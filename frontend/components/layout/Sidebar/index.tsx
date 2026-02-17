@@ -2,51 +2,54 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { SidebarItem } from './SidebarItem';
 import { SidebarSection } from './SidebarSection';
 import { NavSection } from './types';
-import { 
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
+import {
   Car, Calendar, FileText, Wrench, Users, LayoutDashboard,
-  Zap, Bell, Menu, X 
-} from 'lucide-react'; // Using lucide-react for icons
-
-const navigationConfig: NavSection[] = [
-  {
-    id: 'main',
-    items: [
-      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
-      { id: 'fleet', label: 'Автопарк', icon: Car, href: '/fleet' },
-      { id: 'calendar', label: 'Календар', icon: Calendar, href: '/calendar' },
-      { id: 'expenses', label: 'Витрати', icon: FileText, href: '/expenses' },
-      { id: 'services', label: 'Сервіси', icon: Wrench, href: '/services' },
-      { id: 'drivers', label: 'Водії', icon: Users, href: '/drivers' },
-    ]
-  },
-  {
-    id: 'quick-access',
-    title: 'ШВИДКИЙ ДОСТУП',
-    items: [
-      { id: 'quick-expenses', label: 'Швидкі витрати', icon: Zap, href: '/quick-expenses' },
-      { 
-        id: 'notifications', 
-        label: 'Сповіщення', 
-        icon: Bell, 
-        href: '/notifications',
-        badge: 2 
-      },
-    ]
-  }
-];
+  Zap, Bell, Menu, X
+} from 'lucide-react';
 
 export function Sidebar() {
+  const t = useTranslations('nav');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const navigationConfig: NavSection[] = [
+    {
+      id: 'main',
+      items: [
+        { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard, href: '/dashboard' },
+        { id: 'fleet', label: t('fleet'), icon: Car, href: '/vehicles' },
+        { id: 'calendar', label: t('calendar'), icon: Calendar, href: '/calendar' },
+        { id: 'expenses', label: t('expenses'), icon: FileText, href: '/expenses' },
+        { id: 'services', label: t('services'), icon: Wrench, href: '/services' },
+        { id: 'drivers', label: t('drivers'), icon: Users, href: '/drivers' },
+      ]
+    },
+    {
+      id: 'quick-access',
+      title: t('quickExpenses').toUpperCase(),
+      items: [
+        { id: 'quick-expenses', label: t('quickExpenses'), icon: Zap, href: '/quick-expenses' },
+        {
+          id: 'notifications',
+          label: t('notifications'),
+          icon: Bell,
+          href: '/notifications',
+          badge: 2
+        },
+      ]
+    }
+  ];
 
   return (
     <>
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden animate-in fade-in duration-200"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -71,14 +74,19 @@ export function Sidebar() {
               <p className="text-xs font-semibold tracking-[0.2em] text-slate-400">MANAGER</p>
             </div>
           </div>
-          
-          <button 
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden"
-            aria-label="Close sidebar"
-          >
-            <X className="h-5 w-5" />
-          </button>
+
+          {/* Language Switcher & Close button */}
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden"
+              aria-label="Close sidebar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Navigation */}
@@ -93,11 +101,11 @@ export function Sidebar() {
       {!isMobileMenuOpen && (
         <button
           onClick={() => setIsMobileMenuOpen(true)}
-          className="fixed left-4 top-4 z-30 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:bg-slate-50 lg:hidden"
+          className="fixed left-4 top-4 z-30 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-700 shadow-md hover:shadow-lg transition-all hover:bg-slate-50 active:scale-95 lg:hidden"
           aria-label="Open sidebar"
         >
           <Menu className="h-5 w-5" />
-          <span className="text-sm font-medium">Menu</span>
+          <span className="text-sm font-semibold">Menu</span>
         </button>
       )}
     </>

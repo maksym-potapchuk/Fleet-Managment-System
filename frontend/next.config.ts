@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from 'next-intl/plugin';
 
 const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:8000";
+
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
   async rewrites() {
@@ -14,12 +17,12 @@ const nextConfig: NextConfig = {
   webpack: (config, { dev, isServer }) => {
     if (dev && !isServer) {
       config.watchOptions = {
-        poll: 1000, 
-        aggregateTimeout: 300, 
+        poll: 1000,
+        aggregateTimeout: 300,
       };
     }
     return config;
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

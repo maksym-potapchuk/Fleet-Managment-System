@@ -1,0 +1,177 @@
+{
+  "common": {
+    "loading": "Ładowanie...",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "edit": "Edytuj",
+    "add": "Dodaj",
+    "search": "Szukaj",
+    "filter": "Filtruj",
+    "actions": "Akcje",
+    "confirm": "Potwierdź",
+    "close": "Zamknij",
+    "yes": "Tak",
+    "no": "Nie"
+  },
+  "nav": {
+    "dashboard": "Panel główny",
+    "fleet": "Flota",
+    "calendar": "Kalendarz",
+    "expenses": "Wydatki",
+    "services": "Serwisy",
+    "drivers": "Kierowcy",
+    "quickExpenses": "Szybkie wydatki",
+    "notifications": "Powiadomienia"
+  },
+  "auth": {
+    "login": "Zaloguj się",
+    "logout": "Wyloguj",
+    "email": "Email",
+    "password": "Hasło",
+    "loginError": "Nieprawidłowy email lub hasło",
+    "welcomeBack": "Witaj ponownie"
+  },
+  "dashboard": {
+    "title": "Panel główny",
+    "welcome": "Witaj ponownie",
+    "vehiclesStatus": "Status pojazdów",
+    "driversActivity": "Aktywność kierowców",
+    "maintenanceAlerts": "Alerty konserwacji",
+    "comingSoon": "Wkrótce"
+  },
+  "drivers": {
+    "title": "Kierowcy",
+    "subtitle": "Zarządzanie kierowcami Twojej floty",
+    "addDriver": "Dodaj kierowcę",
+    "editDriver": "Edytuj kierowcę",
+    "deleteDriver": "Usuń kierowcę",
+    "noDrivers": "Nie ma jeszcze kierowców",
+    "noDriversDesc": "Kliknij przycisk 'Dodaj kierowcę', aby utworzyć pierwszego kierowcę",
+    "firstName": "Imię",
+    "lastName": "Nazwisko",
+    "phoneNumber": "Numer telefonu",
+    "hasVehicle": "Pojazd",
+    "isActive": "Status",
+    "lastActive": "Ostatnia aktywność",
+    "active": "Aktywny",
+    "inactive": "Nieaktywny",
+    "hasVehicleYes": "Ma pojazd",
+    "hasVehicleNo": "Brak pojazdu",
+    "deleteConfirmTitle": "Usuń kierowcę?",
+    "deleteConfirmMessage": "Czy na pewno chcesz usunąć kierowcę {name}? Tej operacji nie można cofnąć.",
+    "deleteSuccess": "Kierowca został usunięty",
+    "deleteError": "Nie udało się usunąć kierowcy",
+    "createSuccess": "Kierowca został dodany",
+    "updateSuccess": "Kierowca został zaktualizowany",
+    "loadError": "Nie udało się załadować kierowców"
+  },
+  "driverForm": {
+    "firstName": "Imię",
+    "lastName": "Nazwisko",
+    "phoneNumber": "Numer telefonu",
+    "phoneFormat": "Format: 48 + numer telefonu (np. 48123456789)",
+    "addDriver": "Dodaj kierowcę",
+    "updateDriver": "Zaktualizuj kierowcę",
+    "saving": "Zapisywanie...",
+    "errors": {
+      "firstNameRequired": "Imię jest wymagane",
+      "firstNameTooLong": "Imię nie może przekraczać 50 znaków",
+      "lastNameRequired": "Nazwisko jest wymagane",
+      "lastNameTooLong": "Nazwisko nie może przekraczać 50 znaków",
+      "phoneRequired": "Numer telefonu jest wymagany",
+      "phoneDigitsOnly": "Numer telefonu może zawierać tylko cyfry",
+      "phoneStartWith48": "Numer telefonu musi zaczynać się od 48",
+      "phoneLength": "Numer telefonu musi mieć od 10 do 15 cyfr"
+    },
+    "placeholders": {
+      "firstName": "Wpisz imię kierowcy",
+      "lastName": "Wpisz nazwisko kierowcy",
+      "phoneNumber": "48XXXXXXXXX"
+    }
+  },
+  "services": {
+    "title": "Serwisy",
+    "subtitle": "Zarządzanie serwisami floty",
+    "addService": "Dodaj serwis",
+    "editService": "Edytuj serwis",
+    "deleteService": "Usuń serwis",
+    "noServices": "Nie ma jeszcze serwisów",
+    "noServicesDesc": "Kliknij przycisk 'Dodaj serwis', aby utworzyć pierwszy serwis",
+    "name": "Nazwa",
+    "description": "Opis",
+    "createdAt": "Data utworzenia",
+    "noDescription": "Brak opisu",
+    "deleteConfirmTitle": "Usuń serwis?",
+    "deleteConfirmMessage": "Czy na pewno chcesz usunąć serwis {name}? Tej operacji nie można cofnąć.",
+    "deleteSuccess": "Serwis został usunięty",
+    "deleteError": "Nie udało się usunąć serwisu",
+    "createSuccess": "Serwis został dodany",
+    "updateSuccess": "Serwis został zaktualizowany",
+    "loadError": "Nie udało się załadować serwisów"
+  },
+  "serviceForm": {
+    "name": "Nazwa",
+    "description": "Opis",
+    "addService": "Dodaj serwis",
+    "updateService": "Zaktualizuj serwis",
+    "saving": "Zapisywanie...",
+    "errors": {
+      "nameRequired": "Nazwa jest wymagana",
+      "nameTooLong": "Nazwa nie może przekraczać 100 znaków"
+    },
+    "placeholders": {
+      "name": "Wpisz nazwę serwisu",
+      "description": "Wpisz opis serwisu (opcjonalnie)"
+    }
+  },
+  "language": {
+    "polish": "Polski",
+    "ukrainian": "Українська",
+    "switchLanguage": "Zmień język"
+  },
+  "vehicles": {
+    "title": "Flota",
+    "subtitle": "Zarządzanie pojazdami floty",
+    "addVehicle": "Dodaj pojazd",
+    "total": "Wszystkich",
+    "active": "Aktywnych",
+    "search": "Szukaj pojazdu...",
+    "allBrands": "Wszystkie marki",
+    "allYears": "Wszystkie lata",
+    "empty": "Puste",
+    "dropHere": "✨ Upuść tutaj",
+    "year": "rok",
+    "assignedDriver": "Przypisany kierowca",
+    "noDriver": "Brak kierowcy",
+    "view": "Podgląd",
+    "edit": "Edytuj",
+    "duplicate": "Duplikuj",
+    "delete": "Usuń",
+    "deleteConfirm": "Usunąć pojazd {number}?",
+    "loading": "Ładowanie...",
+    "error": "Błąd",
+    "tryAgain": "Spróbuj ponownie",
+    "loadError": "Nie udało się załadować pojazdów",
+    "filters": {
+      "status": "Filtr statusu",
+      "driver": "Filtr kierowcy",
+      "manufacturer": "Filtr producenta",
+      "allDrivers": "Wszyscy",
+      "withDriver": "Z kierowcą",
+      "withoutDriver": "Bez kierowcy",
+      "clearAll": "Wyczyść wszystkie filtry"
+    },
+    "statuses": {
+      "CTO": "CTO",
+      "FOCUS": "Focus",
+      "CLEANING": "Czyszczenie",
+      "PREPARATION": "Przygotowanie",
+      "READY": "Gotowe",
+      "LEASING": "Leasing",
+      "RENT": "Wynajem",
+      "SELLING": "Sprzedaż",
+      "SOLD": "Sprzedane"
+    }
+  }
+}

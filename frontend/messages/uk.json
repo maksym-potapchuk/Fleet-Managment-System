@@ -1,0 +1,177 @@
+{
+  "common": {
+    "loading": "Завантаження...",
+    "save": "Зберегти",
+    "cancel": "Скасувати",
+    "delete": "Видалити",
+    "edit": "Редагувати",
+    "add": "Додати",
+    "search": "Пошук",
+    "filter": "Фільтр",
+    "actions": "Дії",
+    "confirm": "Підтвердити",
+    "close": "Закрити",
+    "yes": "Так",
+    "no": "Ні"
+  },
+  "nav": {
+    "dashboard": "Панель",
+    "fleet": "Автопарк",
+    "calendar": "Календар",
+    "expenses": "Витрати",
+    "services": "Сервіси",
+    "drivers": "Водії",
+    "quickExpenses": "Швидкі витрати",
+    "notifications": "Сповіщення"
+  },
+  "auth": {
+    "login": "Увійти",
+    "logout": "Вийти",
+    "email": "Email",
+    "password": "Пароль",
+    "loginError": "Невірний email або пароль",
+    "welcomeBack": "Ласкаво просимо"
+  },
+  "dashboard": {
+    "title": "Панель керування",
+    "welcome": "Ласкаво просимо",
+    "vehiclesStatus": "Статус транспорту",
+    "driversActivity": "Активність водіїв",
+    "maintenanceAlerts": "Сповіщення про обслуговування",
+    "comingSoon": "Незабаром"
+  },
+  "drivers": {
+    "title": "Водії",
+    "subtitle": "Управління водіями вашого автопарку",
+    "addDriver": "Додати водія",
+    "editDriver": "Редагувати водія",
+    "deleteDriver": "Видалити водія",
+    "noDrivers": "Водіїв ще немає",
+    "noDriversDesc": "Натисніть кнопку 'Додати водія' щоб створити першого водія",
+    "firstName": "Ім'я",
+    "lastName": "Прізвище",
+    "phoneNumber": "Номер телефону",
+    "hasVehicle": "Авто",
+    "isActive": "Статус",
+    "lastActive": "Остання активність",
+    "active": "Активний",
+    "inactive": "Неактивний",
+    "hasVehicleYes": "Є авто",
+    "hasVehicleNo": "Немає авто",
+    "deleteConfirmTitle": "Видалити водія?",
+    "deleteConfirmMessage": "Ви впевнені, що хочете видалити водія {name}? Цю дію неможливо скасувати.",
+    "deleteSuccess": "Водія видалено",
+    "deleteError": "Не вдалося видалити водія",
+    "createSuccess": "Водія додано",
+    "updateSuccess": "Водія оновлено",
+    "loadError": "Не вдалося завантажити водіїв"
+  },
+  "driverForm": {
+    "firstName": "Ім'я",
+    "lastName": "Прізвище",
+    "phoneNumber": "Номер телефону",
+    "phoneFormat": "Формат: 48 + номер телефону (наприклад, 48123456789)",
+    "addDriver": "Додати водія",
+    "updateDriver": "Оновити водія",
+    "saving": "Збереження...",
+    "errors": {
+      "firstNameRequired": "Ім'я обов'язкове",
+      "firstNameTooLong": "Ім'я не може перевищувати 50 символів",
+      "lastNameRequired": "Прізвище обов'язкове",
+      "lastNameTooLong": "Прізвище не може перевищувати 50 символів",
+      "phoneRequired": "Номер телефону обов'язковий",
+      "phoneDigitsOnly": "Номер телефону повинен містити тільки цифри",
+      "phoneStartWith48": "Номер телефону повинен починатися з 48",
+      "phoneLength": "Номер телефону повинен бути від 10 до 15 цифр"
+    },
+    "placeholders": {
+      "firstName": "Введіть ім'я водія",
+      "lastName": "Введіть прізвище водія",
+      "phoneNumber": "48XXXXXXXXX"
+    }
+  },
+  "services": {
+    "title": "Сервіси",
+    "subtitle": "Управління сервісами автопарку",
+    "addService": "Додати сервіс",
+    "editService": "Редагувати сервіс",
+    "deleteService": "Видалити сервіс",
+    "noServices": "Сервісів ще немає",
+    "noServicesDesc": "Натисніть кнопку 'Додати сервіс' щоб створити перший сервіс",
+    "name": "Назва",
+    "description": "Опис",
+    "createdAt": "Дата створення",
+    "noDescription": "Немає опису",
+    "deleteConfirmTitle": "Видалити сервіс?",
+    "deleteConfirmMessage": "Ви впевнені, що хочете видалити сервіс {name}? Цю дію неможливо скасувати.",
+    "deleteSuccess": "Сервіс видалено",
+    "deleteError": "Не вдалося видалити сервіс",
+    "createSuccess": "Сервіс додано",
+    "updateSuccess": "Сервіс оновлено",
+    "loadError": "Не вдалося завантажити сервіси"
+  },
+  "serviceForm": {
+    "name": "Назва",
+    "description": "Опис",
+    "addService": "Додати сервіс",
+    "updateService": "Оновити сервіс",
+    "saving": "Збереження...",
+    "errors": {
+      "nameRequired": "Назва обов'язкова",
+      "nameTooLong": "Назва не може перевищувати 100 символів"
+    },
+    "placeholders": {
+      "name": "Введіть назву сервісу",
+      "description": "Введіть опис сервісу (необов'язково)"
+    }
+  },
+  "language": {
+    "polish": "Polski",
+    "ukrainian": "Українська",
+    "switchLanguage": "Змінити мову"
+  },
+  "vehicles": {
+    "title": "Автопарк",
+    "subtitle": "Управління автопарком",
+    "addVehicle": "Додати авто",
+    "total": "Всього",
+    "active": "Активних",
+    "search": "Пошук авто...",
+    "allBrands": "Всі марки",
+    "allYears": "Всі роки",
+    "empty": "Порожньо",
+    "dropHere": "✨ Відпустіть тут",
+    "year": "рік",
+    "assignedDriver": "Призначений водій",
+    "noDriver": "Не призначено",
+    "view": "Переглянути",
+    "edit": "Редагувати",
+    "duplicate": "Дублювати",
+    "delete": "Видалити",
+    "deleteConfirm": "Видалити автомобіль {number}?",
+    "loading": "Завантаження...",
+    "error": "Помилка",
+    "tryAgain": "Спробувати знову",
+    "loadError": "Не вдалося завантажити автомобілі",
+    "filters": {
+      "status": "Фільтр за статусом",
+      "driver": "Фільтр за водієм",
+      "manufacturer": "Фільтр за виробником",
+      "allDrivers": "Всі",
+      "withDriver": "З водієм",
+      "withoutDriver": "Без водія",
+      "clearAll": "Очистити всі фільтри"
+    },
+    "statuses": {
+      "CTO": "СТО",
+      "FOCUS": "Фокус",
+      "CLEANING": "Хімчистка",
+      "PREPARATION": "Підготовка",
+      "READY": "Готове",
+      "LEASING": "Лізинг",
+      "RENT": "Оренда",
+      "SELLING": "Продаж",
+      "SOLD": "Продано"
+    }
+  }
+}

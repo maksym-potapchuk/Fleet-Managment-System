@@ -20,7 +20,9 @@ export default function DashboardPage() {
                 setUser(res.data);
                 setLoading(false);
             })
-            .catch(() => {
+            .catch((error) => {
+                console.error("Auth check failed:", error);
+                setLoading(false);
                 router.replace("/login");
             });
     }, [router]);
