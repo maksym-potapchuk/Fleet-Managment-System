@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   Car,
@@ -45,6 +45,30 @@ export function VehicleKanban({
   const [selectedStatuses, setSelectedStatuses] = useState<VehicleStatus[]>([]);
   const [driverFilter, setDriverFilter] = useState<'all' | 'with_driver' | 'without_driver'>('all');
   const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>([]);
+
+  // Auto-scroll during drag
+  const boardRef = useRef<HTMLDivElement>(null);
+
+  const handleBoardDragOver = useCallback((e: React.DragEvent) => {
+    const container = boardRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const edgeZone = 150; // px from edge to start scrolling
+    const maxSpeed = 20;
+
+    const mouseX = e.clientX;
+
+    if (mouseX < rect.left + edgeZone) {
+      // Scroll left
+      const intensity = 1 - (mouseX - rect.left) / edgeZone;
+      container.scrollLeft -= maxSpeed * Math.max(0, intensity);
+    } else if (mouseX > rect.right - edgeZone) {
+      // Scroll right
+      const intensity = 1 - (rect.right - mouseX) / edgeZone;
+      container.scrollLeft += maxSpeed * Math.max(0, intensity);
+    }
+  }, []);
 
   // Status column configuration with translations
   const KANBAN_COLUMNS: {
@@ -373,7 +397,10 @@ export function VehicleKanban({
       </div>
 
       {/* Kanban Board */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6">
+      <div
+        ref={boardRef}
+        onDragOver={handleBoardDragOver}
+        className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6">
         <div className="flex gap-4 h-full min-w-max">
           {visibleColumns.map(column => (
             <KanbanColumn

@@ -13,7 +13,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build ps logs logs-backend logs-frontend logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed dump seed
+.PHONY: help up down restart build ps logs logs-backend logs-frontend logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed dump seed create-reg-schema
 
 help:
 >@echo "Available commands:"
@@ -35,6 +35,7 @@ help:
 >@echo "  make createsuperuser-auto - Create Django superuser (non-interactive)"
 >@echo "  make db-dump             - Export SQL dump to $(DUMP_FILE)"
 >@echo "  make db-seed             - Import SQL dump from $(DUMP_FILE)"
+>@echo "  make create-reg-schema   - Seed default vehicle regulation schema"
 
 up:
 >$(COMPOSE) up -d
@@ -96,3 +97,9 @@ db-seed:
 dump: db-dump
 
 seed: db-seed
+
+create-reg-schema:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py create_vehicle_reg_basic_schema
+
+force-reg-schema:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py create_vehicle_reg_basic_schema --force
