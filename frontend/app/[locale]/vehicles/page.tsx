@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from '@/src/i18n/routing';
 import { VehicleKanban } from '@/components/vehicle/VehicleKanban';
 import { VehicleModal } from '@/components/vehicle/VehicleModal';
 import { vehicleService } from '@/services/vehicle';
@@ -10,6 +11,7 @@ import { useSidebar } from './SidebarContext';
 
 export default function VehiclesPage() {
   const t = useTranslations('vehicles');
+  const router = useRouter();
   const { openSidebar } = useSidebar();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,11 @@ export default function VehiclesPage() {
     }
   };
 
-  const handleSelectVehicle = async (id: string) => {
+  const handleSelectVehicle = (id: string) => {
+    router.push(`/vehicles/${id}`);
+  };
+
+  const handleEditVehicle = async (id: string) => {
     try {
       const vehicle = await vehicleService.getVehicle(id);
       setSelectedVehicle(vehicle);
@@ -154,6 +160,7 @@ export default function VehiclesPage() {
       <VehicleKanban
         vehicles={vehicles}
         onSelectVehicle={handleSelectVehicle}
+        onEditVehicle={handleEditVehicle}
         onAddVehicle={handleAddVehicle}
         onUpdateStatus={handleUpdateStatus}
         onDeleteVehicle={handleDeleteVehicle}

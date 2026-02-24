@@ -24,6 +24,7 @@ import { Vehicle, VehicleStatus } from '@/types/vehicle';
 interface VehicleKanbanProps {
   vehicles: Vehicle[];
   onSelectVehicle: (id: string) => void;
+  onEditVehicle?: (id: string) => void;
   onAddVehicle: () => void;
   onUpdateStatus: (vehicleId: string, newStatus: VehicleStatus) => void;
   onDeleteVehicle?: (id: string) => void;
@@ -34,6 +35,7 @@ interface VehicleKanbanProps {
 export function VehicleKanban({
   vehicles,
   onSelectVehicle,
+  onEditVehicle,
   onAddVehicle,
   onUpdateStatus,
   onDeleteVehicle,
@@ -408,6 +410,7 @@ export function VehicleKanban({
               column={column}
               vehicles={filteredVehicles.filter(v => v.status === column.id)}
               onSelectVehicle={onSelectVehicle}
+              onEditVehicle={onEditVehicle}
               onUpdateStatus={onUpdateStatus}
               onDeleteVehicle={onDeleteVehicle}
               onDuplicateVehicle={onDuplicateVehicle}
@@ -424,12 +427,13 @@ interface KanbanColumnProps {
   column: typeof KANBAN_COLUMNS[0];
   vehicles: Vehicle[];
   onSelectVehicle: (id: string) => void;
+  onEditVehicle?: (id: string) => void;
   onUpdateStatus: (vehicleId: string, newStatus: VehicleStatus) => void;
   onDeleteVehicle?: (id: string) => void;
   onDuplicateVehicle?: (id: string) => void;
 }
 
-function KanbanColumn({ column, vehicles, onSelectVehicle, onUpdateStatus, onDeleteVehicle, onDuplicateVehicle }: KanbanColumnProps) {
+function KanbanColumn({ column, vehicles, onSelectVehicle, onEditVehicle, onUpdateStatus, onDeleteVehicle, onDuplicateVehicle }: KanbanColumnProps) {
   const t = useTranslations('vehicles');
   const [isOver, setIsOver] = useState(false);
   const [draggedVehicleId, setDraggedVehicleId] = useState<string | null>(null);
@@ -524,6 +528,7 @@ function KanbanColumn({ column, vehicles, onSelectVehicle, onUpdateStatus, onDel
               key={vehicle.id}
               vehicle={vehicle}
               onSelect={() => onSelectVehicle(vehicle.id)}
+              onEdit={onEditVehicle ? () => onEditVehicle(vehicle.id) : undefined}
               onDelete={onDeleteVehicle}
               onDuplicate={onDuplicateVehicle}
               isDimmed={draggedVehicleId === vehicle.id}
@@ -539,12 +544,13 @@ function KanbanColumn({ column, vehicles, onSelectVehicle, onUpdateStatus, onDel
 interface VehicleCardProps {
   vehicle: Vehicle;
   onSelect: () => void;
+  onEdit?: () => void;
   onDelete?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   isDimmed?: boolean;
 }
 
-function VehicleCard({ vehicle, onSelect, onDelete, onDuplicate, isDimmed }: VehicleCardProps) {
+function VehicleCard({ vehicle, onSelect, onEdit, onDelete, onDuplicate, isDimmed }: VehicleCardProps) {
   const t = useTranslations('vehicles');
   const [isDragging, setIsDragging] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -600,6 +606,12 @@ function VehicleCard({ vehicle, onSelect, onDelete, onDuplicate, isDimmed }: Veh
     e.stopPropagation();
     setMenuOpen(false);
     onSelect();
+  };
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    if (onEdit) onEdit();
   };
 
   const driverName = vehicle.driver
@@ -660,13 +672,15 @@ function VehicleCard({ vehicle, onSelect, onDelete, onDuplicate, isDimmed }: Veh
                     <Eye className="w-4 h-4 text-[#2D8B7E]" />
                     {t('view')}
                   </button>
-                  <button
-                    onClick={handleView}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    <Edit className="w-4 h-4 text-blue-600" />
-                    {t('edit')}
-                  </button>
+                  {onEdit && (
+                    <button
+                      onClick={handleEdit}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <Edit className="w-4 h-4 text-blue-600" />
+                      {t('edit')}
+                    </button>
+                  )}
                   {onDuplicate && (
                     <button
                       onClick={handleDuplicate}

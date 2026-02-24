@@ -1,4 +1,3 @@
-// Root layout - просто передає children
 export default function RootLayout({
   children,
 }: {
