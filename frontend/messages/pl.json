@@ -173,5 +173,113 @@
       "SELLING": "Sprzedaż",
       "SOLD": "Sprzedane"
     }
+  },
+  "calendar": {
+    "title": "Kalendarz zdarzeń",
+    "subtitle": "Plany napraw i przeglądów",
+    "today": "Dzisiaj",
+    "loading": "Ładowanie...",
+    "legend": {
+      "planned": "Zaplanowane",
+      "overdue": "Przeterminowane",
+      "done": "Wykonane"
+    },
+    "months": {
+      "jan": "Styczeń", "feb": "Luty", "mar": "Marzec",
+      "apr": "Kwiecień", "may": "Maj", "jun": "Czerwiec",
+      "jul": "Lipiec", "aug": "Sierpień", "sep": "Wrzesień",
+      "oct": "Październik", "nov": "Listopad", "dec": "Grudzień"
+    },
+    "days": {
+      "mon": "Pon", "tue": "Wt", "wed": "Śr",
+      "thu": "Czw", "fri": "Pt", "sat": "Sob", "sun": "Nd"
+    },
+    "panel": {
+      "title": "Zdarzenia na dzień",
+      "noPlans": "Brak zdarzeń na ten dzień",
+      "goToVehicle": "Otwórz pojazd",
+      "markDone": "Wykonano",
+      "reschedule": "Przesuń datę",
+      "pinned": "Przypięto",
+      "preview": "Podgląd",
+      "hint": "Najedź na datę, aby zobaczyć zdarzenia"
+    }
+  },
+  "vehicleWorkspace": {
+    "loadingVehicle": "Ładowanie pojazdu...",
+    "vehicleNotFound": "Pojazd nie znaleziony",
+    "backToVehicles": "Flota",
+    "edit": "Edytuj",
+    "tabs": {
+      "service": "Serwis",
+      "equipment": "Wyposażenie",
+      "regulation": "Regulamin"
+    },
+    "service": {
+      "title": "Przypomnienia serwisowe",
+      "subtitle": "Zadania i przypomnienia dotyczące obsługi",
+      "add": "Dodaj",
+      "save": "Zapisz",
+      "cancel": "Anuluj",
+      "titlePlaceholder": "Nazwa zadania...",
+      "descPlaceholder": "Opis (opcjonalnie)...",
+      "plannedLabel": "Zaplanowano na",
+      "filter": {
+        "all": "Wszystkie",
+        "pending": "Aktywne",
+        "done": "Wykonane"
+      },
+      "overdue": "Przeterminowane",
+      "dueSoon": "Wkrótce",
+      "planned": "Zaplanowane",
+      "done": "Wykonano",
+      "empty": "Brak przypomnień",
+      "emptyDesc": "Dodaj pierwsze przypomnienie o obsłudze tego pojazdu.",
+      "emptyFiltered": "Brak wpisów w tej kategorii"
+    },
+    "equipment": {
+      "title": "Wyposażenie",
+      "subtitle": "Wyposażenie i akcesoria tego pojazdu",
+      "total": "{count} pozycji",
+      "addEquipment": "Dodaj pozycję",
+      "newItemPlaceholder": "Nazwa wyposażenia...",
+      "add": "Dodaj",
+      "cancel": "Anuluj",
+      "empty": "Brak przypisanego wyposażenia",
+      "emptyDesc": "Dodaj pozycję ręcznie lub poczekaj na automatyczne przypisanie przy tworzeniu pojazdu."
+    },
+    "regulation": {
+      "title": "Regulamin",
+      "subtitle": "Schemat konserwacji według przebiegu",
+      "assignedOn": "przypisano",
+      "everyKm": "co {km} km",
+      "reminder": "Przypomnienie",
+      "done": "Wykonano",
+      "next": "Następny",
+      "markDone": "Oznacz",
+      "km": "km",
+      "noDefault": "Brak domyślnego schematu",
+      "noDefaultDesc": "Najpierw utwórz schemat regulaminu i oznacz go jako domyślny.",
+      "assignTitle": "Przypisz regulamin",
+      "assignSubtitle": "Schemat: {schema} · podaj przebieg ostatniego wykonania dla każdego elementu",
+      "saveRegulation": "Zapisz regulamin",
+      "saveError": "Błąd podczas zapisywania",
+      "planView": "Plan",
+      "historyView": "Historia",
+      "history": {
+        "filters": "Filtry",
+        "from": "Od",
+        "to": "Do",
+        "allEvents": "Wszystkie zdarzenia",
+        "performed": "Wykonano",
+        "km_updated": "Aktualizacja km",
+        "notified": "Powiadomiono",
+        "oldestFirst": "Najstarsze pierwsze",
+        "newestFirst": "Najnowsze pierwsze",
+        "clearFilters": "Wyczyść",
+        "empty": "Brak historii dla tego pojazdu",
+        "remaining": "pozostało"
+      }
+    }
   }
 }

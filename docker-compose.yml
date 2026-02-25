@@ -27,3 +27,13 @@ services:
       - ./backend:/app
     env_file:
       - ./backend/.env
+
+  bot:
+    build:
+      context: .
+      dockerfile: ./bot/Dockerfile
+    depends_on:
+      - backend
+    env_file:
+      - ./backend/.env
+    restart: unless-stopped

@@ -3,6 +3,7 @@
 COMPOSE := docker compose
 BACKEND_SERVICE := backend
 FRONTEND_SERVICE := frontend
+BOT_SERVICE := bot
 DB_SERVICE := postgres
 
 DB_NAME ?= fleet_db
@@ -13,7 +14,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build ps logs logs-backend logs-frontend logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed dump seed create-reg-schema
+.PHONY: help up down restart build build-bot ps logs logs-backend logs-frontend logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation
 
 help:
 >@echo "Available commands:"
@@ -21,6 +22,7 @@ help:
 >@echo "  make down                - Stop and remove containers"
 >@echo "  make restart             - Restart all services"
 >@echo "  make build               - Rebuild all images"
+>@echo "  make build-bot           - Rebuild and restart only bot"
 >@echo "  make ps                  - Show container status"
 >@echo "  make logs                - Show all logs"
 >@echo "  make logs-backend        - Show backend logs"
@@ -36,6 +38,10 @@ help:
 >@echo "  make db-dump             - Export SQL dump to $(DUMP_FILE)"
 >@echo "  make db-seed             - Import SQL dump from $(DUMP_FILE)"
 >@echo "  make create-reg-schema   - Seed default vehicle regulation schema"
+>@echo "  make create-driver-vehicle - Create driver +380663234712, vehicle, assign"
+>@echo "  make create-driver-vehicle-force - Same, recreate/reassign if exists"
+>@echo "  make show-regulation CAR=AA6601BB - Show regulation plan for vehicle by car number"
+>@echo "  make assign-regulation CAR=AA6601BB - Assign (fill) default regulation for vehicle"
 
 up:
 >$(COMPOSE) up -d
@@ -48,6 +54,9 @@ restart:
 
 build:
 >$(COMPOSE) up --build -d
+
+build-bot:
+>$(COMPOSE) up -d --build $(BOT_SERVICE)
 
 ps:
 >$(COMPOSE) ps
@@ -103,3 +112,15 @@ create-reg-schema:
 
 force-reg-schema:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py create_vehicle_reg_basic_schema --force
+
+create-driver-vehicle:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py create_driver_with_vehicle
+
+create-driver-vehicle-force:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py create_driver_with_vehicle --force
+
+show-regulation:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py show_regulation_plan $(CAR)
+
+assign-regulation:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py assign_regulation $(CAR)

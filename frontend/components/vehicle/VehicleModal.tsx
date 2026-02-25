@@ -34,6 +34,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave }: VehicleModalP
     cost: '',
     vin_number: '',
     car_number: '',
+    initial_km: 0,
     status: 'PREPARATION',
   });
   const [loading, setLoading] = useState(false);
@@ -48,6 +49,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave }: VehicleModalP
         cost: vehicle.cost,
         vin_number: vehicle.vin_number,
         car_number: vehicle.car_number,
+        initial_km: vehicle.initial_km,
         status: vehicle.status,
       });
     } else {
@@ -58,6 +60,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave }: VehicleModalP
         cost: '',
         vin_number: '',
         car_number: '',
+        initial_km: 0,
         status: 'PREPARATION',
       });
     }
@@ -241,6 +244,22 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave }: VehicleModalP
               placeholder="1HGBH41JXMN109186"
             />
             <p className="text-xs text-slate-500 mt-1">17 символів</p>
+          </div>
+
+          {/* Initial KM */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">
+              Поточний пробіг (км)
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={formData.initial_km ?? 0}
+              onChange={(e) => setFormData({ ...formData, initial_km: parseInt(e.target.value) || 0 })}
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D8B7E] focus:border-transparent"
+              placeholder="0"
+            />
+            <p className="text-xs text-slate-500 mt-1">Використовується для розрахунку регламенту</p>
           </div>
 
           {/* Actions */}

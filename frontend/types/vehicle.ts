@@ -28,6 +28,7 @@ export interface Vehicle {
   cost: string; // Decimal as string
   vin_number: string;
   car_number: string;
+  initial_km: number;
   is_selected: boolean;
   status: VehicleStatus;
   driver: {
@@ -46,6 +47,7 @@ export interface CreateVehicleData {
   cost: string | number;
   vin_number: string;
   car_number: string;
+  initial_km?: number;
   status?: VehicleStatus;
   driver?: string | null; // driver ID
 }
