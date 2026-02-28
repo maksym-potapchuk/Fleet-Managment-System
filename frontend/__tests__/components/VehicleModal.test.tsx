@@ -46,6 +46,23 @@ const baseProps = {
   onSave: vi.fn(),
 };
 
+/**
+ * Fill required fields for create form (vehicle={null}).
+ * Selects (manufacturer, status) already have defaults so only text/number inputs need filling.
+ */
+async function fillCreateForm(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByPlaceholderText('AA1234BB'), 'ZZ9999ZZ');
+  await user.type(screen.getByPlaceholderText('Corolla'), 'Camry');
+  // year and cost have type="number" — clear default then type
+  const yearInput = screen.getByDisplayValue(String(new Date().getFullYear()));
+  await user.clear(yearInput);
+  await user.type(yearInput, '2022');
+  const costInput = screen.getByPlaceholderText('50000.00');
+  await user.type(costInput, '30000');
+  await user.type(screen.getByPlaceholderText('1HGBH41JXMN109186'), 'WVWZZZ3CZWE123456');
+  await user.type(screen.getByPlaceholderText('0'), '10000');
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -98,9 +115,11 @@ describe('VehicleModal – useEffect pre-fill', () => {
 
 describe('VehicleModal – form submission', () => {
   it('calls vehicleService.createVehicle (not updateVehicle) when creating', async () => {
+    const user = userEvent.setup();
     vi.mocked(vehicleService.createVehicle).mockResolvedValue({ ...mockVehicle, id: 'new-id' });
     render(<VehicleModal {...baseProps} vehicle={null} />);
 
+    await fillCreateForm(user);
     fireEvent.submit(document.querySelector('form')!);
 
     await waitFor(() => expect(vehicleService.createVehicle).toHaveBeenCalledOnce());
@@ -119,11 +138,13 @@ describe('VehicleModal – form submission', () => {
   });
 
   it('calls onSave and onClose after a successful create', async () => {
+    const user = userEvent.setup();
     vi.mocked(vehicleService.createVehicle).mockResolvedValue({ ...mockVehicle, id: 'new-id' });
     const onSave = vi.fn();
     const onClose = vi.fn();
     render(<VehicleModal isOpen={true} vehicle={null} onSave={onSave} onClose={onClose} />);
 
+    await fillCreateForm(user);
     fireEvent.submit(document.querySelector('form')!);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
@@ -131,9 +152,11 @@ describe('VehicleModal – form submission', () => {
   });
 
   it('shows error message when the API call fails', async () => {
+    const user = userEvent.setup();
     vi.mocked(vehicleService.createVehicle).mockRejectedValue(new Error('Network error'));
     render(<VehicleModal {...baseProps} vehicle={null} />);
 
+    await fillCreateForm(user);
     fireEvent.submit(document.querySelector('form')!);
 
     await waitFor(() =>

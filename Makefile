@@ -204,7 +204,7 @@ pre-push: lint-fix lint-check test
 >@echo "================================================"
 
 test-backend:
->$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py test --settings=config.test_settings --verbosity=2
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py test --settings=config.test_settings --verbosity=2 --noinput
 
 test-frontend:
 >$(COMPOSE) exec $(FRONTEND_SERVICE) npm run test:run
