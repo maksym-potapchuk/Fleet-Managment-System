@@ -269,7 +269,7 @@ async def mileage_value_entered(message: Message, state: FSMContext) -> None:
     unit_note = " (введено в милях)" if unit == "Милі" else ""
     await message.answer(
         f"Дякуємо, дані прийнято.\n"
-        f"Авто: {car_number}, пробіг: {value_km} км{unit_note}.\n"
+        f"Авто: {car_number}, пробіг: {value_km} км{unit_note}.\n",
         reply_markup=get_main_menu_keyboard(),
     )
 
