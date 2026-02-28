@@ -19,7 +19,13 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-const mockedApi = vi.mocked(api);
+const mockedApi = api as unknown as {
+  get: ReturnType<typeof vi.fn>;
+  post: ReturnType<typeof vi.fn>;
+  patch: ReturnType<typeof vi.fn>;
+  put: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -93,7 +99,7 @@ describe('vehicleService.getVehicle', () => {
 
 describe('vehicleService.createVehicle', () => {
   it('POSTs to /vehicle/ with the provided data', async () => {
-    const payload = { model: 'Corolla', manufacturer: 'Toyota' as const, year: 2020, cost: '25000', vin_number: 'VIN', car_number: 'AA1234BB' };
+    const payload = { model: 'Corolla', manufacturer: 'Toyota' as const, year: 2020, cost: '25000', vin_number: 'VIN', car_number: 'AA1234BB', initial_km: 0 };
     mockedApi.post.mockResolvedValue({ data: { id: 'new', ...payload } });
 
     await vehicleService.createVehicle(payload);

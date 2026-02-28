@@ -15,7 +15,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean ps logs logs-backend logs-frontend logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend
+.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean ps logs logs-backend logs-frontend logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push
 
 help:
 >@echo "Available commands:"
@@ -57,6 +57,7 @@ help:
 >@echo "  make test                - Run all tests (backend + frontend)"
 >@echo "  make test-backend        - Run Django tests only"
 >@echo "  make test-frontend       - Run Vitest tests only"
+>@echo "  make pre-push            - Fix lint → check lint → run tests (full pre-push pipeline)"
 
 up:
 >$(COMPOSE) up -d
@@ -193,6 +194,14 @@ lint-check-frontend:
 
 test: test-backend test-frontend
 >@echo "All tests passed."
+
+# ── Pre-push pipeline ──────────────────────────────────────
+
+pre-push: lint-fix lint-check test
+>@echo ""
+>@echo "================================================"
+>@echo "  All checks passed. Safe to push."
+>@echo "================================================"
 
 test-backend:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py test --settings=config.test_settings --verbosity=2

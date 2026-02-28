@@ -23,13 +23,12 @@ import {
   Pencil,
   Check,
   Upload,
-  ImageOff,
   Users,
 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import api from '@/lib/api';
 import { vehicleService } from '@/services/vehicle';
-import { Vehicle, VehiclePhoto, VehicleOwnerHistory, VehicleStatus } from '@/types/vehicle';
+import { Vehicle, VehicleOwnerHistory, VehicleStatus } from '@/types/vehicle';
 import { VehicleModal } from '@/components/vehicle/VehicleModal';
 import { useSidebar } from '../SidebarContext';
 
@@ -1559,165 +1558,6 @@ function RegulationHistoryPanel({ vehicleId }: { vehicleId: string }) {
               </div>
             </div>
           ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
-// Photos Tab
-// ─────────────────────────────────────────────
-
-interface PhotosTabProps {
-  vehicleId: string;
-  photos: VehiclePhoto[];
-  onRefresh: () => void;
-}
-
-function PhotosTab({ vehicleId, photos, onRefresh }: PhotosTabProps) {
-  const t = useTranslations('vehicleWorkspace.photos');
-  const [uploading, setUploading] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    setUploading(true);
-    try {
-      await vehicleService.uploadVehiclePhoto(vehicleId, file);
-      onRefresh();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDelete = async (photoId: number) => {
-    setDeletingId(photoId);
-    try {
-      await vehicleService.deleteVehiclePhoto(vehicleId, photoId);
-      onRefresh();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
-  const goLightbox = (dir: 1 | -1) => {
-    if (lightboxIdx === null) return;
-    setLightboxIdx((lightboxIdx + dir + photos.length) % photos.length);
-  };
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-black text-slate-900">{t('title')}</h2>
-          <p className="text-sm text-slate-500 mt-0.5 font-medium">{t('subtitle', { count: photos.length })}</p>
-        </div>
-        {photos.length < 10 && (
-          <button
-            onClick={() => inputRef.current?.click()}
-            disabled={uploading}
-            className="flex items-center gap-2 bg-gradient-to-r from-[#2D8B7E] to-[#248B7B] text-white px-4 py-2 rounded-xl hover:shadow-lg hover:shadow-[#2D8B7E]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shadow-md text-sm font-bold disabled:opacity-50"
-          >
-            {uploading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                {t('uploading')}
-              </>
-            ) : (
-              <>
-                <Upload className="w-4 h-4" strokeWidth={2.5} />
-                {t('add')}
-              </>
-            )}
-          </button>
-        )}
-        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-      </div>
-
-      {photos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400">
-          <ImageOff className="w-12 h-12 mb-3 opacity-30" />
-          <p className="font-semibold text-sm">{t('empty')}</p>
-          <p className="text-xs mt-1">{t('emptyDesc')}</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {photos.map((photo, idx) => (
-            <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-slate-100 shadow-sm">
-              <img
-                src={photo.image}
-                alt={`Photo ${idx + 1}`}
-                className="w-full h-full object-cover cursor-pointer transition-transform duration-200 group-hover:scale-105"
-                onClick={() => setLightboxIdx(idx)}
-              />
-              <button
-                onClick={() => handleDelete(photo.id)}
-                disabled={deletingId === photo.id}
-                className="absolute top-1.5 right-1.5 w-7 h-7 bg-black/60 hover:bg-red-600 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all disabled:opacity-60"
-              >
-                {deletingId === photo.id
-                  ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  : <X className="w-3.5 h-3.5 text-white" />}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Lightbox */}
-      {lightboxIdx !== null && (
-        <div
-          className="fixed inset-0 bg-black/92 z-50 flex items-center justify-center p-4"
-          onClick={() => setLightboxIdx(null)}
-        >
-          <button
-            className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
-            onClick={() => setLightboxIdx(null)}
-          >
-            <X className="w-5 h-5 text-white" />
-          </button>
-          {photos.length > 1 && (
-            <>
-              <button
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
-                onClick={(e) => { e.stopPropagation(); goLightbox(-1); }}
-              >
-                <ArrowLeft className="w-5 h-5 text-white" />
-              </button>
-              <button
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors rotate-180"
-                onClick={(e) => { e.stopPropagation(); goLightbox(1); }}
-              >
-                <ArrowLeft className="w-5 h-5 text-white" />
-              </button>
-            </>
-          )}
-          <img
-            src={photos[lightboxIdx].image}
-            alt={`Photo ${lightboxIdx + 1}`}
-            className="max-w-full max-h-full rounded-xl object-contain shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-          {photos.length > 1 && (
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5">
-              {photos.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={(e) => { e.stopPropagation(); setLightboxIdx(i); }}
-                  className={`rounded-full transition-all ${i === lightboxIdx ? 'w-4 h-2 bg-white' : 'w-2 h-2 bg-white/40 hover:bg-white/70'}`}
-                />
-              ))}
-            </div>
-          )}
         </div>
       )}
     </div>

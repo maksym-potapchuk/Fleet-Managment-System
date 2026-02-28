@@ -35,6 +35,7 @@ const mockVehicle: Vehicle = {
   is_selected: false,
   status: 'READY',
   driver: null,
+  photos: [],
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
 };
