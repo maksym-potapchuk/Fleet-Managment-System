@@ -1,0 +1,20 @@
+# Root .dockerignore — used when build context is the repo root (bot service)
+.git/
+.gitignore
+*.md
+
+# Frontend — not needed for bot
+frontend/
+# Backend Python cache — not needed for bot
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.env
+backend/.ruff_cache/
+backend/.pytest_cache/
+backend/htmlcov/
+backend/staticfiles/
+backend/media/
+
+# Dev artifacts
+.claude/

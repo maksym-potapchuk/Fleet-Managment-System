@@ -1,6 +1,7 @@
 .RECIPEPREFIX := >
 
 COMPOSE := docker compose
+COMPOSE_PROD := docker compose -f docker-compose.yml -f docker-compose.prod.yml
 BACKEND_SERVICE := backend
 FRONTEND_SERVICE := frontend
 BOT_SERVICE := bot
@@ -14,7 +15,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build build-bot ps logs logs-backend logs-frontend logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation
+.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean ps logs logs-backend logs-frontend logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend
 
 help:
 >@echo "Available commands:"
@@ -23,10 +24,16 @@ help:
 >@echo "  make restart             - Restart all services"
 >@echo "  make build               - Rebuild all images"
 >@echo "  make build-bot           - Rebuild and restart only bot"
+>@echo "  make prod                - Start prod stack (recreate containers)"
+>@echo "  make prod-build          - Rebuild and start with production frontend"
+>@echo "  make prod-down           - Stop prod stack (when using make prod)"
+>@echo "  make prod-up             - Start prod stack only, no rebuild (up -d)"
+>@echo "  make docker-clean        - Stop all, remove containers, volumes, orphans"
 >@echo "  make ps                  - Show container status"
 >@echo "  make logs                - Show all logs"
 >@echo "  make logs-backend        - Show backend logs"
 >@echo "  make logs-frontend       - Show frontend logs"
+>@echo "  make logs-bot            - Show bot logs"
 >@echo "  make logs-db             - Show postgres logs"
 >@echo "  make shell-backend       - Open backend shell"
 >@echo "  make shell-frontend      - Open frontend shell"
@@ -42,6 +49,14 @@ help:
 >@echo "  make create-driver-vehicle-force - Same, recreate/reassign if exists"
 >@echo "  make show-regulation CAR=AA6601BB - Show regulation plan for vehicle by car number"
 >@echo "  make assign-regulation CAR=AA6601BB - Assign (fill) default regulation for vehicle"
+>@echo "  make drop-vehicles               - Delete ALL vehicles from the database (with confirmation)"
+>@echo ""
+>@echo "  Lint & Test:"
+>@echo "  make lint-fix            - Auto-fix lint (backend ruff + frontend eslint)"
+>@echo "  make lint-check          - Check lint without fixing (CI mode)"
+>@echo "  make test                - Run all tests (backend + frontend)"
+>@echo "  make test-backend        - Run Django tests only"
+>@echo "  make test-frontend       - Run Vitest tests only"
 
 up:
 >$(COMPOSE) up -d
@@ -58,8 +73,28 @@ build:
 build-bot:
 >$(COMPOSE) up -d --build $(BOT_SERVICE)
 
+prod:
+>$(COMPOSE_PROD) up -d --force-recreate
+
+prod-build:
+>$(COMPOSE_PROD) up --build -d --force-recreate
+
+prod-down:
+>$(COMPOSE_PROD) down
+
+prod-up:
+>$(COMPOSE_PROD) up -d
+
+docker-clean:
+>$(COMPOSE_PROD) down -v --remove-orphans
+>$(COMPOSE) down -v --remove-orphans
+>@echo "Docker cleaned: containers, volumes, orphans removed."
+
 ps:
 >$(COMPOSE) ps
+
+ps-all:
+>$(COMPOSE) ps -a
 
 logs:
 >$(COMPOSE) logs -f
@@ -69,6 +104,9 @@ logs-backend:
 
 logs-frontend:
 >$(COMPOSE) logs -f $(FRONTEND_SERVICE)
+
+logs-bot:
+>$(COMPOSE) logs -f $(BOT_SERVICE)
 
 logs-db:
 >$(COMPOSE) logs -f $(DB_SERVICE)
@@ -124,3 +162,40 @@ show-regulation:
 
 assign-regulation:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py assign_regulation $(CAR)
+
+drop-vehicles:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py drop_all_vehicles --force
+
+# ── Lint & Test ──────────────────────────────────────────────
+
+lint-fix: lint-fix-backend lint-fix-frontend
+>@echo "All lint fixes applied."
+
+lint-check: lint-check-backend lint-check-frontend
+>@echo "All lint checks passed."
+
+lint-fix-backend:
+>$(COMPOSE) exec $(BACKEND_SERVICE) ruff check --fix .
+>$(COMPOSE) exec $(BACKEND_SERVICE) ruff format .
+>@echo "Backend lint fixed."
+
+lint-fix-frontend:
+>$(COMPOSE) exec $(FRONTEND_SERVICE) npm run lint:fix
+>@echo "Frontend lint fixed."
+
+lint-check-backend:
+>$(COMPOSE) exec $(BACKEND_SERVICE) ruff check .
+>$(COMPOSE) exec $(BACKEND_SERVICE) ruff format --check .
+
+lint-check-frontend:
+>$(COMPOSE) exec $(FRONTEND_SERVICE) npm run lint
+>$(COMPOSE) exec $(FRONTEND_SERVICE) npm run typecheck
+
+test: test-backend test-frontend
+>@echo "All tests passed."
+
+test-backend:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py test --settings=config.test_settings --verbosity=2
+
+test-frontend:
+>$(COMPOSE) exec $(FRONTEND_SERVICE) npm run test:run

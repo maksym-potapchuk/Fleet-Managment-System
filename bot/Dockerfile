@@ -1,18 +1,21 @@
+# syntax=docker/dockerfile:1
 FROM python:3.12-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential libpq-dev fonts-dejavu-core \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
-COPY bot/requirements.txt ./bot/requirements.txt
-RUN pip install --no-cache-dir -r bot/requirements.txt
+# Dependency layer — cached unless requirements.txt changes
+COPY bot/requirements.txt ./
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Only copy the bot package — not the entire monorepo
+COPY bot/ ./bot/
 
 CMD ["python", "-m", "bot.app"]
-

@@ -1,0 +1,16 @@
+node_modules/
+.next/
+
+.git/
+.gitignore
+
+.env
+.env.*
+!.env.example
+
+__tests__/
+coverage/
+*.log
+
+*.md
+!README.md
