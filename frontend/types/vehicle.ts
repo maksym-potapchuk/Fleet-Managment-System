@@ -1,5 +1,23 @@
 // TypeScript interfaces matching Django Vehicle model
 
+export interface VehiclePhoto {
+  id: number;
+  image: string; // absolute URL
+  uploaded_at: string;
+}
+
+export interface VehicleOwnerHistory {
+  id: number;
+  driver: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  };
+  agreement_number: string;
+  acquired_at: string;
+  released_at: string | null;
+}
+
 export type VehicleStatus =
   | 'CTO'
   | 'FOCUS'
@@ -36,6 +54,7 @@ export interface Vehicle {
     first_name: string;
     last_name: string;
   } | null;
+  photos: VehiclePhoto[];
   created_at: string; // ISO datetime
   updated_at: string; // ISO datetime
 }
@@ -47,7 +66,7 @@ export interface CreateVehicleData {
   cost: string | number;
   vin_number: string;
   car_number: string;
-  initial_km?: number;
+  initial_km: number;
   status?: VehicleStatus;
   driver?: string | null; // driver ID
 }

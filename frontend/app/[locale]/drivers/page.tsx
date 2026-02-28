@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Driver, CreateDriverData } from '@/types/driver';
 import { DriverForm } from '@/components/driver/DriverForm';
@@ -39,28 +39,25 @@ export default function DriversPage() {
 
   /**
    * Load drivers when page first loads
-   * This runs only once when component mounts (because of empty dependency array [])
    */
-  useEffect(() => {
-    loadDrivers();
-  }, []);
-
-  /**
-   * Fetch all drivers from the API
-   */
-  const loadDrivers = async () => {
+  const loadDrivers = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const data = await getAllDrivers();
       setDrivers(data);
-    } catch (err: any) {
-      setError(t('loadError') + ' ' + (err.message || ''));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(t('loadError') + ' ' + msg);
       console.error('Error loading drivers:', err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    loadDrivers();
+  }, [loadDrivers]);
 
   /**
    * Handle creating a new driver
@@ -76,7 +73,7 @@ export default function DriversPage() {
       // Close the form
       setShowForm(false);
       setEditingDriver(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating driver:', err);
       throw err; // Re-throw so form can handle the error
     } finally {
@@ -104,7 +101,7 @@ export default function DriversPage() {
       // Close the form
       setShowForm(false);
       setEditingDriver(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating driver:', err);
       throw err; // Re-throw so form can handle the error
     } finally {
@@ -153,8 +150,9 @@ export default function DriversPage() {
 
       // Close dialog
       setDriverToDelete(null);
-    } catch (err: any) {
-      setError(t('deleteError') + ': ' + (err.message || ''));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(t('deleteError') + ': ' + msg);
       console.error('Error deleting driver:', err);
     } finally {
       setIsDeleting(false);

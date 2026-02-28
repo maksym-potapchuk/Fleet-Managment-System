@@ -51,13 +51,21 @@ export function ServiceForm({ onSubmit, onCancel, initialData, isLoading = false
 
     try {
       await onSubmit(formData);
-    } catch (error: any) {
-      if (error.response?.data) {
-        const backendErrors: any = {};
-        Object.keys(error.response.data).forEach((key) => {
-          backendErrors[key] = Array.isArray(error.response.data[key])
-            ? error.response.data[key][0]
-            : error.response.data[key];
+    } catch (error: unknown) {
+      const data =
+        error &&
+        typeof error === 'object' &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response
+          ? (error.response as { data: Record<string, string | string[]> }).data
+          : null;
+      if (data) {
+        const backendErrors: Record<string, string> = {};
+        Object.keys(data).forEach((key) => {
+          const val = data[key];
+          backendErrors[key] = Array.isArray(val) ? val[0] : String(val);
         });
         setErrors(backendErrors);
       }

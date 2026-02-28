@@ -1,9 +1,65 @@
-import createMiddleware from 'next-intl/middleware';
+import { type NextRequest, NextResponse } from 'next/server';
+import createIntlMiddleware from 'next-intl/middleware';
 import { routing } from './src/i18n/routing';
 
-export default createMiddleware(routing);
+const handleI18n = createIntlMiddleware(routing);
+
+const ACCESS_TOKEN_COOKIE = 'access_token';
+
+// Public routes (no auth required) — canonical form (no locale prefix)
+const PUBLIC_PATHS = new Set(['/login']);
+
+// With localePrefix: 'as-needed', only non-default locales (uk) carry a prefix.
+// Default locale (pl) has no prefix: /dashboard, /login, etc.
+function getPathLocale(pathname: string): string {
+  return pathname.startsWith('/uk') ? 'uk' : routing.defaultLocale;
+}
+
+function getCanonicalPath(pathname: string): string {
+  return pathname.replace(/^\/uk(?=\/|$)/, '') || '/';
+}
+
+function buildLocalizedPath(locale: string, path: string): string {
+  return locale === routing.defaultLocale ? path : `/${locale}${path}`;
+}
+
+export default function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Skip auth check for Next.js internals and static assets
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/_vercel') ||
+    /\.(.*)$/.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
+  const canonical = getCanonicalPath(pathname);
+  const locale = getPathLocale(pathname);
+  const hasToken = request.cookies.has(ACCESS_TOKEN_COOKIE);
+  const isPublic = PUBLIC_PATHS.has(canonical);
+
+  // No token on a protected route → redirect to /login
+  if (!isPublic && !hasToken) {
+    const url = request.nextUrl.clone();
+    url.pathname = buildLocalizedPath(locale, '/login');
+    url.search = '';
+    return NextResponse.redirect(url);
+  }
+
+  // Already authenticated, trying to reach /login → redirect to /dashboard
+  if (isPublic && hasToken) {
+    const url = request.nextUrl.clone();
+    url.pathname = buildLocalizedPath(locale, '/dashboard');
+    url.search = '';
+    return NextResponse.redirect(url);
+  }
+
+  // Delegate locale handling to next-intl
+  return handleI18n(request);
+}
 
 export const config = {
-  // Match only internationalized pathnames
-  matcher: ['/', '/(pl|uk)/:path*', '/((?!_next|_vercel|.*\\..*).*)']
+  matcher: ['/', '/(pl|uk)/:path*', '/((?!_next|_vercel|.*\\..*).*)'],
 };

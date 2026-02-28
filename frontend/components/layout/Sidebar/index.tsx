@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { SidebarItem } from './SidebarItem';
 import { SidebarSection } from './SidebarSection';
 import { NavSection } from './types';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
@@ -101,11 +100,10 @@ export function Sidebar() {
       {!isMobileMenuOpen && (
         <button
           onClick={() => setIsMobileMenuOpen(true)}
-          className="fixed left-4 top-4 z-30 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-700 shadow-md hover:shadow-lg transition-all hover:bg-slate-50 active:scale-95 lg:hidden"
-          aria-label="Open sidebar"
+          className="fixed left-4 top-4 z-30 inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 shadow-md hover:shadow-lg transition-all hover:bg-slate-50 active:scale-95 lg:hidden"
+          aria-label="Відкрити меню"
         >
           <Menu className="h-5 w-5" />
-          <span className="text-sm font-semibold">Menu</span>
         </button>
       )}
     </>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/src/i18n/routing';
 import { VehicleKanban } from '@/components/vehicle/VehicleKanban';
@@ -19,12 +19,7 @@ export default function VehiclesPage() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Load vehicles
-  useEffect(() => {
-    loadVehicles();
-  }, []);
-
-  const loadVehicles = async () => {
+  const loadVehicles = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -36,7 +31,12 @@ export default function VehiclesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
+
+  // Load vehicles
+  useEffect(() => {
+    loadVehicles();
+  }, [loadVehicles]);
 
   const handleUpdateStatus = async (vehicleId: string, newStatus: VehicleStatus) => {
     // Store previous state for rollback
@@ -50,15 +50,17 @@ export default function VehiclesPage() {
 
       // API call
       await vehicleService.updateVehicleStatus(vehicleId, newStatus);
-      console.log('✅ Status updated successfully');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('❌ Failed to update vehicle status:', err);
 
       // Revert on error
       setVehicles(previousVehicles);
 
       // Show user-friendly error
-      const errorMessage = err.response?.data?.message || 'Не вдалося оновити статус';
+      const data = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data
+        : undefined;
+      const errorMessage = data?.message ?? 'Не вдалося оновити статус';
       alert(`Помилка: ${errorMessage}`);
     }
   };
@@ -105,15 +107,16 @@ export default function VehiclesPage() {
     try {
       const vehicle = await vehicleService.getVehicle(id);
 
-      // Create a copy with modified car_number and vin_number
+      // Create a copy with modified car_number and vin_number (respecting field length limits)
       const duplicateData = {
         model: vehicle.model,
         manufacturer: vehicle.manufacturer,
         year: vehicle.year,
         cost: vehicle.cost,
-        vin_number: vehicle.vin_number + '_COPY', // Temporary, user should change
-        car_number: vehicle.car_number + '-COPY',
+        vin_number: (vehicle.vin_number.slice(0, 12) + '_COPY').slice(0, 17),
+        car_number: (vehicle.car_number.slice(0, 5) + '-COPY').slice(0, 10),
         status: 'PREPARATION' as const,
+        initial_km: vehicle.initial_km,
       };
 
       await vehicleService.createVehicle(duplicateData);

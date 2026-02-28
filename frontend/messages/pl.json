@@ -213,7 +213,9 @@
     "tabs": {
       "service": "Serwis",
       "equipment": "Wyposażenie",
-      "regulation": "Regulamin"
+      "regulation": "Regulamin",
+      "photos": "Zdjęcia",
+      "owners": "Właściciele"
     },
     "service": {
       "title": "Przypomnienia serwisowe",
@@ -280,6 +282,29 @@
         "empty": "Brak historii dla tego pojazdu",
         "remaining": "pozostało"
       }
+    },
+    "photos": {
+      "title": "Zdjęcia",
+      "subtitle": "{count} / 10 zdjęć",
+      "add": "Dodaj zdjęcie",
+      "uploading": "Przesyłanie...",
+      "deleteConfirm": "Usunąć zdjęcie?",
+      "empty": "Brak zdjęć",
+      "emptyDesc": "Dodaj do 10 zdjęć tego pojazdu"
+    },
+    "owners": {
+      "title": "Właściciele",
+      "subtitle": "Historia właścicieli pojazdu",
+      "add": "Dodaj właściciela",
+      "selectDriver": "Wybierz kierowcę...",
+      "agreementPlaceholder": "Numer umowy (opcjonalnie)",
+      "save": "Zapisz",
+      "cancel": "Anuluj",
+      "close": "Zakończ",
+      "current": "Aktualny",
+      "agreement": "Umowa",
+      "empty": "Brak wpisów",
+      "emptyDesc": "Dodaj pierwszego właściciela tego pojazdu"
     }
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Service, CreateServiceData } from '@/types/service';
 import { ServiceForm } from '@/components/service/ServiceForm';
@@ -22,23 +22,24 @@ export default function ServicesPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadServices();
-  }, []);
-
-  const loadServices = async () => {
+  const loadServices = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const data = await getAllServices();
       setServices(data);
-    } catch (err: any) {
-      setError(t('loadError') + ' ' + (err.message || ''));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(t('loadError') + ' ' + msg);
       console.error('Error loading services:', err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    loadServices();
+  }, [loadServices]);
 
   const handleCreate = async (data: CreateServiceData) => {
     try {
@@ -47,7 +48,7 @@ export default function ServicesPage() {
       setServices(prev => [newService, ...prev]);
       setShowForm(false);
       setEditingService(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating service:', err);
       throw err;
     } finally {
@@ -68,7 +69,7 @@ export default function ServicesPage() {
       );
       setShowForm(false);
       setEditingService(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating service:', err);
       throw err;
     } finally {
@@ -101,8 +102,9 @@ export default function ServicesPage() {
       await deleteService(serviceToDelete.id);
       setServices(prev => prev.filter(s => s.id !== serviceToDelete.id));
       setServiceToDelete(null);
-    } catch (err: any) {
-      setError(t('deleteError') + ': ' + (err.message || ''));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(t('deleteError') + ': ' + msg);
       console.error('Error deleting service:', err);
     } finally {
       setIsDeleting(false);

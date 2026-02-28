@@ -1,5 +1,5 @@
 import api from '@/lib/api';
-import { Vehicle, CreateVehicleData, UpdateVehicleData, VehicleFilters } from '@/types/vehicle';
+import { Vehicle, VehiclePhoto, VehicleOwnerHistory, CreateVehicleData, UpdateVehicleData, VehicleFilters } from '@/types/vehicle';
 
 export const vehicleService = {
   // Get all vehicles
@@ -46,9 +46,50 @@ export const vehicleService = {
     try {
       const response = await api.patch<Vehicle>(`/vehicle/${id}/`, { status });
       return response.data;
-    } catch (error: any) {
-      console.error('Error updating vehicle status:', error.response?.data || error.message);
+    } catch (error: unknown) {
+      const logDetail =
+        error &&
+        typeof error === 'object' &&
+        'response' in error &&
+        (error as { response?: { data?: unknown } }).response?.data;
+      console.error(
+        'Error updating vehicle status:',
+        logDetail ?? (error instanceof Error ? error.message : String(error))
+      );
       throw error;
     }
+  },
+
+  // Photos
+  async uploadVehiclePhoto(vehicleId: string, file: File): Promise<VehiclePhoto> {
+    const formData = new FormData();
+    formData.append('image', file);
+    const response = await api.post<VehiclePhoto>(`/vehicle/${vehicleId}/photos/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  async deleteVehiclePhoto(vehicleId: string, photoId: number): Promise<void> {
+    await api.delete(`/vehicle/${vehicleId}/photos/${photoId}/`);
+  },
+
+  // Owner history
+  async getOwnerHistory(vehicleId: string): Promise<VehicleOwnerHistory[]> {
+    const response = await api.get<VehicleOwnerHistory[] | { results: VehicleOwnerHistory[] }>(`/vehicle/${vehicleId}/owner-history/`);
+    return Array.isArray(response.data) ? response.data : (response.data.results ?? []);
+  },
+
+  async addOwner(vehicleId: string, data: { driver: string; agreement_number?: string }): Promise<VehicleOwnerHistory> {
+    const response = await api.post<VehicleOwnerHistory>(`/vehicle/${vehicleId}/owner-history/`, data);
+    return response.data;
+  },
+
+  async closeOwnership(vehicleId: string, historyId: number): Promise<VehicleOwnerHistory> {
+    const response = await api.patch<VehicleOwnerHistory>(
+      `/vehicle/${vehicleId}/owner-history/${historyId}/`,
+      { released_at: new Date().toISOString() },
+    );
+    return response.data;
   },
 };
