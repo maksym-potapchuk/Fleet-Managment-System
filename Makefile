@@ -1,7 +1,7 @@
 .RECIPEPREFIX := >
 
 COMPOSE := docker compose
-COMPOSE_PROD := docker compose -f docker-compose.yml -f docker-compose.prod.yml
+COMPOSE_PROD := docker compose -f docker-compose.prod.yml
 BACKEND_SERVICE := backend
 FRONTEND_SERVICE := frontend
 BOT_SERVICE := bot
