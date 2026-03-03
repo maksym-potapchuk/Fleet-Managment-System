@@ -12,7 +12,12 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-const mockedApi = vi.mocked(api);
+const mockedApi = api as unknown as {
+  get: ReturnType<typeof vi.fn>;
+  post: ReturnType<typeof vi.fn>;
+  patch: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
