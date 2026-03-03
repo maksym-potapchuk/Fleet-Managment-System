@@ -16,7 +16,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push
+.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed db-reset dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push
 
 help:
 >@echo "Available commands:"
@@ -30,6 +30,7 @@ help:
 >@echo "  make prod-down           - Stop prod stack (when using make prod)"
 >@echo "  make prod-up             - Start prod stack only, no rebuild (up -d)"
 >@echo "  make docker-clean        - Stop all, remove containers, volumes, orphans"
+>@echo "  make docker-nuke         - Full clean: containers, volumes, images, build cache"
 >@echo "  make ps                  - Show container status"
 >@echo "  make logs                - Show all logs"
 >@echo "  make logs-backend        - Show backend logs"
@@ -46,6 +47,7 @@ help:
 >@echo "  make createsuperuser-auto - Create Django superuser (non-interactive)"
 >@echo "  make db-dump             - Export SQL dump to $(DUMP_FILE)"
 >@echo "  make db-seed             - Import SQL dump from $(DUMP_FILE)"
+>@echo "  make db-reset            - Drop and recreate database (full clean)"
 >@echo "  make create-reg-schema   - Seed default vehicle regulation schema"
 >@echo "  make create-driver-vehicle - Create driver +380663234712, vehicle, assign"
 >@echo "  make create-driver-vehicle-force - Same, recreate/reassign if exists"
@@ -92,6 +94,12 @@ docker-clean:
 >$(COMPOSE_PROD) down -v --remove-orphans
 >$(COMPOSE) down -v --remove-orphans
 >@echo "Docker cleaned: containers, volumes, orphans removed."
+
+docker-nuke:
+>$(COMPOSE_PROD) down -v --remove-orphans --rmi all
+>$(COMPOSE) down -v --remove-orphans --rmi all
+>docker builder prune -f
+>@echo "Docker nuked: containers, volumes, images, build cache removed."
 
 ps:
 >$(COMPOSE) ps
@@ -146,6 +154,12 @@ db-dump:
 db-seed:
 >$(COMPOSE) exec -T $(DB_SERVICE) psql -U $(DB_USER) -d $(DB_NAME) < $(DUMP_FILE)
 >@echo "Seed loaded from: $(DUMP_FILE)"
+
+db-reset:
+>$(COMPOSE) exec $(DB_SERVICE) psql -U $(DB_USER) -d postgres -c "DROP DATABASE IF EXISTS $(DB_NAME);"
+>$(COMPOSE) exec $(DB_SERVICE) psql -U $(DB_USER) -d postgres -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);"
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py migrate
+>@echo "Database reset: dropped, recreated, migrations applied."
 
 dump: db-dump
 
