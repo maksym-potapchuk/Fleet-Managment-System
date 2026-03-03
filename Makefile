@@ -4,6 +4,7 @@ COMPOSE := docker compose
 COMPOSE_PROD := docker compose -f docker-compose.prod.yml
 BACKEND_SERVICE := backend
 FRONTEND_SERVICE := frontend
+NGINX_SERVICE := nginx
 BOT_SERVICE := bot
 DB_SERVICE := postgres
 
@@ -15,7 +16,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean ps logs logs-backend logs-frontend logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push
+.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push
 
 help:
 >@echo "Available commands:"
@@ -33,6 +34,7 @@ help:
 >@echo "  make logs                - Show all logs"
 >@echo "  make logs-backend        - Show backend logs"
 >@echo "  make logs-frontend       - Show frontend logs"
+>@echo "  make logs-nginx          - Show nginx logs"
 >@echo "  make logs-bot            - Show bot logs"
 >@echo "  make logs-db             - Show postgres logs"
 >@echo "  make shell-backend       - Open backend shell"
@@ -105,6 +107,9 @@ logs-backend:
 
 logs-frontend:
 >$(COMPOSE) logs -f $(FRONTEND_SERVICE)
+
+logs-nginx:
+>$(COMPOSE) logs -f $(NGINX_SERVICE)
 
 logs-bot:
 >$(COMPOSE) logs -f $(BOT_SERVICE)

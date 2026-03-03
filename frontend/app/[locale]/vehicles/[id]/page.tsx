@@ -855,17 +855,17 @@ function ServiceTab({ vehicleId }: { vehicleId: string }) {
   return (
     <div>
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="flex items-start justify-between gap-3 sm:gap-4 mb-4">
         <div>
-          <h2 className="text-xl font-black text-slate-900">{t('title')}</h2>
-          <p className="text-sm text-slate-500 mt-0.5 font-medium">{t('subtitle')}</p>
+          <h2 className="text-lg sm:text-xl font-black text-slate-900">{t('title')}</h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-medium">{t('subtitle')}</p>
         </div>
         <button
           onClick={() => { setShowAdd(v => !v); setNewTitle(''); setNewDesc(''); setNewDate(''); }}
-          className="flex items-center gap-2 bg-gradient-to-r from-[#2D8B7E] to-[#248B7B] text-white px-4 py-2 rounded-xl hover:shadow-lg hover:shadow-[#2D8B7E]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shadow-md text-sm font-bold flex-shrink-0"
+          className="flex items-center gap-2 bg-gradient-to-r from-[#2D8B7E] to-[#248B7B] text-white px-3 sm:px-4 py-2 rounded-xl hover:shadow-lg hover:shadow-[#2D8B7E]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shadow-md text-sm font-bold flex-shrink-0"
         >
           <Plus className="w-4 h-4" strokeWidth={3} />
-          {t('add')}
+          <span className="hidden sm:inline">{t('add')}</span>
         </button>
       </div>
 
@@ -886,7 +886,7 @@ function ServiceTab({ vehicleId }: { vehicleId: string }) {
 
       {/* ── Inline add form ── */}
       {showAdd && (
-        <div className="mb-4 p-4 bg-white border border-[#2D8B7E]/30 rounded-2xl shadow-sm space-y-3">
+        <div className="mb-4 p-3 sm:p-4 bg-white border border-[#2D8B7E]/30 rounded-2xl shadow-sm space-y-3">
           <input
             autoFocus
             type="text"
@@ -903,14 +903,14 @@ function ServiceTab({ vehicleId }: { vehicleId: string }) {
             placeholder={t('descPlaceholder')}
             className="w-full text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] resize-none"
           />
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 flex-1">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1">
               <label className="text-xs font-semibold text-slate-500 flex-shrink-0">{t('plannedLabel')}</label>
               <input
                 type="date"
                 value={newDate}
                 onChange={e => setNewDate(e.target.value)}
-                className="text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E]"
+                className="flex-1 sm:flex-initial text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E]"
               />
             </div>
             <button
@@ -1004,7 +1004,7 @@ function ServiceTab({ vehicleId }: { vehicleId: string }) {
             return (
               <div
                 key={plan.id}
-                className="flex items-start gap-4 bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-sm group hover:border-slate-300 transition-colors"
+                className="flex flex-wrap sm:flex-nowrap items-start gap-3 sm:gap-4 bg-white border border-slate-200 rounded-2xl px-3 sm:px-5 py-3 sm:py-4 shadow-sm group hover:border-slate-300 transition-colors"
               >
                 {/* Done toggle */}
                 <button
@@ -1036,31 +1036,31 @@ function ServiceTab({ vehicleId }: { vehicleId: string }) {
                 </div>
 
                 {/* Date badge */}
-                <div className={`flex-shrink-0 flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-lg border ${style.badge}`}>
+                <div className={`flex-shrink-0 flex items-center gap-1.5 text-[11px] sm:text-xs font-bold px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border ${style.badge}`}>
                   <span>{style.label}</span>
-                  <span>·</span>
-                  <span>{new Date(plan.planned_at).toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' })}</span>
+                  <span className="hidden sm:inline">·</span>
+                  <span className="hidden sm:inline">{new Date(plan.planned_at).toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' })}</span>
                 </div>
 
-                {/* Edit */}
-                <button
-                  onClick={() => startEdit(plan)}
-                  disabled={isDeleting || isToggling}
-                  className="mt-0.5 w-7 h-7 flex items-center justify-center text-slate-300 hover:text-[#2D8B7E] transition-all disabled:opacity-40 opacity-0 group-hover:opacity-100 flex-shrink-0"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-
-                {/* Delete */}
-                <button
-                  onClick={() => deletePlan(plan.id)}
-                  disabled={isDeleting || isToggling}
-                  className="mt-0.5 w-7 h-7 flex items-center justify-center text-slate-300 hover:text-red-400 transition-all disabled:opacity-40 opacity-0 group-hover:opacity-100 flex-shrink-0"
-                >
-                  {isDeleting
-                    ? <div className="w-3 h-3 border-2 border-red-300 border-t-transparent rounded-full animate-spin" />
-                    : <Trash2 className="w-3.5 h-3.5" />}
-                </button>
+                {/* Edit + Delete */}
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  <button
+                    onClick={() => startEdit(plan)}
+                    disabled={isDeleting || isToggling}
+                    className="mt-0.5 w-7 h-7 flex items-center justify-center text-slate-300 hover:text-[#2D8B7E] transition-all disabled:opacity-40 sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => deletePlan(plan.id)}
+                    disabled={isDeleting || isToggling}
+                    className="mt-0.5 w-7 h-7 flex items-center justify-center text-slate-300 hover:text-red-400 transition-all disabled:opacity-40 sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0"
+                  >
+                    {isDeleting
+                      ? <div className="w-3 h-3 border-2 border-red-300 border-t-transparent rounded-full animate-spin" />
+                      : <Trash2 className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -1380,14 +1380,14 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
     return (
       <div>
         {/* Header + view toggle */}
-        <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
           <div>
-            <h2 className="text-xl font-black text-slate-900">{t('title')}</h2>
-            <p className="text-sm text-slate-500 mt-0.5 font-medium">
+            <h2 className="text-lg sm:text-xl font-black text-slate-900">{t('title')}</h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-medium">
               {localTitle(plan.schema, locale)} · {t('assignedOn')} {new Date(plan.assigned_at).toLocaleDateString()}
             </p>
           </div>
-          <div className="flex bg-slate-100 rounded-xl p-1 gap-1 flex-shrink-0">
+          <div className="flex bg-slate-100 rounded-xl p-1 gap-1 flex-shrink-0 w-fit">
             <button
               onClick={() => setActiveView('plan')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -1423,11 +1423,11 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
               return (
                 <div
                   key={entry.id}
-                  className={`bg-white border rounded-2xl px-5 py-4 shadow-sm transition-colors ${
+                  className={`bg-white border rounded-2xl px-3 sm:px-5 py-3 sm:py-4 shadow-sm transition-colors ${
                     isOverdue ? 'border-red-200' : isDueSoon ? 'border-amber-200' : 'border-slate-200'
                   }`}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4">
                     {/* Status dot */}
                     <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
                       isOverdue ? 'bg-red-500' : isDueSoon ? 'bg-amber-400' : 'bg-emerald-500'
@@ -1440,7 +1440,8 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-shrink-0 text-right">
+                    {/* Desktop: km blocks + mark done inline */}
+                    <div className="hidden md:flex items-center gap-2 flex-shrink-0 text-right">
                       <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('done')}</p>
                         <p className="text-sm font-bold text-slate-700">{entry.last_done_km.toLocaleString()} {t('km')}</p>
@@ -1459,8 +1460,6 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                           isOverdue ? 'text-red-600' : isDueSoon ? 'text-amber-700' : 'text-[#2D8B7E]'
                         }`}>{entry.next_due_km.toLocaleString()} {t('km')}</p>
                       </div>
-
-                      {/* Mark done button */}
                       <button
                         onClick={() => { setMarkingId(entry.id); setMarkKm(String(initialKm)); }}
                         className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#2D8B7E] bg-slate-50 hover:bg-[#2D8B7E]/5 border border-slate-200 hover:border-[#2D8B7E]/30 rounded-xl px-3 py-2 transition-all"
@@ -1469,11 +1468,41 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                         {t('markDone')}
                       </button>
                     </div>
+
+                    {/* Mobile: mark done icon button */}
+                    <button
+                      onClick={() => { setMarkingId(entry.id); setMarkKm(String(initialKm)); }}
+                      className="flex md:hidden items-center text-xs font-bold text-slate-500 hover:text-[#2D8B7E] bg-slate-50 hover:bg-[#2D8B7E]/5 border border-slate-200 hover:border-[#2D8B7E]/30 rounded-xl p-2 transition-all flex-shrink-0"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Mobile: km blocks below title */}
+                  <div className="flex md:hidden items-center gap-2 mt-2.5 ml-[22px] sm:ml-[26px]">
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('done')}</p>
+                      <p className="text-xs font-bold text-slate-700">{entry.last_done_km.toLocaleString()} {t('km')}</p>
+                    </div>
+                    <div className={`rounded-xl px-2.5 py-1.5 border ${
+                      isOverdue
+                        ? 'bg-red-50 border-red-200'
+                        : isDueSoon
+                          ? 'bg-amber-50 border-amber-200'
+                          : 'bg-[#2D8B7E]/5 border-[#2D8B7E]/20'
+                    }`}>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest ${
+                        isOverdue ? 'text-red-500' : isDueSoon ? 'text-amber-500' : 'text-[#2D8B7E]/70'
+                      }`}>{t('next')}</p>
+                      <p className={`text-xs font-bold ${
+                        isOverdue ? 'text-red-600' : isDueSoon ? 'text-amber-700' : 'text-[#2D8B7E]'
+                      }`}>{entry.next_due_km.toLocaleString()} {t('km')}</p>
+                    </div>
                   </div>
 
                   {/* Inline mark-done form */}
                   {isMarking && (
-                    <div className="mt-3 flex items-center gap-2 pt-3 border-t border-slate-100">
+                    <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
                       <Gauge className="w-4 h-4 text-slate-400 flex-shrink-0" />
                       <span className="text-xs text-slate-500 font-medium flex-shrink-0">Виконано при:</span>
                       <input
@@ -1483,7 +1512,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                         value={markKm}
                         onChange={e => setMarkKm(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') markDone(entry.id); if (e.key === 'Escape') { setMarkingId(null); setMarkKm(''); } }}
-                        className="w-32 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-24 sm:w-32 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2.5 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                       <span className="text-xs text-slate-400 font-medium">{t('km')}</span>
                       <button
@@ -1543,7 +1572,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
             const lastDone = parseInt(kmInputs[item.id] ?? '0', 10) || 0;
             const nextDue = lastDone + item.every_km;
             return (
-              <div key={item.id} className="flex items-center gap-4 px-5 py-4">
+              <div key={item.id} className="flex flex-wrap md:flex-nowrap items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-4">
                 <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 text-xs font-bold flex items-center justify-center flex-shrink-0">
                   {idx + 1}
                 </span>
@@ -1553,8 +1582,8 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                     {t('everyKm', { km: item.every_km.toLocaleString() })}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <div className="text-right">
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 w-full md:w-auto ml-9 md:ml-0">
+                  <div className="text-right flex-1 md:flex-initial">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
                       Останній раз
                     </p>
@@ -1564,10 +1593,10 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                       placeholder="0"
                       value={kmInputs[item.id] ?? ''}
                       onChange={e => setKmInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
-                      className="w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-full md:w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
-                  <div className="w-4 h-px bg-slate-200 flex-shrink-0" />
+                  <div className="w-4 h-px bg-slate-200 flex-shrink-0 hidden sm:block" />
                   <div className="bg-[#2D8B7E]/5 border border-[#2D8B7E]/20 rounded-xl px-3 py-2 text-right min-w-[90px]">
                     <p className="text-[10px] font-bold text-[#2D8B7E]/70 uppercase tracking-widest mb-0.5">
                       {t('next')}
@@ -1679,8 +1708,8 @@ function RegulationHistoryPanel({ vehicleId }: { vehicleId: string }) {
   return (
     <div>
       {/* ── Filters ── */}
-      <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-        <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 sm:mb-6 p-3 sm:p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
           <Filter className="w-3.5 h-3.5 text-slate-400" />
           <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">
             {t('history.filters')}
@@ -1761,28 +1790,28 @@ function RegulationHistoryPanel({ vehicleId }: { vehicleId: string }) {
 
               {/* Entries with vertical line */}
               <div className="relative">
-                <div className="absolute left-[19px] top-4 bottom-4 w-px bg-slate-200" />
+                <div className="absolute left-[15px] sm:left-[19px] top-4 bottom-4 w-px bg-slate-200" />
                 <div className="space-y-3">
                   {group.entries.map(entry => {
                     const cfg = EVENT_CONFIG[entry.event_type];
                     return (
-                      <div key={entry.id} className="relative flex items-start gap-4 pl-11">
+                      <div key={entry.id} className="relative flex items-start gap-3 sm:gap-4 pl-9 sm:pl-11">
                         {/* Timeline dot */}
                         <div
-                          className={`absolute left-3.5 top-4 w-3 h-3 rounded-full ${cfg.dot} border-2 border-white shadow-sm z-10`}
+                          className={`absolute left-2.5 sm:left-3.5 top-3.5 sm:top-4 w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full ${cfg.dot} border-2 border-white shadow-sm z-10`}
                         />
                         {/* Card */}
-                        <div className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm hover:border-slate-300 transition-colors">
-                          <div className="flex items-start justify-between gap-3 flex-wrap">
-                            <div className="flex items-center gap-2 flex-wrap min-w-0">
-                              <span className="text-sm font-bold text-slate-900 truncate">
+                        <div className="flex-1 bg-white border border-slate-200 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 shadow-sm hover:border-slate-300 transition-colors">
+                          <div className="flex items-start justify-between gap-2 sm:gap-3 flex-wrap">
+                            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+                              <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
                                 {itemTitle(entry)}
                               </span>
-                              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${cfg.badge} flex-shrink-0`}>
+                              <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full border ${cfg.badge} flex-shrink-0`}>
                                 {t(`history.${entry.event_type}`)}
                               </span>
                             </div>
-                            <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap flex-shrink-0">
+                            <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium whitespace-nowrap flex-shrink-0">
                               {new Date(entry.created_at).toLocaleString(
                                 locale === 'uk' ? 'uk-UA' : 'pl-PL',
                                 { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' },
@@ -1790,7 +1819,7 @@ function RegulationHistoryPanel({ vehicleId }: { vehicleId: string }) {
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-3 mt-2 flex-wrap">
+                          <div className="flex items-center gap-2 sm:gap-3 mt-1.5 sm:mt-2 flex-wrap">
                             <div className="flex items-center gap-1.5">
                               <Gauge className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} />
                               <span className="text-xs font-semibold text-slate-700">
@@ -2387,22 +2416,22 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
         const daysLeft = Math.round((new Date(latest.next_inspection_date || latest.expiry_date).getTime() - Date.now()) / 86400000);
         const sc = getStatusColor(daysLeft);
         return (
-          <div className={`${sc.bg} border ${sc.border} rounded-2xl p-5`}>
-            <div className="flex items-center gap-3 mb-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${sc.badge}`}>
-                <ShieldCheck className="w-5 h-5" />
+          <div className={`${sc.bg} border ${sc.border} rounded-2xl p-3 sm:p-5`}>
+            <div className="flex items-start sm:items-center gap-3 mb-3">
+              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${sc.badge}`}>
+                <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-slate-900">{t('current')}</h3>
-                <p className="text-sm text-slate-500">{t('subtitle')}</p>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900">{t('current')}</h3>
+                <p className="text-xs sm:text-sm text-slate-500">{t('subtitle')}</p>
               </div>
-              <span className={`px-3 py-1.5 rounded-xl text-sm font-bold ${sc.badge}`}>
+              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs sm:text-sm font-bold flex-shrink-0 ${sc.badge}`}>
                 {daysLeft < 0
                   ? t('overdue', { days: Math.abs(daysLeft) })
                   : t('daysLeft', { days: daysLeft })}
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <p className="text-xs text-slate-500 font-medium mb-0.5">{t('inspectionDate')}</p>
                 <p className="text-sm font-bold text-slate-800">
@@ -2525,21 +2554,21 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
             const daysLeft = Math.round((new Date(ins.next_inspection_date || ins.expiry_date).getTime() - Date.now()) / 86400000);
             const isExpired = daysLeft < 0;
             return (
-              <div key={ins.id} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
+              <div key={ins.id} className={`flex items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border transition-all ${
                 isExpired ? 'bg-red-50/50 border-red-200/60' : 'bg-white border-slate-200/60 hover:border-slate-300'
               }`}>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${
                   isExpired ? 'bg-red-100 text-red-500' : 'bg-emerald-100 text-emerald-500'
                 }`}>
-                  <Calendar className="w-5 h-5" />
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-slate-800">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <span className="text-xs sm:text-sm font-bold text-slate-800">
                       {new Date(ins.inspection_date).toLocaleDateString()}
                     </span>
                     <span className="text-slate-300">&rarr;</span>
-                    <span className={`text-sm font-semibold ${isExpired ? 'text-red-600' : 'text-slate-600'}`}>
+                    <span className={`text-xs sm:text-sm font-semibold ${isExpired ? 'text-red-600' : 'text-slate-600'}`}>
                       {new Date(ins.next_inspection_date || ins.expiry_date).toLocaleDateString()}
                     </span>
                   </div>
@@ -2564,7 +2593,7 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
                 <button
                   onClick={() => handleDelete(ins.id)}
                   disabled={deletingId === ins.id}
-                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all disabled:opacity-50 shrink-0"
+                  className="p-1.5 sm:p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all disabled:opacity-50 shrink-0"
                 >
                   {deletingId === ins.id
                     ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -2662,14 +2691,14 @@ function ExpensesTab({ vehicleId }: { vehicleId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-slate-900">{t('title')}</h3>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-base sm:text-lg font-bold text-slate-900">{t('title')}</h3>
         <button
           onClick={() => { setEditingExpense(null); setShowForm(true); }}
-          className="flex items-center gap-1.5 px-3 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
-          {t('addExpense')}
+          <span className="hidden sm:inline">{t('addExpense')}</span>
         </button>
       </div>
 
