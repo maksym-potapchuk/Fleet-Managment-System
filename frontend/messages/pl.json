@@ -12,7 +12,9 @@
     "confirm": "Potwierdź",
     "close": "Zamknij",
     "yes": "Tak",
-    "no": "Nie"
+    "no": "Nie",
+    "chooseFile": "Wybierz plik",
+    "noFileChosen": "Nie wybrano pliku"
   },
   "nav": {
     "dashboard": "Panel główny",
@@ -30,6 +32,7 @@
     "email": "Email",
     "password": "Hasło",
     "loginError": "Nieprawidłowy email lub hasło",
+    "rememberMe": "Zapamiętaj mnie",
     "welcomeBack": "Witaj ponownie"
   },
   "dashboard": {
@@ -149,6 +152,32 @@
     "duplicate": "Duplikuj",
     "delete": "Usuń",
     "deleteConfirm": "Usunąć pojazd {number}?",
+    "archive": "Archiwum",
+    "archiveVehicle": "Archiwizuj",
+    "archiveConfirm": "Archiwizować pojazd {number}?",
+    "archiveSuccess": "Pojazd zarchiwizowany",
+    "archiveError": "Nie udało się zarchiwizować pojazdu",
+    "restoreVehicle": "Przywróć",
+    "restoreSuccess": "Pojazd przywrócony",
+    "restoreError": "Nie udało się przywrócić pojazdu",
+    "permanentDelete": "Usuń na stałe",
+    "permanentDeleteConfirm": "Czy na pewno? Wszystkie informacje o tym pojeździe zostaną trwale usunięte.",
+    "permanentDeleteWarning": "Ten pojazd ma powiązane dane ({details}). Wszystkie informacje zostaną trwale usunięte. Czy na pewno?",
+    "permanentDeleteSuccess": "Pojazd trwale usunięty",
+    "permanentDeleteError": "Nie udało się usunąć pojazdu",
+    "archivedAt": "Zarchiwizowano",
+    "noArchivedVehicles": "Brak zarchiwizowanych pojazdów",
+    "noArchivedVehiclesDesc": "Zarchiwizowane pojazdy pojawią się tutaj",
+    "relatedData": {
+      "ownerHistory": "właścicieli: {count}",
+      "driverHistory": "kierowców: {count}",
+      "photos": "zdjęć: {count}",
+      "inspections": "przeglądów: {count}",
+      "serviceHistory": "serwisów: {count}",
+      "regulations": "regulaminów: {count}",
+      "servicePlans": "planów: {count}",
+      "equipment": "wyposażenia: {count}"
+    },
     "loading": "Ładowanie...",
     "error": "Błąd",
     "tryAgain": "Spróbuj ponownie",
@@ -162,6 +191,16 @@
       "withoutDriver": "Bez kierowcy",
       "clearAll": "Wyczyść wszystkie filtry"
     },
+    "inspection": {
+      "days": "Przegląd: {days} dni",
+      "overdue": "Przeterminowany: {days} dni",
+      "noData": "Przegląd: —"
+    },
+    "regulation": {
+      "overdue": "Regulamin: {count} zaległe",
+      "ok": "Regulamin OK",
+      "none": "Brak regulaminu"
+    },
     "statuses": {
       "CTO": "CTO",
       "FOCUS": "Focus",
@@ -172,6 +211,15 @@
       "RENT": "Wynajem",
       "SELLING": "Sprzedaż",
       "SOLD": "Sprzedane"
+    },
+    "totalCost": "Koszt całkowity",
+    "fuelTypes": {
+      "GASOLINE": "Benzyna",
+      "DIESEL": "Diesel",
+      "LPG": "LPG",
+      "LPG_GASOLINE": "LPG + Benzyna",
+      "ELECTRIC": "Elektryczny",
+      "HYBRID": "Hybryda"
     }
   },
   "calendar": {
@@ -210,12 +258,20 @@
     "vehicleNotFound": "Pojazd nie znaleziony",
     "backToVehicles": "Flota",
     "edit": "Edytuj",
+    "addPhoto": "Dodaj zdjęcie",
+    "driver": {
+      "searchPlaceholder": "Szukaj po imieniu..."
+    },
     "tabs": {
       "service": "Serwis",
       "equipment": "Wyposażenie",
       "regulation": "Regulamin",
       "photos": "Zdjęcia",
-      "owners": "Właściciele"
+      "owners": "Właściciele",
+      "mileage": "Przebieg",
+      "history": "Dziennik",
+      "inspection": "Przegląd",
+      "expenses": "Wydatki"
     },
     "service": {
       "title": "Przypomnienia serwisowe",
@@ -292,6 +348,29 @@
       "empty": "Brak zdjęć",
       "emptyDesc": "Dodaj do 10 zdjęć tego pojazdu"
     },
+    "inspection": {
+      "title": "Przegląd techniczny",
+      "subtitle": "Historia przeglądów technicznych",
+      "current": "Aktualny przegląd",
+      "add": "Dodaj przegląd",
+      "inspectionDate": "Data przeglądu",
+      "validUntil": "Ważny do",
+      "notes": "Uwagi",
+      "notesPlaceholder": "Dodatkowe informacje (opcjonalnie)",
+      "report": "Raport (PDF)",
+      "noReport": "Brak raportu",
+      "downloadReport": "Pobierz raport",
+      "save": "Zapisz",
+      "cancel": "Anuluj",
+      "deleteConfirm": "Usunąć wpis przeglądu?",
+      "empty": "Brak wpisów",
+      "emptyDesc": "Dodaj pierwszy przegląd techniczny",
+      "daysLeft": "{days} dni",
+      "overdue": "Przeterminowany {days} dni",
+      "noData": "Przegląd: —",
+      "nextInspectionDate": "Data następnego przeglądu",
+      "registeredAt": "Zarejestrowano"
+    },
     "owners": {
       "title": "Właściciele",
       "subtitle": "Historia właścicieli pojazdu",
@@ -305,6 +384,199 @@
       "agreement": "Umowa",
       "empty": "Brak wpisów",
       "emptyDesc": "Dodaj pierwszego właściciela tego pojazdu"
+    },
+    "mileage": {
+      "title": "Przebieg",
+      "subtitle": "Historia zmian przebiegu pojazdu",
+      "add": "Dodaj wpis",
+      "kmPlaceholder": "Przebieg (km)",
+      "save": "Zapisz",
+      "cancel": "Anuluj",
+      "empty": "Brak wpisów przebiegu",
+      "emptyDesc": "Dodaj pierwszy wpis o przebiegu tego pojazdu",
+      "updateMileage": "Zaktualizuj przebieg",
+      "newKm": "Nowy przebieg (km)",
+      "minError": "Przebieg musi być większy niż {km} km"
+    },
+    "expenses": {
+      "title": "Wydatki pojazdu",
+      "subtitle": "Rejestr wydatków tego pojazdu",
+      "add": "Dodaj wydatek",
+      "save": "Zapisz",
+      "cancel": "Anuluj",
+      "empty": "Brak wydatków",
+      "emptyDesc": "Dodaj pierwszy wydatek dla tego pojazdu",
+      "deleteConfirm": "Usunąć ten wydatek?",
+      "amount": "Kwota (PLN)",
+      "date": "Data",
+      "receipt": "Paragon/Faktura",
+      "type": "Typ wydatku"
+    }
+  },
+  "expenses": {
+    "title": "Wydatki",
+    "subtitle": "Zarządzanie wydatkami floty",
+    "addExpense": "Dodaj wydatek",
+    "editExpense": "Edytuj wydatek",
+    "noExpenses": "Nie ma jeszcze wydatków",
+    "noExpensesDesc": "Kliknij 'Dodaj wydatek' aby utworzyć pierwszy wpis",
+    "deleteConfirmTitle": "Usunąć wydatek?",
+    "deleteConfirmMessage": "Czy na pewno chcesz usunąć ten wydatek? Tej operacji nie można cofnąć.",
+    "deleteError": "Nie udało się usunąć wydatku",
+    "loadError": "Nie udało się załadować wydatków",
+    "types": {
+      "FUEL": "Paliwo",
+      "SERVICE": "Serwis/Naprawa",
+      "PARTS": "Części",
+      "WASHING": "Czyszczenie chemiczne",
+      "FINES": "Mandaty",
+      "INSPECTION": "Przegląd techniczny",
+      "ACCESSORIES": "Akcesoria",
+      "DOCUMENTS": "Dokumenty",
+      "OTHER": "Inne"
+    },
+    "fields": {
+      "vehicle": "Pojazd",
+      "category": "Kategoria wydatku",
+      "amount": "Kwota (PLN)",
+      "expenseDate": "Data wydatku",
+      "receipt": "Paragon",
+      "invoice": "Faktura",
+      "liters": "Litry",
+      "fuelType": "Typ paliwa",
+      "selectService": "Wybierz serwis",
+      "serviceItems": "Usługi",
+      "serviceName": "Nazwa usługi",
+      "servicePrice": "Cena",
+      "addServiceItem": "Dodaj usługę",
+      "washType": "Typ mycia",
+      "fineNumber": "Numer mandatu",
+      "violationType": "Typ wykroczenia",
+      "fineDate": "Data wykroczenia",
+      "driverAtTime": "Kierowca",
+      "paymentMethod": "Metoda płatności",
+      "payerType": "Kto płaci",
+      "expenseFor": "Wydatek dla",
+      "expenseForPlaceholder": "np. Na flotę, Jan Kowalski",
+      "expenseForFleet": "Na flotę",
+      "sourceName": "Strona/źródło",
+      "supplierType": "Typ dostawcy",
+      "partName": "Nazwa części",
+      "quantity": "Ilość",
+      "unitPrice": "Cena za sztukę",
+      "addPart": "Dodaj część",
+      "removePart": "Usuń",
+      "invoiceRequired": "Faktura jest wymagana dla serwisu",
+      "inspectionDate": "Data przeglądu",
+      "officialCost": "Koszt oficjalny",
+      "additionalCost": "Koszty dodatkowe",
+      "nextInspectionDate": "Data następnego przeglądu",
+      "itemName": "Nazwa",
+      "addItem": "Dodaj pozycję",
+      "expenseName": "Nazwa wydatku",
+      "expenseNamePlaceholder": "np. Parking, Mycie ręczne"
+    },
+    "detail": {
+      "title": "Szczegóły wydatku",
+      "amount": "Kwota",
+      "date": "Data",
+      "vehicle": "Pojazd",
+      "categoryDetails": "Szczegóły kategorii",
+      "liters": "Litry",
+      "fuelType": "Typ paliwa",
+      "serviceName": "Serwis",
+      "serviceItems": "Usługi",
+      "washType": "Typ mycia",
+      "violationType": "Typ wykroczenia",
+      "fineNumber": "Numer mandatu",
+      "fineDate": "Data wykroczenia",
+      "inspectionDate": "Data przeglądu",
+      "officialCost": "Koszt oficjalny",
+      "additionalCost": "Koszty dodatkowe",
+      "nextInspectionDate": "Data następnego przeglądu",
+      "parts": "Części",
+      "attachments": "Załączniki",
+      "receipt": "Paragon",
+      "invoices": "Faktury",
+      "createdAt": "Utworzono",
+      "updatedAt": "Zaktualizowano"
+    },
+    "paymentMethods": {
+      "CASH": "Gotówka",
+      "CASHLESS": "Bezgotówkowy"
+    },
+    "payerTypes": {
+      "COMPANY": "Firma",
+      "CLIENT": "Klient"
+    },
+    "supplierTypes": {
+      "DISASSEMBLY": "Rozbiórka",
+      "INDIVIDUAL": "Osoba fizyczna"
+    },
+    "fuelTypes": {
+      "GASOLINE": "Benzyna",
+      "DIESEL": "Diesel",
+      "LPG": "LPG",
+      "ELECTRIC": "Elektryczny"
+    },
+    "washTypes": {
+      "EXTERIOR": "Zewnątrz",
+      "INTERIOR": "Wewnątrz",
+      "FULL": "Pełne"
+    },
+    "filters": {
+      "search": "Szukaj",
+      "searchPlaceholder": "Numer, marka, model...",
+      "allTypes": "Wszystkie typy",
+      "allVehicles": "Wszystkie pojazdy",
+      "allPaymentMethods": "Wszystkie metody",
+      "allPayerTypes": "Wszyscy płatnicy",
+      "dateFrom": "Od",
+      "dateTo": "Do",
+      "clearAll": "Wyczyść filtry"
+    }
+  },
+  "quickExpenses": {
+    "title": "Szybkie wydatki",
+    "subtitle": "Dodaj wiele wydatków dla jednego pojazdu",
+    "steps": {
+      "vehicle": "Pojazd",
+      "add": "Dodaj",
+      "review": "Podsumowanie"
+    },
+    "vehicleStep": {
+      "title": "Wybierz pojazd",
+      "recent": "Ostatnie pojazdy",
+      "searchPlaceholder": "Szukaj po numerze, marce..."
+    },
+    "addStep": {
+      "selectCategory": "Wybierz kategorię",
+      "addEntry": "Dodaj",
+      "goToReview": "Podsumowanie (__count__)",
+      "noEntries": "Dodaj pierwszy wydatek",
+      "changeVehicle": "Zmień pojazd",
+      "date": "Data",
+      "amount": "Kwota"
+    },
+    "reviewStep": {
+      "title": "Podsumowanie",
+      "vehicle": "Pojazd",
+      "entries": "__count__ wydatków",
+      "total": "Razem",
+      "submitAll": "Zapisz wszystkie",
+      "addMore": "Dodaj więcej",
+      "edit": "Edytuj",
+      "remove": "Usuń"
+    },
+    "submission": {
+      "submitting": "Zapisywanie...",
+      "progress": "__done__ z __total__",
+      "success": "Wszystkie wydatki zapisane!",
+      "partialSuccess": "__success__ z __total__ zapisanych",
+      "failed": "Nie udało się zapisać",
+      "retryFailed": "Ponów nieudane",
+      "done": "Gotowe",
+      "goToExpenses": "Zobacz wydatki"
     }
   }
 }

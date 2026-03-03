@@ -12,7 +12,9 @@
     "confirm": "Підтвердити",
     "close": "Закрити",
     "yes": "Так",
-    "no": "Ні"
+    "no": "Ні",
+    "chooseFile": "Оберіть файл",
+    "noFileChosen": "Файл не обрано"
   },
   "nav": {
     "dashboard": "Панель",
@@ -30,6 +32,7 @@
     "email": "Email",
     "password": "Пароль",
     "loginError": "Невірний email або пароль",
+    "rememberMe": "Запам'ятати мене",
     "welcomeBack": "Ласкаво просимо"
   },
   "dashboard": {
@@ -149,6 +152,32 @@
     "duplicate": "Дублювати",
     "delete": "Видалити",
     "deleteConfirm": "Видалити автомобіль {number}?",
+    "archive": "Архів",
+    "archiveVehicle": "Архівувати",
+    "archiveConfirm": "Архівувати автомобіль {number}?",
+    "archiveSuccess": "Автомобіль архівовано",
+    "archiveError": "Не вдалося архівувати автомобіль",
+    "restoreVehicle": "Відновити",
+    "restoreSuccess": "Автомобіль відновлено",
+    "restoreError": "Не вдалося відновити автомобіль",
+    "permanentDelete": "Видалити назавжди",
+    "permanentDeleteConfirm": "Ви впевнені? Вся інформація про цей автомобіль буде видалена назавжди.",
+    "permanentDeleteWarning": "Цей автомобіль має пов'язані дані ({details}). Вся інформація буде видалена назавжди. Ви впевнені?",
+    "permanentDeleteSuccess": "Автомобіль видалено назавжди",
+    "permanentDeleteError": "Не вдалося видалити автомобіль",
+    "archivedAt": "Архівовано",
+    "noArchivedVehicles": "Немає архівованих автомобілів",
+    "noArchivedVehiclesDesc": "Архівовані автомобілі з'являться тут",
+    "relatedData": {
+      "ownerHistory": "власників: {count}",
+      "driverHistory": "водіїв: {count}",
+      "photos": "фото: {count}",
+      "inspections": "техоглядів: {count}",
+      "serviceHistory": "сервісів: {count}",
+      "regulations": "регламентів: {count}",
+      "servicePlans": "планів: {count}",
+      "equipment": "обладнання: {count}"
+    },
     "loading": "Завантаження...",
     "error": "Помилка",
     "tryAgain": "Спробувати знову",
@@ -162,6 +191,16 @@
       "withoutDriver": "Без водія",
       "clearAll": "Очистити всі фільтри"
     },
+    "inspection": {
+      "days": "Техогляд: {days} дн.",
+      "overdue": "Прострочено: {days} дн.",
+      "noData": "Техогляд: —"
+    },
+    "regulation": {
+      "overdue": "Регламент: {count} прострочено",
+      "ok": "Регламент ОК",
+      "none": "Без регламенту"
+    },
     "statuses": {
       "CTO": "СТО",
       "FOCUS": "Фокус",
@@ -172,6 +211,15 @@
       "RENT": "Оренда",
       "SELLING": "Продаж",
       "SOLD": "Продано"
+    },
+    "totalCost": "Собівартість",
+    "fuelTypes": {
+      "GASOLINE": "Бензин",
+      "DIESEL": "Дизель",
+      "LPG": "Газ (LPG)",
+      "LPG_GASOLINE": "Газ + Бензин",
+      "ELECTRIC": "Електро",
+      "HYBRID": "Гібрид"
     }
   },
   "calendar": {
@@ -210,12 +258,20 @@
     "vehicleNotFound": "Автомобіль не знайдено",
     "backToVehicles": "Автопарк",
     "edit": "Редагувати",
+    "addPhoto": "Додати фото",
+    "driver": {
+      "searchPlaceholder": "Пошук за ім'ям..."
+    },
     "tabs": {
       "service": "Сервіс",
       "equipment": "Обладнання",
       "regulation": "Регламент",
       "photos": "Фото",
-      "owners": "Власники"
+      "owners": "Власники",
+      "mileage": "Пробіг",
+      "history": "Журнал",
+      "inspection": "Техогляд",
+      "expenses": "Витрати"
     },
     "service": {
       "title": "Сервісні нагадування",
@@ -292,6 +348,29 @@
       "empty": "Немає фотографій",
       "emptyDesc": "Додайте до 10 фотографій цього авто"
     },
+    "inspection": {
+      "title": "Технічний огляд",
+      "subtitle": "Історія технічних оглядів",
+      "current": "Поточний техогляд",
+      "add": "Додати огляд",
+      "inspectionDate": "Дата огляду",
+      "validUntil": "Дійсний до",
+      "notes": "Примітки",
+      "notesPlaceholder": "Додаткова інформація (необов'язково)",
+      "report": "Звіт (PDF)",
+      "noReport": "Немає звіту",
+      "downloadReport": "Завантажити звіт",
+      "save": "Зберегти",
+      "cancel": "Скасувати",
+      "deleteConfirm": "Видалити запис огляду?",
+      "empty": "Немає записів",
+      "emptyDesc": "Додайте перший технічний огляд",
+      "daysLeft": "{days} дн.",
+      "overdue": "Прострочено {days} дн.",
+      "noData": "Техогляд: —",
+      "nextInspectionDate": "Наступний огляд",
+      "registeredAt": "Зареєстровано"
+    },
     "owners": {
       "title": "Власники",
       "subtitle": "Історія власників авто",
@@ -305,6 +384,199 @@
       "agreement": "Угода",
       "empty": "Немає записів",
       "emptyDesc": "Додайте першого власника цього авто"
+    },
+    "mileage": {
+      "title": "Пробіг",
+      "subtitle": "Історія змін пробігу авто",
+      "add": "Додати запис",
+      "kmPlaceholder": "Пробіг (км)",
+      "save": "Зберегти",
+      "cancel": "Скасувати",
+      "empty": "Немає записів пробігу",
+      "emptyDesc": "Додайте перший запис пробігу цього авто",
+      "updateMileage": "Оновити пробіг",
+      "newKm": "Новий пробіг (км)",
+      "minError": "Пробіг має бути більшим за {km} км"
+    },
+    "expenses": {
+      "title": "Витрати авто",
+      "subtitle": "Реєстр витрат цього автомобіля",
+      "add": "Додати витрату",
+      "save": "Зберегти",
+      "cancel": "Скасувати",
+      "empty": "Немає витрат",
+      "emptyDesc": "Додайте першу витрату для цього авто",
+      "deleteConfirm": "Видалити цю витрату?",
+      "amount": "Сума (PLN)",
+      "date": "Дата",
+      "receipt": "Чек/Рахунок",
+      "type": "Тип витрати"
+    }
+  },
+  "expenses": {
+    "title": "Витрати",
+    "subtitle": "Управління витратами автопарку",
+    "addExpense": "Додати витрату",
+    "editExpense": "Редагувати витрату",
+    "noExpenses": "Витрат ще немає",
+    "noExpensesDesc": "Натисніть 'Додати витрату' щоб створити перший запис",
+    "deleteConfirmTitle": "Видалити витрату?",
+    "deleteConfirmMessage": "Ви впевнені, що хочете видалити цю витрату? Цю дію неможливо скасувати.",
+    "deleteError": "Не вдалося видалити витрату",
+    "loadError": "Не вдалося завантажити витрати",
+    "types": {
+      "FUEL": "Пальне",
+      "SERVICE": "Сервіс/Ремонт",
+      "PARTS": "Запчастини",
+      "WASHING": "Хімчистка",
+      "FINES": "Штрафи",
+      "INSPECTION": "Техогляд",
+      "ACCESSORIES": "Аксесуари",
+      "DOCUMENTS": "Документи",
+      "OTHER": "Інше"
+    },
+    "fields": {
+      "vehicle": "Автомобіль",
+      "category": "Категорія витрати",
+      "amount": "Сума (PLN)",
+      "expenseDate": "Дата витрати",
+      "receipt": "Чек",
+      "invoice": "Фактура",
+      "liters": "Літри",
+      "fuelType": "Тип палива",
+      "selectService": "Оберіть сервіс",
+      "serviceItems": "Послуги",
+      "serviceName": "Назва послуги",
+      "servicePrice": "Ціна",
+      "addServiceItem": "Додати послугу",
+      "washType": "Тип мийки",
+      "fineNumber": "Номер штрафу",
+      "violationType": "Тип порушення",
+      "fineDate": "Дата порушення",
+      "driverAtTime": "Водій",
+      "paymentMethod": "Спосіб оплати",
+      "payerType": "Хто платить",
+      "expenseFor": "Витрата для",
+      "expenseForPlaceholder": "напр. На автопарк, Іван Петренко",
+      "expenseForFleet": "На автопарк",
+      "sourceName": "Сайт/джерело",
+      "supplierType": "Тип постачальника",
+      "partName": "Назва запчастини",
+      "quantity": "Кількість",
+      "unitPrice": "Ціна за одиницю",
+      "addPart": "Додати запчастину",
+      "removePart": "Видалити",
+      "invoiceRequired": "Фактура обов'язкова для сервісу",
+      "inspectionDate": "Дата техогляду",
+      "officialCost": "Офіційна вартість",
+      "additionalCost": "Додаткові витрати",
+      "nextInspectionDate": "Наступний огляд",
+      "itemName": "Назва",
+      "addItem": "Додати позицію",
+      "expenseName": "Назва витрати",
+      "expenseNamePlaceholder": "напр. Паркування, Мийка руками"
+    },
+    "paymentMethods": {
+      "CASH": "Готівка",
+      "CASHLESS": "Безготівковий"
+    },
+    "payerTypes": {
+      "COMPANY": "Фірма",
+      "CLIENT": "Клієнт"
+    },
+    "supplierTypes": {
+      "DISASSEMBLY": "Розборка",
+      "INDIVIDUAL": "Фізик"
+    },
+    "detail": {
+      "title": "Деталі витрати",
+      "amount": "Сума",
+      "date": "Дата",
+      "vehicle": "Автомобіль",
+      "categoryDetails": "Деталі категорії",
+      "liters": "Літри",
+      "fuelType": "Тип палива",
+      "serviceName": "Сервіс",
+      "serviceItems": "Послуги",
+      "washType": "Тип мийки",
+      "violationType": "Тип порушення",
+      "fineNumber": "Номер штрафу",
+      "fineDate": "Дата порушення",
+      "inspectionDate": "Дата техогляду",
+      "officialCost": "Офіційна вартість",
+      "additionalCost": "Додаткові витрати",
+      "nextInspectionDate": "Наступний огляд",
+      "parts": "Запчастини",
+      "attachments": "Вкладення",
+      "receipt": "Чек",
+      "invoices": "Фактури",
+      "createdAt": "Створено",
+      "updatedAt": "Оновлено"
+    },
+    "fuelTypes": {
+      "GASOLINE": "Бензин",
+      "DIESEL": "Дизель",
+      "LPG": "Газ",
+      "ELECTRIC": "Електро"
+    },
+    "washTypes": {
+      "EXTERIOR": "Зовні",
+      "INTERIOR": "Всередині",
+      "FULL": "Повна"
+    },
+    "filters": {
+      "search": "Пошук",
+      "searchPlaceholder": "Номер, марка, модель...",
+      "allTypes": "Всі типи",
+      "allVehicles": "Всі авто",
+      "allPaymentMethods": "Всі способи",
+      "allPayerTypes": "Всі платники",
+      "dateFrom": "Від",
+      "dateTo": "До",
+      "clearAll": "Очистити фільтри"
+    }
+  },
+  "quickExpenses": {
+    "title": "Швидкі витрати",
+    "subtitle": "Додайте кілька витрат для одного авто",
+    "steps": {
+      "vehicle": "Авто",
+      "add": "Додати",
+      "review": "Підсумок"
+    },
+    "vehicleStep": {
+      "title": "Оберіть авто",
+      "recent": "Нещодавні авто",
+      "searchPlaceholder": "Шукайте за номером, маркою..."
+    },
+    "addStep": {
+      "selectCategory": "Оберіть категорію",
+      "addEntry": "Додати",
+      "goToReview": "Підсумок (__count__)",
+      "noEntries": "Додайте першу витрату",
+      "changeVehicle": "Змінити авто",
+      "date": "Дата",
+      "amount": "Сума"
+    },
+    "reviewStep": {
+      "title": "Підсумок",
+      "vehicle": "Автомобіль",
+      "entries": "__count__ витрат",
+      "total": "Всього",
+      "submitAll": "Зберегти всі",
+      "addMore": "Додати ще",
+      "edit": "Редагувати",
+      "remove": "Видалити"
+    },
+    "submission": {
+      "submitting": "Збереження...",
+      "progress": "__done__ з __total__",
+      "success": "Всі витрати збережено!",
+      "partialSuccess": "__success__ з __total__ збережено",
+      "failed": "Не вдалося зберегти",
+      "retryFailed": "Повторити невдалі",
+      "done": "Готово",
+      "goToExpenses": "Переглянути витрати"
     }
   }
 }
