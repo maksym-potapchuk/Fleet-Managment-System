@@ -343,7 +343,7 @@ export function QuickEntryForm({
           )}
 
           {/* ── Payment & payer ── */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
             <div>
               <label className={labelClasses}>{tExpenses('fields.paymentMethod')}</label>
               <div className="pt-0.5">
@@ -423,7 +423,7 @@ export function QuickEntryForm({
                   className={inputClasses}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
                 <div>
                   <label className={labelClasses}>{tExpenses('fields.fineNumber')}</label>
                   <input
@@ -449,7 +449,7 @@ export function QuickEntryForm({
           {/* ── INSPECTION ── */}
           {code === 'INSPECTION' && (
             <>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
                 <div>
                   <label className={labelClasses}>{tExpenses('fields.inspectionDate')} *</label>
                   <input
@@ -469,7 +469,7 @@ export function QuickEntryForm({
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
                 <NumericInput
                   value={officialCost}
                   onChange={setOfficialCost}
@@ -578,7 +578,7 @@ export function QuickEntryForm({
           {/* ── PARTS ── */}
           {code === 'PARTS' && (
             <>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
                 <div>
                   <label className={labelClasses}>{tExpenses('fields.sourceName')}</label>
                   <input

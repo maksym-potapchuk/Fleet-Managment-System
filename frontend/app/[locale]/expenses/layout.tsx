@@ -42,7 +42,7 @@ export default function ExpensesLayout({
   ];
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-white overflow-x-hidden">
       {/* Overlay */}
       {isSidebarOpen && (
         <div

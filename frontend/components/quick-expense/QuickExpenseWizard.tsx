@@ -197,7 +197,7 @@ export function QuickExpenseWizard() {
   const showCategoryPicker = state.editingIndex === null && !state.activeCategoryId;
 
   return (
-    <div className="flex h-screen flex-col bg-slate-50">
+    <div className="flex h-screen flex-col bg-slate-50 overflow-x-hidden">
       {/* Header */}
       <header className="flex-shrink-0 border-b border-slate-200 bg-white px-4 lg:px-6 py-3">
         <div className="flex items-center gap-3 max-w-6xl mx-auto">

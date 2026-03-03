@@ -382,11 +382,11 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                 </div>
 
-                {/* Виробник + Модель + Рік */}
+                {/* Марка + Модель + Рік */}
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      Виробник <span className="text-red-400">*</span>
+                      Марка <span className="text-red-400">*</span>
                     </label>
                     <div className="relative">
                       <select

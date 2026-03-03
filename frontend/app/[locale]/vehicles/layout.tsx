@@ -48,7 +48,7 @@ export default function VehiclesLayout({
   ];
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-white overflow-x-hidden">
       {/* Overlay */}
       {isSidebarOpen && (
         <div
@@ -101,7 +101,7 @@ export default function VehiclesLayout({
       {/* Main content - full width */}
       <main className="min-w-0 flex-1 relative">
         <SidebarProvider openSidebar={() => setIsSidebarOpen(true)}>
-          <div className="w-full h-screen">
+          <div className="w-full h-screen overflow-x-hidden">
             {children}
           </div>
         </SidebarProvider>
