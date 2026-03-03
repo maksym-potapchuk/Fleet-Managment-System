@@ -7,6 +7,8 @@ import { getAllServices } from '@/services/service';
 import { FileInput } from '@/components/common/FileInput';
 import { ChevronDown, ChevronUp, Plus, Check, Trash2 } from 'lucide-react';
 
+let _entryId = 0;
+
 const FUEL_TYPES: { value: FuelType; short: string }[] = [
   { value: 'GASOLINE', short: 'B' },
   { value: 'DIESEL', short: 'D' },
@@ -261,7 +263,7 @@ export function QuickEntryForm({
     else if (code === 'INSPECTION') computedAmount = String(inspectionTotal);
 
     const entry: QuickExpenseEntry = {
-      id: editingEntry?.id || crypto.randomUUID(),
+      id: editingEntry?.id || String(++_entryId),
       category: category.id,
       category_code: code,
       category_name: code ? tExpenses(`types.${code}`) : category.name,

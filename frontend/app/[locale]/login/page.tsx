@@ -15,7 +15,7 @@ export default function LoginPage() {
     setError('');
     try {
       await loginRequest(email, password, rememberMe);
-      router.replace('/dashboard');
+      router.replace('/vehicles');
     } catch {
       setError('Невірний email або пароль');
     } finally {

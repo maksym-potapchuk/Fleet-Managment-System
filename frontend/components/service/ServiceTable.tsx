@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Service } from '@/types/service';
 import { Pencil, Trash2, Calendar, FileText } from 'lucide-react';
 
@@ -11,9 +11,10 @@ interface ServiceTableProps {
   isLoading?: boolean;
 }
 
-const formatDate = (dateString: string): string => {
+const formatDate = (dateString: string, locale?: string): string => {
   const date = new Date(dateString);
-  return date.toLocaleDateString('uk-UA', {
+  const loc = locale === 'uk' ? 'uk-UA' : locale === 'pl' ? 'pl-PL' : locale || 'pl-PL';
+  return date.toLocaleDateString(loc, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
@@ -23,6 +24,7 @@ const formatDate = (dateString: string): string => {
 export function ServiceTable({ services, onEdit, onDelete, isLoading = false }: ServiceTableProps) {
   const t = useTranslations('services');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
 
   if (isLoading) {
     return (
@@ -85,7 +87,7 @@ export function ServiceTable({ services, onEdit, onDelete, isLoading = false }: 
             {/* Service Info */}
             <div className="flex items-center gap-2 mb-4 text-sm text-slate-600 min-w-0">
               <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
-              <span className="truncate">{t('createdAt')}: {formatDate(service.created_at)}</span>
+              <span className="truncate">{t('createdAt')}: {formatDate(service.created_at, locale)}</span>
             </div>
 
             {/* Action Buttons */}
@@ -171,7 +173,7 @@ export function ServiceTable({ services, onEdit, onDelete, isLoading = false }: 
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-2 text-sm text-slate-600">
                     <Calendar className="w-4 h-4 text-slate-400" />
-                    {formatDate(service.created_at)}
+                    {formatDate(service.created_at, locale)}
                   </div>
                 </td>
 

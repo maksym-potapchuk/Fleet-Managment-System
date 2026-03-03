@@ -16,7 +16,7 @@ interface ExpenseFiltersProps {
 }
 
 const selectClass = 'w-full appearance-none pl-2.5 pr-7 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] transition-all cursor-pointer';
-const dateClass = 'w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] transition-all';
+const dateClass = 'px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] transition-all';
 
 export function ExpenseFilters({ filters, onChange, showVehicleFilter = false, showSearch = true, vehicles, categories }: ExpenseFiltersProps) {
   const t = useTranslations('expenses');

@@ -50,10 +50,18 @@ export default function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Already authenticated, trying to reach /login → redirect to /dashboard
+  // Already authenticated, trying to reach /login → redirect to /vehicles
   if (isPublic && hasSession) {
     const url = request.nextUrl.clone();
-    url.pathname = buildLocalizedPath(locale, '/dashboard');
+    url.pathname = buildLocalizedPath(locale, '/vehicles');
+    url.search = '';
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect /dashboard → /vehicles (dashboard temporarily disabled)
+  if (canonical === '/dashboard') {
+    const url = request.nextUrl.clone();
+    url.pathname = buildLocalizedPath(locale, '/vehicles');
     url.search = '';
     return NextResponse.redirect(url);
   }

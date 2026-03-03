@@ -1,7 +1,7 @@
 'use client';
 
 import { createElement } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Expense } from '@/types/expense';
 import { Pencil, Trash2, Eye, Receipt } from 'lucide-react';
 import { getCategoryIcon, getCategoryStyle, getCategoryLabel, formatDate, formatAmount } from './expense-utils';
@@ -45,6 +45,7 @@ function SkeletonCard() {
 export function ExpenseTable({ expenses, onEdit, onDelete, onView, isLoading = false, showVehicle = false }: ExpenseTableProps) {
   const t = useTranslations('expenses');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
 
   // Loading
   if (isLoading) {
@@ -119,11 +120,11 @@ export function ExpenseTable({ expenses, onEdit, onDelete, onView, isLoading = f
               <div className="flex items-center gap-2 text-xs text-slate-500 mb-1 flex-wrap">
                 {showVehicle && expense.vehicle_vin_number && (
                   <>
-                    <span className="font-mono text-slate-400">{expense.vehicle_vin_number}</span>
+                    <span className="font-mono font-semibold text-slate-400">{expense.vehicle_vin_number}</span>
                     <span className="text-slate-300">·</span>
                   </>
                 )}
-                <span>{formatDate(expense.expense_date)}</span>
+                <span>{formatDate(expense.expense_date, locale)}</span>
                 <span className="text-slate-300">·</span>
                 <span>{t(`paymentMethods.${expense.payment_method}`)}</span>
                 <span className="text-slate-300">·</span>
@@ -182,7 +183,7 @@ export function ExpenseTable({ expenses, onEdit, onDelete, onView, isLoading = f
                         {expense.vehicle_car_number}
                       </div>
                       {expense.vehicle_vin_number && (
-                        <div className="text-[10px] font-mono text-slate-400 mt-0.5">{expense.vehicle_vin_number}</div>
+                        <div className="text-[10px] font-mono font-semibold text-slate-400 mt-0.5">{expense.vehicle_vin_number}</div>
                       )}
                     </td>
                   )}
@@ -209,7 +210,7 @@ export function ExpenseTable({ expenses, onEdit, onDelete, onView, isLoading = f
                     <span className="text-xs text-slate-600">{t(`payerTypes.${expense.payer_type}`)}</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm text-slate-600">{formatDate(expense.expense_date)}</span>
+                    <span className="text-sm text-slate-600">{formatDate(expense.expense_date, locale)}</span>
                   </td>
                   <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

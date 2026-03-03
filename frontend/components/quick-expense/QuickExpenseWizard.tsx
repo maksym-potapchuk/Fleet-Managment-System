@@ -242,7 +242,7 @@ export function QuickExpenseWizard() {
         ) : (
           <>
             {state.step === 'vehicle' && (
-              <div className="max-w-lg lg:max-w-2xl mx-auto">
+              <div className="max-w-lg lg:max-w-2xl mx-auto lg:flex lg:items-start lg:justify-center lg:min-h-full lg:pt-12">
                 <VehicleStep
                   vehicles={vehicles}
                   onSelect={(vehicleId, label) => dispatch({ type: 'SET_VEHICLE', vehicleId, label })}

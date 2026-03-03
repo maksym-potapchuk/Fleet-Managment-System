@@ -1,16 +1,9 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Driver } from '@/types/driver';
 import { Pencil, Trash2, Phone, Calendar, CheckCircle2, XCircle } from 'lucide-react';
 
-/**
- * Props for the DriverTable component
- * @param drivers - Array of driver objects to display
- * @param onEdit - Function called when edit button is clicked
- * @param onDelete - Function called when delete button is clicked
- * @param isLoading - Optional: Show loading state
- */
 interface DriverTableProps {
   drivers: Driver[];
   onEdit: (driver: Driver) => void;
@@ -18,14 +11,11 @@ interface DriverTableProps {
   isLoading?: boolean;
 }
 
-/**
- * Format date from ISO string to readable format
- * Example: "2024-01-15T10:30:00Z" -> "15.01.2024"
- */
-const formatDate = (dateString: string | null): string => {
+const formatDate = (dateString: string | null, locale?: string): string => {
   if (!dateString) return '—';
   const date = new Date(dateString);
-  return date.toLocaleDateString('uk-UA', {
+  const loc = locale === 'uk' ? 'uk-UA' : locale === 'pl' ? 'pl-PL' : locale || 'pl-PL';
+  return date.toLocaleDateString(loc, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
@@ -46,6 +36,7 @@ const formatPhoneNumber = (phone: string): string => {
 export function DriverTable({ drivers, onEdit, onDelete, isLoading = false }: DriverTableProps) {
   const t = useTranslations('drivers');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
 
   // Show loading state
   if (isLoading) {
@@ -138,7 +129,7 @@ export function DriverTable({ drivers, onEdit, onDelete, isLoading = false }: Dr
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
                 <span className="text-sm text-slate-600">
-                  {t('lastActive')}: {formatDate(driver.last_active_at)}
+                  {t('lastActive')}: {formatDate(driver.last_active_at, locale)}
                 </span>
               </div>
             </div>
@@ -267,7 +258,7 @@ export function DriverTable({ drivers, onEdit, onDelete, isLoading = false }: Dr
               <td className="px-4 py-4">
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <Calendar className="w-4 h-4 text-slate-400" />
-                  {formatDate(driver.last_active_at)}
+                  {formatDate(driver.last_active_at, locale)}
                 </div>
               </td>
 

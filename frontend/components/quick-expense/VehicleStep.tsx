@@ -60,12 +60,12 @@ export function VehicleStep({ vehicles, onSelect }: VehicleStepProps) {
   const showRecentLabel = !query.trim() && recentVehicles.length > 0;
 
   return (
-    <div className="flex flex-col h-full p-4">
-      <h2 className="text-xl font-bold text-slate-900 mb-1">{t('vehicleStep.title')}</h2>
-      <p className="text-sm text-slate-500 mb-4">{t('subtitle')}</p>
+    <div className="flex flex-col h-full p-4 w-full lg:items-center">
+      <h2 className="text-xl font-bold text-slate-900 mb-1 lg:text-center">{t('vehicleStep.title')}</h2>
+      <p className="text-sm text-slate-500 mb-4 lg:text-center">{t('subtitle')}</p>
 
       {/* Search */}
-      <div className="relative mb-4">
+      <div className="relative mb-4 w-full">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
         <input
           type="text"
@@ -86,7 +86,7 @@ export function VehicleStep({ vehicles, onSelect }: VehicleStepProps) {
       )}
 
       {/* Vehicle list */}
-      <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+      <div className="w-full space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
         {displayList.map((vehicle) => (
           <button
             key={vehicle.id}

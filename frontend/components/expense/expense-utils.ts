@@ -40,9 +40,10 @@ export function getCategoryLabel(expense: Expense, t: (key: string) => string): 
   return expense.category_name;
 }
 
-export const formatDate = (dateString: string): string => {
+export const formatDate = (dateString: string, locale?: string): string => {
   const date = new Date(dateString);
-  return date.toLocaleDateString('uk-UA', { day: '2-digit', month: 'short', year: 'numeric' });
+  const loc = locale === 'uk' ? 'uk-UA' : locale === 'pl' ? 'pl-PL' : locale || 'pl-PL';
+  return date.toLocaleDateString(loc, { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 export const formatAmount = (amount: string): string => {

@@ -7,8 +7,8 @@ import { NavSection } from '@/components/layout/Sidebar/types';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { SidebarProvider } from './SidebarContext';
 import {
-  Car, Calendar, FileText, Wrench, Users, LayoutDashboard,
-  Zap, Bell, X
+  Car, Calendar, FileText, Wrench, Users,
+  Zap, X
 } from 'lucide-react';
 
 export default function QuickExpensesLayout({
@@ -23,7 +23,6 @@ export default function QuickExpensesLayout({
     {
       id: 'main',
       items: [
-        { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard, href: '/dashboard' },
         { id: 'fleet', label: t('fleet'), icon: Car, href: '/vehicles' },
         { id: 'calendar', label: t('calendar'), icon: Calendar, href: '/calendar' },
         { id: 'expenses', label: t('expenses'), icon: FileText, href: '/expenses' },
@@ -36,7 +35,6 @@ export default function QuickExpensesLayout({
       title: t('quickExpenses').toUpperCase(),
       items: [
         { id: 'quick-expenses', label: t('quickExpenses'), icon: Zap, href: '/quick-expenses' },
-        { id: 'notifications', label: t('notifications'), icon: Bell, href: '/notifications', badge: 2 },
       ],
     },
   ];

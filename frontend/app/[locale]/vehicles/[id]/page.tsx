@@ -570,7 +570,7 @@ export default function VehicleWorkspacePage() {
           )}
           <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-3 py-2 min-w-0">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex-shrink-0">VIN</span>
-            <span className="text-[10px] sm:text-xs font-mono text-slate-600 truncate">{vehicle.vin_number}</span>
+            <span className="text-[10px] sm:text-xs font-mono font-bold text-slate-700 truncate">{vehicle.vin_number}</span>
           </div>
           {(() => {
             const d = vehicle.days_until_inspection;

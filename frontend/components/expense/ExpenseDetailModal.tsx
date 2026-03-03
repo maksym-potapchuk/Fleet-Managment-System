@@ -1,7 +1,7 @@
 'use client';
 
 import { createElement } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Expense } from '@/types/expense';
 import { X, Pencil, ExternalLink, FileText, Paperclip } from 'lucide-react';
 import { getCategoryIcon, getCategoryStyle, getCategoryLabel, formatDate, formatAmount } from './expense-utils';
@@ -24,6 +24,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 
 function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose: () => void; onEdit?: (expense: Expense) => void }) {
   const t = useTranslations('expenses');
+  const locale = useLocale();
   const style = getCategoryStyle(expense.category_color);
   const code = expense.category_code;
 
@@ -70,7 +71,7 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
 
       {/* Base info */}
       <div className="mb-5">
-        <DetailRow label={t('detail.date')} value={formatDate(expense.expense_date)} />
+        <DetailRow label={t('detail.date')} value={formatDate(expense.expense_date, locale)} />
         {expense.vehicle_car_number && (
           <DetailRow label={t('detail.vehicle')} value={
             <span className="font-mono font-semibold tracking-wide">{expense.vehicle_car_number}</span>
@@ -119,13 +120,13 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
             <>
               <DetailRow label={t('detail.violationType')} value={expense.violation_type || null} />
               <DetailRow label={t('detail.fineNumber')} value={expense.fine_number || null} />
-              <DetailRow label={t('detail.fineDate')} value={expense.fine_date ? formatDate(expense.fine_date) : null} />
+              <DetailRow label={t('detail.fineDate')} value={expense.fine_date ? formatDate(expense.fine_date, locale) : null} />
             </>
           )}
 
           {code === 'INSPECTION' && (
             <>
-              <DetailRow label={t('detail.inspectionDate')} value={expense.inspection_date ? formatDate(expense.inspection_date) : null} />
+              <DetailRow label={t('detail.inspectionDate')} value={expense.inspection_date ? formatDate(expense.inspection_date, locale) : null} />
               <DetailRow label={t('detail.officialCost')} value={expense.official_cost ? `${formatAmount(expense.official_cost)} PLN` : null} />
               <DetailRow label={t('detail.additionalCost')} value={expense.additional_cost && parseFloat(expense.additional_cost) > 0 ? `${formatAmount(expense.additional_cost)} PLN` : null} />
             </>
@@ -192,8 +193,8 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
 
       {/* Meta */}
       <div className="text-xs text-slate-400 space-y-1 pt-3 border-t border-slate-100">
-        <p>{t('detail.createdAt')}: {formatDate(expense.created_at)}</p>
-        <p>{t('detail.updatedAt')}: {formatDate(expense.updated_at)}</p>
+        <p>{t('detail.createdAt')}: {formatDate(expense.created_at, locale)}</p>
+        <p>{t('detail.updatedAt')}: {formatDate(expense.updated_at, locale)}</p>
       </div>
     </>
   );
