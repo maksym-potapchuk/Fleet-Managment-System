@@ -10,11 +10,11 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const handleLogin = async (email: string, password: string) => {
+  const handleLogin = async (email: string, password: string, rememberMe: boolean) => {
     setLoading(true);
     setError('');
     try {
-      await loginRequest(email, password);
+      await loginRequest(email, password, rememberMe);
       router.replace('/dashboard');
     } catch {
       setError('Невірний email або пароль');

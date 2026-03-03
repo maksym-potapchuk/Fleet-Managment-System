@@ -71,7 +71,7 @@ describe('LoginForm', () => {
     fireEvent.submit(screen.getByRole('button', { name: /Увійти/ }).closest('form')!);
 
     expect(onSubmit).toHaveBeenCalledOnce();
-    expect(onSubmit).toHaveBeenCalledWith('admin@fleet.com', 'secret123');
+    expect(onSubmit).toHaveBeenCalledWith('admin@fleet.com', 'secret123', false);
   });
 
   // ─── Error display ────────────────────────────────────────────────────────

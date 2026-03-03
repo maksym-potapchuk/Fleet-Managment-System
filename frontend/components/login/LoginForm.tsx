@@ -6,13 +6,14 @@ import { Eye, EyeOff, ArrowRight, Car, Mail, Lock } from "lucide-react";
 type Props = {
     loading: boolean;
     error: string;
-    onSubmit: (email: string, password: string) => void;
+    onSubmit: (email: string, password: string, rememberMe: boolean) => void;
 };
 
 export function LoginForm({ loading, error, onSubmit }: Props) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
 
     return (
         // On mobile: full-screen white, no card chrome — feels native
@@ -45,7 +46,7 @@ export function LoginForm({ loading, error, onSubmit }: Props) {
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
-                        onSubmit(email, password);
+                        onSubmit(email, password, rememberMe);
                     }}
                     className="space-y-4"
                 >
@@ -89,6 +90,17 @@ export function LoginForm({ loading, error, onSubmit }: Props) {
                             </button>
                         </div>
                     </div>
+
+                    {/* Remember me */}
+                    <label className="flex items-center gap-2.5 cursor-pointer select-none py-1">
+                        <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            className="w-5 h-5 rounded-lg border-2 border-slate-300 text-[#2D8B7E] focus:ring-[#2D8B7E]/20 focus:ring-offset-0 cursor-pointer accent-[#2D8B7E]"
+                        />
+                        <span className="text-sm font-semibold text-slate-600">Запам&apos;ятати мене</span>
+                    </label>
 
                     <div className="pt-2">
                         <button

@@ -5,6 +5,7 @@ import { routing } from './src/i18n/routing';
 const handleI18n = createIntlMiddleware(routing);
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
+const REFRESH_TOKEN_COOKIE = 'refresh_token';
 
 // Public routes (no auth required) — canonical form (no locale prefix)
 const PUBLIC_PATHS = new Set(['/login']);
@@ -37,11 +38,12 @@ export default function middleware(request: NextRequest) {
 
   const canonical = getCanonicalPath(pathname);
   const locale = getPathLocale(pathname);
-  const hasToken = request.cookies.has(ACCESS_TOKEN_COOKIE);
+  const hasSession =
+    request.cookies.has(ACCESS_TOKEN_COOKIE) || request.cookies.has(REFRESH_TOKEN_COOKIE);
   const isPublic = PUBLIC_PATHS.has(canonical);
 
   // No token on a protected route → redirect to /login
-  if (!isPublic && !hasToken) {
+  if (!isPublic && !hasSession) {
     const url = request.nextUrl.clone();
     url.pathname = buildLocalizedPath(locale, '/login');
     url.search = '';
@@ -49,7 +51,7 @@ export default function middleware(request: NextRequest) {
   }
 
   // Already authenticated, trying to reach /login → redirect to /dashboard
-  if (isPublic && hasToken) {
+  if (isPublic && hasSession) {
     const url = request.nextUrl.clone();
     url.pathname = buildLocalizedPath(locale, '/dashboard');
     url.search = '';

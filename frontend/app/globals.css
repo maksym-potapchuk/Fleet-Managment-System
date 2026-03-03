@@ -16,8 +16,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #ffffff;
+    --foreground: #171717;
   }
 }
 
@@ -34,5 +34,12 @@ body {
 
 .animate-slide-up {
   animation: slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* ── Stable caret color ── */
+input,
+textarea,
+select {
+  caret-color: #2D8B7E;
 }
 
