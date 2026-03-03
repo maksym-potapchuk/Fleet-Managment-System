@@ -1,5 +1,6 @@
 'use client';
 
+import { createElement } from 'react';
 import { useTranslations } from 'next-intl';
 import { Expense } from '@/types/expense';
 import { X, Pencil, ExternalLink, FileText, Paperclip } from 'lucide-react';
@@ -24,7 +25,6 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose: () => void; onEdit?: (expense: Expense) => void }) {
   const t = useTranslations('expenses');
   const style = getCategoryStyle(expense.category_color);
-  const Icon = getCategoryIcon(expense.category_icon);
   const code = expense.category_code;
 
   return (
@@ -33,7 +33,7 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3 min-w-0">
           <div className={`w-10 h-10 rounded-xl ${style.bg} flex items-center justify-center flex-shrink-0`}>
-            <Icon className={`w-5 h-5 ${style.text}`} />
+            {createElement(getCategoryIcon(expense.category_icon), { className: `w-5 h-5 ${style.text}` })}
           </div>
           <div className="min-w-0">
             <h2 className="text-lg font-bold text-slate-900 truncate">{t('detail.title')}</h2>

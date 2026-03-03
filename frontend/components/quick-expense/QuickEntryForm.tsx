@@ -183,14 +183,14 @@ export function QuickEntryForm({
   const [additionalCost, setAdditionalCost] = useState(editingEntry?.additional_cost || '');
   const [nextInspectionDate, setNextInspectionDate] = useState(editingEntry?.next_inspection_date || '');
 
-  // Auto-compute next inspection date (+1 year) when inspectionDate changes
-  useEffect(() => {
-    if (code === 'INSPECTION' && inspectionDate && !editingEntry?.next_inspection_date) {
-      const d = new Date(inspectionDate);
+  const handleInspectionDateChange = (value: string) => {
+    setInspectionDate(value);
+    if (code === 'INSPECTION' && value && !editingEntry?.next_inspection_date) {
+      const d = new Date(value);
       d.setFullYear(d.getFullYear() + 1);
       setNextInspectionDate(d.toISOString().split('T')[0]);
     }
-  }, [inspectionDate, code]); // eslint-disable-line react-hooks/exhaustive-deps
+  };
 
   // ── SERVICE ──
   const [selectedService, setSelectedService] = useState(editingEntry?.service || '');
@@ -455,7 +455,7 @@ export function QuickEntryForm({
                   <input
                     type="date"
                     value={inspectionDate}
-                    onChange={(e) => setInspectionDate(e.target.value)}
+                    onChange={(e) => handleInspectionDateChange(e.target.value)}
                     className={inputClasses}
                   />
                 </div>

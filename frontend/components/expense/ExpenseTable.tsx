@@ -1,5 +1,6 @@
 'use client';
 
+import { createElement } from 'react';
 import { useTranslations } from 'next-intl';
 import { Expense } from '@/types/expense';
 import { Pencil, Trash2, Eye, Receipt } from 'lucide-react';
@@ -93,7 +94,6 @@ export function ExpenseTable({ expenses, onEdit, onDelete, onView, isLoading = f
       <div className="lg:hidden divide-y divide-slate-100">
         {expenses.map((expense) => {
           const style = getCategoryStyle(expense.category_color);
-          const Icon = getCategoryIcon(expense.category_icon);
           return (
             <div
               key={expense.id}
@@ -170,7 +170,6 @@ export function ExpenseTable({ expenses, onEdit, onDelete, onView, isLoading = f
           <tbody className="divide-y divide-slate-100">
             {expenses.map((expense) => {
               const style = getCategoryStyle(expense.category_color);
-              const Icon = getCategoryIcon(expense.category_icon);
               return (
                 <tr
                   key={expense.id}
@@ -190,7 +189,7 @@ export function ExpenseTable({ expenses, onEdit, onDelete, onView, isLoading = f
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2.5">
                       <div className={`w-8 h-8 rounded-lg ${style.bg} flex items-center justify-center flex-shrink-0`}>
-                        <Icon className={`w-4 h-4 ${style.text}`} />
+                        {createElement(getCategoryIcon(expense.category_icon), { className: `w-4 h-4 ${style.text}` })}
                       </div>
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${style.bg} ${style.text}`}>
                         {getCategoryLabel(expense, t)}

@@ -75,15 +75,6 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
   const categoryCode = selectedCategory?.code || null;
   const isAutoAmountCategory = categoryCode === 'SERVICE' || categoryCode === 'PARTS' || categoryCode === 'INSPECTION' || categoryCode === 'ACCESSORIES' || categoryCode === 'DOCUMENTS';
 
-  // Auto-compute next_inspection_date (+1 year) when inspection_date changes
-  useEffect(() => {
-    if (categoryCode === 'INSPECTION' && formData.inspection_date && !initialData?.next_inspection_date) {
-      const d = new Date(formData.inspection_date);
-      d.setFullYear(d.getFullYear() + 1);
-      setFormData(prev => ({ ...prev, next_inspection_date: d.toISOString().split('T')[0] }));
-    }
-  }, [formData.inspection_date, categoryCode]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Load fleet services once on mount
   useEffect(() => {
     let ignore = false;
@@ -95,7 +86,16 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const next = { ...prev, [name]: value };
+      // Auto-compute next_inspection_date (+1 year) when inspection_date changes
+      if (name === 'inspection_date' && value && categoryCode === 'INSPECTION' && !initialData?.next_inspection_date) {
+        const d = new Date(value);
+        d.setFullYear(d.getFullYear() + 1);
+        next.next_inspection_date = d.toISOString().split('T')[0];
+      }
+      return next;
+    });
     if (errors[name]) {
       setErrors(prev => { const next = { ...prev }; delete next[name]; return next; });
     }
