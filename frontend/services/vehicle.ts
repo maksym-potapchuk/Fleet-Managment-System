@@ -1,5 +1,5 @@
 import api from '@/lib/api';
-import { Vehicle, VehiclePhoto, VehicleOwnerHistory, CreateVehicleData, UpdateVehicleData, VehicleFilters } from '@/types/vehicle';
+import { Vehicle, VehiclePhoto, VehicleOwnerHistory, TechnicalInspection, CreateVehicleData, UpdateVehicleData, VehicleFilters, VehicleDeleteCheck } from '@/types/vehicle';
 
 export const vehicleService = {
   // Get all vehicles
@@ -36,9 +36,32 @@ export const vehicleService = {
     return response.data;
   },
 
-  // Delete vehicle
-  async deleteVehicle(id: string): Promise<void> {
+  // Archive vehicle (soft-delete)
+  async archiveVehicle(id: string): Promise<void> {
     await api.delete(`/vehicle/${id}/`);
+  },
+
+  // Get archived vehicles
+  async getArchivedVehicles(): Promise<Vehicle[]> {
+    const response = await api.get<Vehicle[]>('/vehicle/archive/');
+    return response.data;
+  },
+
+  // Restore vehicle from archive
+  async restoreVehicle(id: string): Promise<Vehicle> {
+    const response = await api.post<Vehicle>(`/vehicle/${id}/restore/`);
+    return response.data;
+  },
+
+  // Check if vehicle can be permanently deleted
+  async checkVehicleDelete(id: string): Promise<VehicleDeleteCheck> {
+    const response = await api.get<VehicleDeleteCheck>(`/vehicle/${id}/delete-check/`);
+    return response.data;
+  },
+
+  // Permanently delete vehicle (from archive only)
+  async permanentlyDeleteVehicle(id: string): Promise<void> {
+    await api.delete(`/vehicle/${id}/permanent-delete/?confirm=true`);
   },
 
   // Update vehicle status (for Kanban drag & drop)
@@ -91,5 +114,50 @@ export const vehicleService = {
       { released_at: new Date().toISOString() },
     );
     return response.data;
+  },
+
+  // Technical inspections
+  async getInspections(vehicleId: string): Promise<TechnicalInspection[]> {
+    const response = await api.get<TechnicalInspection[] | { results: TechnicalInspection[] }>(`/vehicle/${vehicleId}/inspections/`);
+    return Array.isArray(response.data) ? response.data : (response.data.results ?? []);
+  },
+
+  async createInspection(
+    vehicleId: string,
+    data: { inspection_date: string; next_inspection_date?: string; notes?: string; report?: File },
+  ): Promise<TechnicalInspection> {
+    const formData = new FormData();
+    formData.append('inspection_date', data.inspection_date);
+    if (data.next_inspection_date) formData.append('next_inspection_date', data.next_inspection_date);
+    if (data.notes) formData.append('notes', data.notes);
+    if (data.report) formData.append('report', data.report);
+    const response = await api.post<TechnicalInspection>(
+      `/vehicle/${vehicleId}/inspections/`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return response.data;
+  },
+
+  async updateInspection(
+    vehicleId: string,
+    inspectionId: number,
+    data: { inspection_date?: string; next_inspection_date?: string; notes?: string; report?: File },
+  ): Promise<TechnicalInspection> {
+    const formData = new FormData();
+    if (data.inspection_date) formData.append('inspection_date', data.inspection_date);
+    if (data.next_inspection_date) formData.append('next_inspection_date', data.next_inspection_date);
+    if (data.notes !== undefined) formData.append('notes', data.notes);
+    if (data.report) formData.append('report', data.report);
+    const response = await api.patch<TechnicalInspection>(
+      `/vehicle/${vehicleId}/inspections/${inspectionId}/`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return response.data;
+  },
+
+  async deleteInspection(vehicleId: string, inspectionId: number): Promise<void> {
+    await api.delete(`/vehicle/${vehicleId}/inspections/${inspectionId}/`);
   },
 };

@@ -19,17 +19,20 @@ import {
   Search,
   GripVertical,
   User,
-  Calendar,
-  DollarSign,
   MoreVertical,
   Edit,
-  Trash2,
+  Archive,
   Eye,
   Copy,
   Menu,
   X,
   Filter,
   ChevronDown,
+  ShieldCheck,
+  Package,
+  AlertTriangle,
+  ScrollText,
+  Receipt,
 } from 'lucide-react';
 import { Vehicle, VehicleStatus } from '@/types/vehicle';
 
@@ -47,9 +50,10 @@ interface VehicleKanbanProps {
   onEditVehicle?: (id: string) => void;
   onAddVehicle: () => void;
   onUpdateStatus: (vehicleId: string, newStatus: VehicleStatus) => void;
-  onDeleteVehicle?: (id: string) => void;
+  onArchiveVehicle?: (id: string) => void;
   onDuplicateVehicle?: (id: string) => void;
   onOpenSidebar?: () => void;
+  onGoToArchive?: () => void;
 }
 
 export function VehicleKanban({
@@ -58,9 +62,10 @@ export function VehicleKanban({
   onEditVehicle,
   onAddVehicle,
   onUpdateStatus,
-  onDeleteVehicle,
+  onArchiveVehicle,
   onDuplicateVehicle,
-  onOpenSidebar
+  onOpenSidebar,
+  onGoToArchive,
 }: VehicleKanbanProps) {
   const t = useTranslations('vehicles');
   const [searchTerm, setSearchTerm] = useState('');
@@ -133,7 +138,7 @@ export function VehicleKanban({
         if (selectedManufacturers.length > 0 && !selectedManufacturers.includes(v.manufacturer)) return false;
         return true;
       })
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   }, [vehicles, searchTerm, selectedStatuses, driverFilter, selectedManufacturers]);
 
   const mobileDisplayedVehicles = useMemo(() => {
@@ -184,13 +189,25 @@ export function VehicleKanban({
             </div>
           </div>
 
-          <button
-            onClick={onAddVehicle}
-            className="bg-gradient-to-r from-[#2D8B7E] to-[#248B7B] text-white px-3 py-2.5 md:px-6 md:py-3 rounded-xl hover:shadow-2xl hover:shadow-[#2D8B7E]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shadow-lg flex items-center gap-1.5 text-sm font-bold whitespace-nowrap flex-shrink-0"
-          >
-            <Plus className="w-4 h-4 md:w-5 md:h-5" strokeWidth={3} />
-            <span className="hidden sm:inline">{t('addVehicle')}</span>
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {onGoToArchive && (
+              <button
+                onClick={onGoToArchive}
+                className="flex items-center justify-center w-10 h-10 md:w-auto md:px-4 md:py-3 bg-white border-2 border-slate-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition-all shadow-sm text-amber-600"
+                title={t('archive')}
+              >
+                <Archive className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="hidden md:inline ml-1.5 text-sm font-bold">{t('archive')}</span>
+              </button>
+            )}
+            <button
+              onClick={onAddVehicle}
+              className="bg-gradient-to-r from-[#2D8B7E] to-[#248B7B] text-white px-3 py-2.5 md:px-6 md:py-3 rounded-xl hover:shadow-2xl hover:shadow-[#2D8B7E]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shadow-lg flex items-center gap-1.5 text-sm font-bold whitespace-nowrap flex-shrink-0"
+            >
+              <Plus className="w-4 h-4 md:w-5 md:h-5" strokeWidth={3} />
+              <span className="hidden sm:inline">{t('addVehicle')}</span>
+            </button>
+          </div>
         </div>
 
         {/* Search */}
@@ -376,7 +393,7 @@ export function VehicleKanban({
               columns={KANBAN_COLUMNS}
               onSelect={() => onSelectVehicle(vehicle.id)}
               onEdit={onEditVehicle ? () => onEditVehicle(vehicle.id) : undefined}
-              onDelete={onDeleteVehicle}
+              onArchive={onArchiveVehicle}
               onUpdateStatus={onUpdateStatus}
             />
           ))
@@ -395,7 +412,7 @@ export function VehicleKanban({
                 activeDragId={activeDragId}
                 onSelectVehicle={onSelectVehicle}
                 onEditVehicle={onEditVehicle}
-                onDeleteVehicle={onDeleteVehicle}
+                onArchiveVehicle={onArchiveVehicle}
                 onDuplicateVehicle={onDuplicateVehicle}
               />
             ))}
@@ -422,11 +439,11 @@ interface KanbanColumnProps {
   activeDragId: string | null;
   onSelectVehicle: (id: string) => void;
   onEditVehicle?: (id: string) => void;
-  onDeleteVehicle?: (id: string) => void;
+  onArchiveVehicle?: (id: string) => void;
   onDuplicateVehicle?: (id: string) => void;
 }
 
-function KanbanColumn({ column, vehicles, activeDragId, onSelectVehicle, onEditVehicle, onDeleteVehicle, onDuplicateVehicle }: KanbanColumnProps) {
+function KanbanColumn({ column, vehicles, activeDragId, onSelectVehicle, onEditVehicle, onArchiveVehicle, onDuplicateVehicle }: KanbanColumnProps) {
   const t = useTranslations('vehicles');
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
@@ -465,7 +482,7 @@ function KanbanColumn({ column, vehicles, activeDragId, onSelectVehicle, onEditV
               vehicle={vehicle}
               onSelect={() => onSelectVehicle(vehicle.id)}
               onEdit={onEditVehicle ? () => onEditVehicle(vehicle.id) : undefined}
-              onDelete={onDeleteVehicle}
+              onArchive={onArchiveVehicle}
               onDuplicate={onDuplicateVehicle}
               isBeingDragged={activeDragId === vehicle.id}
             />
@@ -476,18 +493,28 @@ function KanbanColumn({ column, vehicles, activeDragId, onSelectVehicle, onEditV
   );
 }
 
+// ── Inspection Badge Helper ──────────────────────────────────────────────────
+
+function getInspectionDisplay(days: number | null, t: (key: string, values?: Record<string, string | number | Date>) => string) {
+  if (days === null) return { bg: 'bg-slate-100', icon: 'text-slate-400', text: 'text-slate-400', label: t('inspection.noData') };
+  if (days < 0)     return { bg: 'bg-red-100',   icon: 'text-red-500',   text: 'text-red-600 font-bold', label: t('inspection.overdue', { days: Math.abs(days) }) };
+  if (days <= 7)    return { bg: 'bg-red-100',   icon: 'text-red-500',   text: 'text-red-600', label: t('inspection.days', { days }) };
+  if (days <= 30)   return { bg: 'bg-amber-100', icon: 'text-amber-500', text: 'text-amber-600', label: t('inspection.days', { days }) };
+  return             { bg: 'bg-emerald-100', icon: 'text-emerald-500', text: 'text-emerald-600', label: t('inspection.days', { days }) };
+}
+
 // ── Desktop Vehicle Card ──────────────────────────────────────────────────────
 
 interface VehicleCardProps {
   vehicle: Vehicle;
   onSelect: () => void;
   onEdit?: () => void;
-  onDelete?: (id: string) => void;
+  onArchive?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   isBeingDragged?: boolean;
 }
 
-function VehicleCard({ vehicle, onSelect, onEdit, onDelete, onDuplicate, isBeingDragged }: VehicleCardProps) {
+function VehicleCard({ vehicle, onSelect, onEdit, onArchive, onDuplicate, isBeingDragged }: VehicleCardProps) {
   const t = useTranslations('vehicles');
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -500,11 +527,11 @@ function VehicleCard({ vehicle, onSelect, onEdit, onDelete, onDuplicate, isBeing
     setMenuOpen(!menuOpen);
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleArchive = (e: React.MouseEvent) => {
     e.stopPropagation();
     setMenuOpen(false);
-    if (onDelete && confirm(t('deleteConfirm', { number: vehicle.car_number }))) {
-      onDelete(vehicle.id);
+    if (onArchive && confirm(t('archiveConfirm', { number: vehicle.car_number }))) {
+      onArchive(vehicle.id);
     }
   };
 
@@ -542,14 +569,14 @@ function VehicleCard({ vehicle, onSelect, onEdit, onDelete, onDuplicate, isBeing
       <div className="absolute inset-0 bg-gradient-to-br from-[#2D8B7E]/0 to-[#2D8B7E]/0 group-hover:from-[#2D8B7E]/5 group-hover:to-transparent transition-all duration-300 pointer-events-none" />
 
       {vehicle.photos && vehicle.photos.length > 0 && (
-        <div className="relative -mx-5 -mt-5 mb-4 h-28 rounded-t-2xl overflow-hidden">
+        <div className="relative -mx-5 -mt-5 mb-3 h-36 rounded-t-2xl overflow-hidden">
           <img
             src={vehicle.photos[0].image}
             alt={vehicle.car_number}
             className="w-full h-full object-cover"
           />
           {vehicle.photos.length > 1 && (
-            <div className="absolute bottom-1.5 right-2 bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            <div className="absolute bottom-2 right-2 bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
               +{vehicle.photos.length - 1}
             </div>
           )}
@@ -557,11 +584,12 @@ function VehicleCard({ vehicle, onSelect, onEdit, onDelete, onDuplicate, isBeing
       )}
 
       <div className="relative z-10">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
+        {/* Title + menu */}
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1 min-w-0">
             <h4 className="text-lg font-bold text-slate-900 tracking-tight">{vehicle.car_number}</h4>
-            <p className="text-sm text-slate-600 mt-1 font-medium">
-              {vehicle.manufacturer} {vehicle.model}
+            <p className="text-sm text-slate-500 mt-0.5 font-medium truncate">
+              {vehicle.manufacturer} {vehicle.model} <span className="text-slate-400">&middot;</span> {vehicle.year}
             </p>
           </div>
           <div className="flex items-center gap-1">
@@ -614,16 +642,16 @@ function VehicleCard({ vehicle, onSelect, onEdit, onDelete, onDuplicate, isBeing
                         {t('duplicate')}
                       </button>
                     )}
-                    {onDelete && (
+                    {onArchive && (
                       <>
                         <div className="border-t border-slate-200/70 my-1.5" />
                         <button
                           onPointerDown={(e) => e.stopPropagation()}
-                          onClick={handleDelete}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                          onClick={handleArchive}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-amber-600 hover:bg-amber-50 transition-colors"
                         >
-                          <Trash2 className="w-4 h-4" />
-                          {t('delete')}
+                          <Archive className="w-4 h-4" />
+                          {t('archiveVehicle')}
                         </button>
                       </>
                     )}
@@ -634,34 +662,72 @@ function VehicleCard({ vehicle, onSelect, onEdit, onDelete, onDuplicate, isBeing
           </div>
         </div>
 
-        <div className="space-y-3 mt-1">
-          <div className="flex items-center gap-2.5 text-sm text-slate-700">
-            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center group-hover:bg-[#2D8B7E]/10 transition-colors">
-              <Calendar className="w-4 h-4 text-slate-500 group-hover:text-[#2D8B7E] transition-colors" />
-            </div>
-            <span className="font-semibold">{vehicle.year} {t('year')}</span>
-          </div>
-
-          <div className="flex items-center gap-2.5 text-sm text-slate-700">
-            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center group-hover:bg-[#2D8B7E]/10 transition-colors">
-              <DollarSign className="w-4 h-4 text-slate-500 group-hover:text-[#2D8B7E] transition-colors" />
-            </div>
-            <span className="font-bold text-[#2D8B7E]">{parseFloat(vehicle.cost).toLocaleString()} PLN</span>
-          </div>
-
-          <div className="flex items-center gap-2.5 text-sm">
-            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center group-hover:bg-[#2D8B7E]/10 transition-colors">
-              <User className="w-4 h-4 text-slate-500 group-hover:text-[#2D8B7E] transition-colors" />
-            </div>
-            <span className={vehicle.driver ? 'text-slate-800 font-semibold' : 'text-slate-400 italic'}>
-              {driverName}
-            </span>
-          </div>
+        {/* Driver */}
+        <div className="flex items-center gap-2 text-sm mb-3">
+          <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <span className={vehicle.driver ? 'text-slate-700 font-semibold truncate' : 'text-slate-400 italic text-xs'}>
+            {driverName}
+          </span>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-slate-200/70">
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1.5">VIN</p>
-          <p className="text-xs text-slate-700 font-mono bg-slate-50 px-3 py-2 rounded-lg">{vehicle.vin_number}</p>
+        {/* Compact info row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Total cost */}
+          {vehicle.total_cost && (
+            <div className="flex items-center gap-1.5 bg-[#2D8B7E]/5 border border-[#2D8B7E]/20 rounded-lg px-2.5 py-1.5">
+              <Receipt className="w-3.5 h-3.5 text-[#2D8B7E]" />
+              <span className="text-xs font-bold text-[#2D8B7E] tabular-nums">
+                {parseFloat(vehicle.total_cost).toLocaleString('pl-PL', { maximumFractionDigits: 0 })}
+              </span>
+            </div>
+          )}
+
+          {/* Equipment */}
+          {vehicle.equipment_total > 0 && (
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+              <Package className="w-3.5 h-3.5 text-slate-400" />
+              <span className={`text-xs font-bold ${
+                vehicle.equipment_equipped === vehicle.equipment_total
+                  ? 'text-emerald-600'
+                  : vehicle.equipment_equipped > 0
+                  ? 'text-amber-600'
+                  : 'text-slate-500'
+              }`}>
+                {vehicle.equipment_equipped}/{vehicle.equipment_total}
+              </span>
+            </div>
+          )}
+
+          {/* Regulation */}
+          {vehicle.has_regulation ? (
+            vehicle.regulation_overdue > 0 ? (
+              <div className="flex items-center gap-1.5 bg-red-50 border border-red-200/70 rounded-lg px-2.5 py-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                <span className="text-xs font-bold text-red-600">{vehicle.regulation_overdue}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/70 rounded-lg px-2.5 py-1.5">
+                <ScrollText className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="text-xs font-bold text-emerald-600">{t('regulation.ok')}</span>
+              </div>
+            )
+          ) : (
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+              <ScrollText className="w-3.5 h-3.5 text-slate-300" />
+              <span className="text-xs font-semibold text-slate-400">{t('regulation.none')}</span>
+            </div>
+          )}
+
+          {/* Inspection */}
+          {(() => {
+            const ins = getInspectionDisplay(vehicle.days_until_inspection, t);
+            return (
+              <div className={`flex items-center gap-1.5 ${ins.bg} border border-slate-200/70 rounded-lg px-2.5 py-1.5`}>
+                <ShieldCheck className={`w-3.5 h-3.5 ${ins.icon}`} />
+                <span className={`text-xs font-semibold ${ins.text}`}>{ins.label}</span>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -679,7 +745,7 @@ function VehicleCardOverlay({ vehicle }: { vehicle: Vehicle }) {
   return (
     <div className="cursor-move bg-white rounded-2xl border-2 border-[#2D8B7E]/50 shadow-2xl shadow-[#2D8B7E]/20 w-80 select-none overflow-hidden">
       {vehicle.photos && vehicle.photos.length > 0 && (
-        <div className="relative h-28">
+        <div className="relative h-36">
           <img
             src={vehicle.photos[0].image}
             alt={vehicle.car_number}
@@ -688,45 +754,77 @@ function VehicleCardOverlay({ vehicle }: { vehicle: Vehicle }) {
         </div>
       )}
       <div className="p-5">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h4 className="text-lg font-bold text-slate-900 tracking-tight">{vehicle.car_number}</h4>
-          <p className="text-sm text-slate-600 mt-1 font-medium">
-            {vehicle.manufacturer} {vehicle.model}
-          </p>
-        </div>
-        <GripVertical className="w-5 h-5 text-slate-400" />
-      </div>
-
-      <div className="space-y-3 mt-1">
-        <div className="flex items-center gap-2.5 text-sm text-slate-700">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-            <Calendar className="w-4 h-4 text-slate-500" />
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1 min-w-0">
+            <h4 className="text-lg font-bold text-slate-900 tracking-tight">{vehicle.car_number}</h4>
+            <p className="text-sm text-slate-500 mt-0.5 font-medium truncate">
+              {vehicle.manufacturer} {vehicle.model} <span className="text-slate-400">&middot;</span> {vehicle.year}
+            </p>
           </div>
-          <span className="font-semibold">{vehicle.year} {t('year')}</span>
+          <GripVertical className="w-5 h-5 text-slate-400" />
         </div>
 
-        <div className="flex items-center gap-2.5 text-sm text-slate-700">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-            <DollarSign className="w-4 h-4 text-slate-500" />
-          </div>
-          <span className="font-bold text-[#2D8B7E]">{parseFloat(vehicle.cost).toLocaleString()} PLN</span>
-        </div>
-
-        <div className="flex items-center gap-2.5 text-sm">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-            <User className="w-4 h-4 text-slate-500" />
-          </div>
-          <span className={vehicle.driver ? 'text-slate-800 font-semibold' : 'text-slate-400 italic'}>
+        <div className="flex items-center gap-2 text-sm mb-3">
+          <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <span className={vehicle.driver ? 'text-slate-700 font-semibold truncate' : 'text-slate-400 italic text-xs'}>
             {driverName}
           </span>
         </div>
-      </div>
 
-      <div className="mt-4 pt-4 border-t border-slate-200/70">
-        <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1.5">VIN</p>
-        <p className="text-xs text-slate-700 font-mono bg-slate-50 px-3 py-2 rounded-lg">{vehicle.vin_number}</p>
-      </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {vehicle.total_cost && (
+            <div className="flex items-center gap-1.5 bg-[#2D8B7E]/5 border border-[#2D8B7E]/20 rounded-lg px-2.5 py-1.5">
+              <Receipt className="w-3.5 h-3.5 text-[#2D8B7E]" />
+              <span className="text-xs font-bold text-[#2D8B7E] tabular-nums">
+                {parseFloat(vehicle.total_cost).toLocaleString('pl-PL', { maximumFractionDigits: 0 })}
+              </span>
+            </div>
+          )}
+
+          {vehicle.equipment_total > 0 && (
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+              <Package className="w-3.5 h-3.5 text-slate-400" />
+              <span className={`text-xs font-bold ${
+                vehicle.equipment_equipped === vehicle.equipment_total
+                  ? 'text-emerald-600'
+                  : vehicle.equipment_equipped > 0
+                  ? 'text-amber-400'
+                  : 'text-slate-300'
+              }`}>
+                {vehicle.equipment_equipped}/{vehicle.equipment_total}
+              </span>
+            </div>
+          )}
+
+          {vehicle.has_regulation ? (
+            vehicle.regulation_overdue > 0 ? (
+              <div className="flex items-center gap-1.5 bg-red-50 border border-red-200/70 rounded-lg px-2.5 py-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                <span className="text-xs font-bold text-red-600">{vehicle.regulation_overdue}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/70 rounded-lg px-2.5 py-1.5">
+                <ScrollText className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="text-xs font-bold text-emerald-600">{t('regulation.ok')}</span>
+              </div>
+            )
+          ) : (
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+              <ScrollText className="w-3.5 h-3.5 text-slate-300" />
+              <span className="text-xs font-semibold text-slate-400">{t('regulation.none')}</span>
+            </div>
+          )}
+
+          {(() => {
+            const ins = getInspectionDisplay(vehicle.days_until_inspection, t);
+            return (
+              <div className={`flex items-center gap-1.5 ${ins.bg} border border-slate-200/70 rounded-lg px-2.5 py-1.5`}>
+                <ShieldCheck className={`w-3.5 h-3.5 ${ins.icon}`} />
+                <span className={`text-xs font-semibold ${ins.text}`}>{ins.label}</span>
+              </div>
+            );
+          })()}
+        </div>
       </div>
     </div>
   );
@@ -739,11 +837,11 @@ interface MobileVehicleCardProps {
   columns: KanbanColumnConfig[];
   onSelect: () => void;
   onEdit?: () => void;
-  onDelete?: (id: string) => void;
+  onArchive?: (id: string) => void;
   onUpdateStatus: (vehicleId: string, newStatus: VehicleStatus) => void;
 }
 
-function MobileVehicleCard({ vehicle, columns, onSelect, onEdit, onDelete, onUpdateStatus }: MobileVehicleCardProps) {
+function MobileVehicleCard({ vehicle, columns, onSelect, onEdit, onArchive, onUpdateStatus }: MobileVehicleCardProps) {
   const t = useTranslations('vehicles');
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -814,17 +912,65 @@ function MobileVehicleCard({ vehicle, columns, onSelect, onEdit, onDelete, onUpd
           ) : (
             <span className="text-xs text-slate-400 italic">{t('noDriver')}</span>
           )}
+          {(() => {
+            const ins = getInspectionDisplay(vehicle.days_until_inspection, t);
+            return (
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className={`w-3.5 h-3.5 ${ins.icon} shrink-0`} />
+                <span className={`text-xs ${ins.text}`}>{ins.label}</span>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
-      {/* Bottom bar — cost + quick status change */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-100">
-        <span className="text-sm font-black text-[#2D8B7E]">
-          {parseFloat(vehicle.cost).toLocaleString()} PLN
-        </span>
+      {/* Bottom bar — total cost, equipment, regulation alert, quick status change */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-100 gap-2">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {vehicle.total_cost && (
+            <div className="flex items-center gap-1.5">
+              <Receipt className="w-3.5 h-3.5 text-[#2D8B7E] shrink-0" />
+              <span className="text-xs font-bold text-[#2D8B7E] tabular-nums">
+                {parseFloat(vehicle.total_cost).toLocaleString('pl-PL', { maximumFractionDigits: 0 })}
+              </span>
+            </div>
+          )}
+          {vehicle.equipment_total > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className={`text-xs font-bold ${
+                vehicle.equipment_equipped === vehicle.equipment_total
+                  ? 'text-emerald-600'
+                  : 'text-amber-600'
+              }`}>
+                {vehicle.equipment_equipped}/{vehicle.equipment_total}
+              </span>
+            </div>
+          )}
+          {vehicle.has_regulation ? (
+            vehicle.regulation_overdue > 0 ? (
+              <div className="flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                <span className="text-xs font-bold text-red-600">
+                  {t('regulation.overdue', { count: vehicle.regulation_overdue })}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <ScrollText className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span className="text-xs font-bold text-emerald-600">{t('regulation.ok')}</span>
+              </div>
+            )
+          ) : (
+            <div className="flex items-center gap-1">
+              <ScrollText className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+              <span className="text-xs font-semibold text-slate-400">{t('regulation.none')}</span>
+            </div>
+          )}
+        </div>
         <button
           onClick={() => setShowStatusPicker(true)}
-          className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-50 border border-slate-200 hover:bg-slate-100 active:bg-slate-200 px-3 py-1.5 rounded-xl transition-colors"
+          className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-50 border border-slate-200 hover:bg-slate-100 active:bg-slate-200 px-3 py-1.5 rounded-xl transition-colors shrink-0"
         >
           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
           <span className="max-w-[120px] truncate">{currentColumn?.title ?? vehicle.status}</span>
@@ -855,20 +1001,20 @@ function MobileVehicleCard({ vehicle, columns, onSelect, onEdit, onDelete, onUpd
                 </button>
               </>
             )}
-            {onDelete && (
+            {onArchive && (
               <>
                 <div className="border-t border-slate-100 mx-3" />
                 <button
                   onClick={() => {
                     setShowMenu(false);
-                    if (confirm(t('deleteConfirm', { number: vehicle.car_number }))) {
-                      onDelete(vehicle.id);
+                    if (confirm(t('archiveConfirm', { number: vehicle.car_number }))) {
+                      onArchive(vehicle.id);
                     }
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-amber-600 hover:bg-amber-50 active:bg-amber-100 transition-colors"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  {t('delete')}
+                  <Archive className="w-4 h-4" />
+                  {t('archiveVehicle')}
                 </button>
               </>
             )}

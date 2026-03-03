@@ -45,7 +45,7 @@ export default function VehiclesPage() {
     try {
       // Optimistic update
       setVehicles(prev =>
-        prev.map(v => (v.id === vehicleId ? { ...v, status: newStatus } : v))
+        prev.map(v => (v.id === vehicleId ? { ...v, status: newStatus, updated_at: new Date().toISOString() } : v))
       );
 
       // API call
@@ -93,13 +93,13 @@ export default function VehiclesPage() {
     loadVehicles();
   };
 
-  const handleDeleteVehicle = async (id: string) => {
+  const handleArchiveVehicle = async (id: string) => {
     try {
-      await vehicleService.deleteVehicle(id);
+      await vehicleService.archiveVehicle(id);
       loadVehicles();
     } catch (err) {
-      console.error('Failed to delete vehicle:', err);
-      alert('Не вдалося видалити автомобіль');
+      console.error('Failed to archive vehicle:', err);
+      alert(t('archiveError'));
     }
   };
 
@@ -115,6 +115,8 @@ export default function VehiclesPage() {
         cost: vehicle.cost,
         vin_number: (vehicle.vin_number.slice(0, 12) + '_COPY').slice(0, 17),
         car_number: (vehicle.car_number.slice(0, 5) + '-COPY').slice(0, 10),
+        color: vehicle.color || '',
+        fuel_type: vehicle.fuel_type,
         status: 'PREPARATION' as const,
         initial_km: vehicle.initial_km,
       };
@@ -166,9 +168,10 @@ export default function VehiclesPage() {
         onEditVehicle={handleEditVehicle}
         onAddVehicle={handleAddVehicle}
         onUpdateStatus={handleUpdateStatus}
-        onDeleteVehicle={handleDeleteVehicle}
+        onArchiveVehicle={handleArchiveVehicle}
         onDuplicateVehicle={handleDuplicateVehicle}
         onOpenSidebar={openSidebar}
+        onGoToArchive={() => router.push('/vehicles/archive')}
       />
 
       <VehicleModal

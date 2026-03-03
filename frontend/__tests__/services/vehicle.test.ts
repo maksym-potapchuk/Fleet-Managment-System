@@ -99,7 +99,7 @@ describe('vehicleService.getVehicle', () => {
 
 describe('vehicleService.createVehicle', () => {
   it('POSTs to /vehicle/ with the provided data', async () => {
-    const payload = { model: 'Corolla', manufacturer: 'Toyota' as const, year: 2020, cost: '25000', vin_number: 'VIN', car_number: 'AA1234BB', initial_km: 0 };
+    const payload = { model: 'Corolla', manufacturer: 'Toyota' as const, year: 2020, cost: '25000', vin_number: 'VIN', car_number: 'AA1234BB', color: 'Білий', fuel_type: 'GASOLINE' as const, initial_km: 0 };
     mockedApi.post.mockResolvedValue({ data: { id: 'new', ...payload } });
 
     await vehicleService.createVehicle(payload);
@@ -120,15 +120,66 @@ describe('vehicleService.updateVehicle', () => {
   });
 });
 
-// ─── deleteVehicle ────────────────────────────────────────────────────────────
+// ─── archiveVehicle ──────────────────────────────────────────────────────────
 
-describe('vehicleService.deleteVehicle', () => {
-  it('DELETEs /vehicle/{id}/', async () => {
+describe('vehicleService.archiveVehicle', () => {
+  it('DELETEs /vehicle/{id}/ (soft-delete)', async () => {
     mockedApi.delete.mockResolvedValue({});
 
-    await vehicleService.deleteVehicle('v1');
+    await vehicleService.archiveVehicle('v1');
 
     expect(mockedApi.delete).toHaveBeenCalledWith('/vehicle/v1/');
+  });
+});
+
+// ─── getArchivedVehicles ─────────────────────────────────────────────────────
+
+describe('vehicleService.getArchivedVehicles', () => {
+  it('calls GET /vehicle/archive/', async () => {
+    mockedApi.get.mockResolvedValue({ data: [] });
+
+    const result = await vehicleService.getArchivedVehicles();
+
+    expect(mockedApi.get).toHaveBeenCalledWith('/vehicle/archive/');
+    expect(result).toEqual([]);
+  });
+});
+
+// ─── restoreVehicle ──────────────────────────────────────────────────────────
+
+describe('vehicleService.restoreVehicle', () => {
+  it('POSTs to /vehicle/{id}/restore/', async () => {
+    mockedApi.post.mockResolvedValue({ data: { id: 'v1' } });
+
+    await vehicleService.restoreVehicle('v1');
+
+    expect(mockedApi.post).toHaveBeenCalledWith('/vehicle/v1/restore/');
+  });
+});
+
+// ─── checkVehicleDelete ──────────────────────────────────────────────────────
+
+describe('vehicleService.checkVehicleDelete', () => {
+  it('calls GET /vehicle/{id}/delete-check/', async () => {
+    const check = { has_related_data: false, related_counts: {} };
+    mockedApi.get.mockResolvedValue({ data: check });
+
+    const result = await vehicleService.checkVehicleDelete('v1');
+
+    expect(mockedApi.get).toHaveBeenCalledWith('/vehicle/v1/delete-check/');
+    expect(result).toEqual(check);
+  });
+});
+
+// ─── permanentlyDeleteVehicle ────────────────────────────────────────────────
+
+describe('vehicleService.permanentlyDeleteVehicle', () => {
+  it('DELETEs /vehicle/{id}/permanent-delete/?confirm=true', async () => {
+    mockedApi.delete.mockResolvedValue({});
+
+    await vehicleService.permanentlyDeleteVehicle('v1');
+
+    expect(mockedApi.delete).toHaveBeenCalledWith('/vehicle/v1/permanent-delete/?confirm=true');
   });
 });
 

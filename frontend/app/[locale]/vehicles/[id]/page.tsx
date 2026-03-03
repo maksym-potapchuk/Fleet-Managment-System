@@ -24,12 +24,25 @@ import {
   Check,
   Upload,
   Users,
+  ShieldCheck,
+  FileText,
+  Calendar,
+  Fuel,
+  Search,
+  ChevronDown,
 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import api from '@/lib/api';
 import { vehicleService } from '@/services/vehicle';
-import { Vehicle, VehicleOwnerHistory, VehicleStatus } from '@/types/vehicle';
+import { expenseService } from '@/services/expense';
+import { Vehicle, VehicleOwnerHistory, VehicleStatus, FuelType, TechnicalInspection, MileageLog } from '@/types/vehicle';
+import { Expense, CreateExpenseData, ExpenseCategory, ExpenseFilters as ExpenseFiltersType } from '@/types/expense';
 import { VehicleModal } from '@/components/vehicle/VehicleModal';
+import { ExpenseTable } from '@/components/expense/ExpenseTable';
+import { ExpenseForm } from '@/components/expense/ExpenseForm';
+import { ExpenseFilters } from '@/components/expense/ExpenseFilters';
+import { ExpenseDetailModal } from '@/components/expense/ExpenseDetailModal';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useSidebar } from '../SidebarContext';
 
 const STATUS_COLORS: Record<VehicleStatus, { bg: string; text: string; border: string }> = {
@@ -44,7 +57,7 @@ const STATUS_COLORS: Record<VehicleStatus, { bg: string; text: string; border: s
   SOLD:        { bg: 'bg-slate-50',   text: 'text-slate-700',   border: 'border-slate-200' },
 };
 
-type WorkspaceTab = 'service' | 'equipment' | 'regulation' | 'owners';
+type WorkspaceTab = 'service' | 'equipment' | 'regulation' | 'history' | 'inspection' | 'expenses';
 
 interface RegulationItem {
   id: number;
@@ -79,6 +92,12 @@ interface RegulationPlan {
   schema: { id: number; title: string; title_pl: string; title_uk: string };
   assigned_at: string;
   entries: RegulationPlanEntry[];
+}
+
+interface DriverOption {
+  id: string;
+  first_name: string;
+  last_name: string;
 }
 
 interface ServicePlan {
@@ -127,9 +146,24 @@ export default function VehicleWorkspacePage() {
 
   // Inline photo management
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
   const [deletingPhotoId, setDeletingPhotoId] = useState<number | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Quick mileage update
+  const [showMileageInput, setShowMileageInput] = useState(false);
+  const [mileageKm, setMileageKm] = useState('');
+  const [savingMileage, setSavingMileage] = useState(false);
+  const mileageInputRef = useRef<HTMLInputElement>(null);
+
+  // Inline driver assignment
+  const [showDriverPicker, setShowDriverPicker] = useState(false);
+  const [driversList, setDriversList] = useState<DriverOption[]>([]);
+  const [driverSearch, setDriverSearch] = useState('');
+  const [savingDriver, setSavingDriver] = useState(false);
+  const driverPickerRef = useRef<HTMLDivElement>(null);
+  const driverSearchRef = useRef<HTMLInputElement>(null);
 
   const loadVehicle = useCallback(async () => {
     try {
@@ -143,9 +177,77 @@ export default function VehicleWorkspacePage() {
     }
   }, [id]);
 
+  const [mileageError, setMileageError] = useState('');
+
+  const handleQuickMileage = async () => {
+    const kmVal = parseInt(mileageKm, 10);
+    if (!kmVal || kmVal <= 0 || !vehicle) return;
+    if (kmVal <= vehicle.initial_km) {
+      setMileageError(t('mileage.minError', { km: vehicle.initial_km.toLocaleString() }));
+      return;
+    }
+    setMileageError('');
+    setSavingMileage(true);
+    try {
+      await api.post(`/vehicle/${vehicle.id}/mileage/`, {
+        km: kmVal,
+        recorded_at: new Date().toISOString().split('T')[0],
+      });
+      setShowMileageInput(false);
+      setMileageKm('');
+      await loadVehicle();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingMileage(false);
+    }
+  };
+
   useEffect(() => {
     if (id) loadVehicle();
   }, [id, loadVehicle]);
+
+  // Load drivers when picker opens
+  useEffect(() => {
+    if (!showDriverPicker) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get('/driver/');
+        const data = res.data;
+        if (!cancelled) setDriversList(Array.isArray(data) ? data : (data as { results: DriverOption[] }).results ?? []);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [showDriverPicker]);
+
+  // Close driver picker on outside click
+  useEffect(() => {
+    if (!showDriverPicker) return;
+    const handler = (e: MouseEvent) => {
+      if (driverPickerRef.current && !driverPickerRef.current.contains(e.target as Node)) {
+        setShowDriverPicker(false);
+        setDriverSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showDriverPicker]);
+
+  const handleDriverAssign = async (driverId: string | null) => {
+    if (!vehicle) return;
+    setSavingDriver(true);
+    try {
+      await vehicleService.updateVehicle(vehicle.id, { driver: driverId });
+      await loadVehicle();
+      setShowDriverPicker(false);
+      setDriverSearch('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingDriver(false);
+    }
+  };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -212,11 +314,22 @@ export default function VehicleWorkspacePage() {
     ? `${vehicle.driver.first_name} ${vehicle.driver.last_name}`
     : tVehicles('noDriver');
 
+  const FUEL_LABELS: Record<FuelType, string> = {
+    GASOLINE: 'Бензин',
+    DIESEL: 'Дизель',
+    LPG: 'Газ (LPG)',
+    LPG_GASOLINE: 'Газ + Бензин',
+    ELECTRIC: 'Електро',
+    HYBRID: 'Гібрид',
+  };
+
   const tabs: { id: WorkspaceTab; label: string; icon: typeof Wrench; secondary?: boolean }[] = [
     { id: 'service',    label: t('tabs.service'),    icon: Wrench },
     { id: 'equipment',  label: t('tabs.equipment'),  icon: Package },
     { id: 'regulation', label: t('tabs.regulation'), icon: ScrollText },
-    { id: 'owners',     label: t('tabs.owners'),     icon: History, secondary: true },
+    { id: 'inspection', label: t('tabs.inspection'), icon: ShieldCheck },
+    { id: 'expenses',   label: t('tabs.expenses'),   icon: DollarSign },
+    { id: 'history',    label: t('tabs.history'),    icon: History, secondary: true },
   ];
 
   return (
@@ -243,101 +356,241 @@ export default function VehicleWorkspacePage() {
           </button>
         </div>
 
-        {/* Vehicle identity */}
-        <div className="flex flex-col md:flex-row md:items-start gap-4">
-          <div className="flex items-center gap-4 flex-1 min-w-0">
-            <div className="w-14 h-14 bg-gradient-to-br from-[#2D8B7E] to-[#248B7B] rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
-              <Car className="w-8 h-8 text-white" strokeWidth={2} />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-                  {vehicle.car_number}
-                </h1>
-                <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${statusColors.bg} ${statusColors.text} ${statusColors.border}`}>
-                  {vehicle.status}
-                </span>
-              </div>
-              <p className="text-slate-500 font-medium mt-0.5 text-sm">
-                {vehicle.manufacturer} {vehicle.model} &bull; {vehicle.year}
-              </p>
-            </div>
-          </div>
+        {/* ── Photos (compact strip) ── */}
+        {(() => {
+          const photos = vehicle.photos ?? [];
+          const safeIdx = photos.length > 0 ? Math.min(activePhotoIdx, photos.length - 1) : 0;
+          return (
+            <>
+              {photos.length > 0 && (
+                <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+                  {photos.map((photo, idx) => (
+                    <div key={photo.id} className="relative group/thumb flex-shrink-0">
+                      <button
+                        onClick={() => { setActivePhotoIdx(idx); setLightboxIdx(idx); }}
+                        className={`w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden border-2 transition-all ${
+                          idx === safeIdx ? 'border-[#2D8B7E] shadow-md' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <img src={photo.image} alt="" className="w-full h-full object-cover" />
+                      </button>
+                      <button
+                        onClick={() => handlePhotoDelete(photo.id)}
+                        disabled={deletingPhotoId === photo.id}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-all disabled:opacity-60 shadow-sm"
+                      >
+                        {deletingPhotoId === photo.id
+                          ? <div className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />
+                          : <X className="w-3 h-3" />}
+                      </button>
+                    </div>
+                  ))}
+                  {photos.length < 10 && (
+                    <button
+                      onClick={() => photoInputRef.current?.click()}
+                      disabled={uploadingPhoto}
+                      className="w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#2D8B7E] hover:bg-[#2D8B7E]/5 flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-50"
+                    >
+                      {uploadingPhoto
+                        ? <div className="w-4 h-4 border-2 border-[#2D8B7E] border-t-transparent rounded-full animate-spin" />
+                        : <Plus className="w-5 h-5 text-slate-400" />}
+                    </button>
+                  )}
+                </div>
+              )}
+              <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+            </>
+          );
+        })()}
 
-          {/* Quick info chips + edit button */}
-          <div className="flex flex-wrap items-center gap-2 md:flex-shrink-0">
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-              <DollarSign className="w-4 h-4 text-[#2D8B7E]" />
-              <span className="text-sm font-bold text-[#2D8B7E]">
-                {parseFloat(vehicle.cost).toLocaleString()} PLN
-              </span>
-            </div>
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-              <User className="w-4 h-4 text-slate-400" />
-              <span className={`text-sm font-semibold ${vehicle.driver ? 'text-slate-800' : 'text-slate-400 italic'}`}>
-                {driverName}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-              <Gauge className="w-4 h-4 text-slate-400" />
-              <span className="text-sm font-bold text-slate-700">
-                {vehicle.initial_km.toLocaleString()} км
-              </span>
-            </div>
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">VIN</span>
-              <span className="text-xs font-mono text-slate-600">{vehicle.vin_number}</span>
-            </div>
+        {/* ── Title row ── */}
+        <div className="flex items-center gap-3 flex-wrap mb-3">
+          <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+            {vehicle.car_number}
+          </h1>
+          <span className="text-slate-400 font-medium">&middot;</span>
+          <span className="text-base md:text-lg font-semibold text-slate-600">
+            {vehicle.manufacturer} {vehicle.model}
+          </span>
+          <span className="text-slate-400 font-medium">&middot;</span>
+          <span className="text-base md:text-lg font-bold text-slate-800">{vehicle.year}</span>
+          <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${statusColors.bg} ${statusColors.text} ${statusColors.border}`}>
+            {vehicle.status}
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            {(vehicle.photos ?? []).length === 0 && (
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-700 font-bold text-sm px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50"
+              >
+                {uploadingPhoto
+                  ? <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                  : <Upload className="w-3.5 h-3.5" />}
+                {t('addPhoto')}
+              </button>
+            )}
             <button
               onClick={() => setIsEditModalOpen(true)}
-              className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-sm px-3 py-2 rounded-xl transition-colors"
+              className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-sm px-3 py-1.5 rounded-xl transition-colors"
             >
-              <Edit className="w-4 h-4" />
+              <Edit className="w-3.5 h-3.5" />
               {t('edit')}
             </button>
           </div>
         </div>
 
-        {/* ── Photo strip ── */}
-        {vehicle && (
-          <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-            {(vehicle.photos ?? []).map((photo, idx) => (
-              <div key={photo.id} className="relative flex-shrink-0 group">
+        {/* ── Info grid ── */}
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-4">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+            <DollarSign className="w-4 h-4 text-[#2D8B7E]" />
+            <span className="text-sm font-bold text-[#2D8B7E]">
+              {parseFloat(vehicle.cost).toLocaleString()} PLN
+            </span>
+          </div>
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+            <Fuel className="w-4 h-4 text-amber-500" />
+            <span className="text-sm font-bold text-slate-700">
+              {FUEL_LABELS[vehicle.fuel_type] || vehicle.fuel_type}
+            </span>
+          </div>
+          <div className="relative" ref={driverPickerRef}>
+            <button
+              onClick={() => { setShowDriverPicker(v => !v); setDriverSearch(''); }}
+              disabled={savingDriver}
+              className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 hover:border-[#2D8B7E]/50 hover:bg-[#2D8B7E]/5 transition-all group cursor-pointer text-left w-full disabled:opacity-60"
+            >
+              {savingDriver ? (
+                <div className="w-4 h-4 border-2 border-[#2D8B7E] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <User className="w-4 h-4 text-slate-400 group-hover:text-[#2D8B7E] transition-colors" />
+              )}
+              <span className={`text-sm font-semibold truncate ${vehicle.driver ? 'text-slate-800 group-hover:text-[#2D8B7E]' : 'text-slate-400 italic'} transition-colors`}>
+                {driverName}
+              </span>
+              <Pencil className="w-3 h-3 text-slate-300 group-hover:text-[#2D8B7E] transition-colors ml-auto" />
+            </button>
+            {showDriverPicker && (
+              <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden min-w-[220px]">
+                <div className="p-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2 px-2 py-1.5 bg-slate-50 rounded-lg">
+                    <Search className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <input
+                      ref={driverSearchRef}
+                      autoFocus
+                      value={driverSearch}
+                      onChange={(e) => setDriverSearch(e.target.value)}
+                      placeholder={t('driver.searchPlaceholder')}
+                      className="flex-1 text-sm bg-transparent outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  <button
+                    onClick={() => handleDriverAssign(null)}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                      !vehicle.driver ? 'bg-[#2D8B7E]/5 text-[#2D8B7E] font-semibold' : 'text-slate-400 italic'
+                    }`}
+                  >
+                    — {tVehicles('noDriver')} —
+                  </button>
+                  {driversList
+                    .filter(d => {
+                      if (!driverSearch) return true;
+                      const q = driverSearch.toLowerCase();
+                      return `${d.first_name} ${d.last_name}`.toLowerCase().includes(q);
+                    })
+                    .map(d => (
+                      <button
+                        key={d.id}
+                        onClick={() => handleDriverAssign(d.id)}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                          vehicle.driver?.id === d.id ? 'bg-[#2D8B7E]/5 text-[#2D8B7E] font-semibold' : 'text-slate-700'
+                        }`}
+                      >
+                        {d.first_name} {d.last_name}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+          {showMileageInput ? (
+            <div className="col-span-2 md:col-span-1">
+              <div className={`flex items-center gap-1.5 bg-white border-2 rounded-xl px-2 py-1 ${mileageError ? 'border-red-400' : 'border-[#2D8B7E]'}`}>
+                <Gauge className={`w-4 h-4 flex-shrink-0 ${mileageError ? 'text-red-400' : 'text-[#2D8B7E]'}`} />
+                <input
+                  ref={mileageInputRef}
+                  type="number"
+                  min={vehicle.initial_km + 1}
+                  value={mileageKm}
+                  onChange={(e) => { setMileageKm(e.target.value); setMileageError(''); }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleQuickMileage();
+                    if (e.key === 'Escape') { setShowMileageInput(false); setMileageKm(''); setMileageError(''); }
+                  }}
+                  placeholder={t('mileage.newKm')}
+                  className="w-24 text-sm font-bold text-slate-800 bg-transparent outline-none placeholder:text-slate-400"
+                  autoFocus
+                />
                 <button
-                  onClick={() => setLightboxIdx(idx)}
-                  className="w-14 h-14 rounded-xl overflow-hidden block border border-slate-200 hover:border-[#2D8B7E]/50 transition-colors"
+                  onClick={handleQuickMileage}
+                  disabled={savingMileage || !mileageKm || parseInt(mileageKm, 10) <= 0}
+                  className="w-6 h-6 flex items-center justify-center rounded-lg bg-[#2D8B7E] hover:bg-[#248B7B] text-white transition-colors disabled:opacity-50 flex-shrink-0"
                 >
-                  <img src={photo.image} alt="" className="w-full h-full object-cover" />
+                  {savingMileage
+                    ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    : <Check className="w-3.5 h-3.5" />}
                 </button>
                 <button
-                  onClick={() => handlePhotoDelete(photo.id)}
-                  disabled={deletingPhotoId === photo.id}
-                  className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all disabled:opacity-60 z-10"
+                  onClick={() => { setShowMileageInput(false); setMileageKm(''); setMileageError(''); }}
+                  className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
                 >
-                  {deletingPhotoId === photo.id
-                    ? <div className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />
-                    : <X className="w-3 h-3" />}
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
-            ))}
-            {(vehicle.photos ?? []).length < 10 && (
-              <button
-                onClick={() => photoInputRef.current?.click()}
-                disabled={uploadingPhoto}
-                title="Додати фото"
-                className="w-14 h-14 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#2D8B7E] hover:bg-[#2D8B7E]/5 flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-50"
-              >
-                {uploadingPhoto
-                  ? <div className="w-4 h-4 border-2 border-[#2D8B7E] border-t-transparent rounded-full animate-spin" />
-                  : <Upload className="w-5 h-5 text-slate-400" />}
-              </button>
-            )}
-            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+              {mileageError && (
+                <p className="text-[11px] text-red-500 font-medium mt-1 px-1">{mileageError}</p>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => { setShowMileageInput(true); setMileageKm(''); setMileageError(''); }}
+              className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 hover:border-[#2D8B7E]/50 hover:bg-[#2D8B7E]/5 transition-all group cursor-pointer text-left"
+              title={t('mileage.updateMileage')}
+            >
+              <Gauge className="w-4 h-4 text-slate-400 group-hover:text-[#2D8B7E] transition-colors" />
+              <span className="text-sm font-bold text-slate-700 group-hover:text-[#2D8B7E] transition-colors">
+                {vehicle.initial_km.toLocaleString()} км
+              </span>
+              <Pencil className="w-3 h-3 text-slate-300 group-hover:text-[#2D8B7E] transition-colors ml-auto" />
+            </button>
+          )}
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">VIN</span>
+            <span className="text-xs font-mono text-slate-600 truncate">{vehicle.vin_number}</span>
           </div>
-        )}
+          {(() => {
+            const d = vehicle.days_until_inspection;
+            let chipBg = 'bg-slate-50'; let chipBorder = 'border-slate-200'; let chipIcon = 'text-slate-400'; let chipText = 'text-slate-400';
+            let chipLabel = t('inspection.noData');
+            if (d !== null) {
+              if (d < 0) { chipBg = 'bg-red-50'; chipBorder = 'border-red-200'; chipIcon = 'text-red-500'; chipText = 'text-red-600 font-bold'; chipLabel = t('inspection.overdue', { days: Math.abs(d) }); }
+              else if (d <= 7)  { chipBg = 'bg-red-50'; chipBorder = 'border-red-200'; chipIcon = 'text-red-500'; chipText = 'text-red-600'; chipLabel = t('inspection.daysLeft', { days: d }); }
+              else if (d <= 30) { chipBg = 'bg-amber-50'; chipBorder = 'border-amber-200'; chipIcon = 'text-amber-500'; chipText = 'text-amber-600'; chipLabel = t('inspection.daysLeft', { days: d }); }
+              else { chipBg = 'bg-emerald-50'; chipBorder = 'border-emerald-200'; chipIcon = 'text-emerald-500'; chipText = 'text-emerald-600'; chipLabel = t('inspection.daysLeft', { days: d }); }
+            }
+            return (
+              <div className={`flex items-center gap-2 ${chipBg} border ${chipBorder} rounded-xl px-3 py-2`}>
+                <ShieldCheck className={`w-4 h-4 ${chipIcon}`} />
+                <span className={`text-sm font-bold ${chipText}`}>{chipLabel}</span>
+              </div>
+            );
+          })()}
+        </div>
 
         {/* ── Tab navigation ── */}
-        <div className="mt-4 flex gap-1 items-center">
+        <div className="flex gap-1 items-center">
           {tabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -381,7 +634,9 @@ export default function VehicleWorkspacePage() {
         {activeTab === 'service'    && <ServiceTab    vehicleId={vehicle.id} />}
         {activeTab === 'equipment'  && <EquipmentTab  vehicleId={vehicle.id} />}
         {activeTab === 'regulation' && <RegulationTab vehicleId={vehicle.id} initialKm={vehicle.initial_km} />}
-        {activeTab === 'owners'     && <OwnersTab     vehicleId={vehicle.id} />}
+        {activeTab === 'history'    && <HistoryTab    vehicleId={vehicle.id} onMileageChange={loadVehicle} />}
+        {activeTab === 'inspection' && <InspectionTab vehicleId={vehicle.id} onInspectionChange={loadVehicle} />}
+        {activeTab === 'expenses'   && <ExpensesTab  vehicleId={vehicle.id} />}
       </div>
 
       {/* Lightbox */}
@@ -438,6 +693,7 @@ export default function VehicleWorkspacePage() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSave={loadVehicle}
+        onArchive={() => router.push('/vehicles')}
       />
     </div>
   );
@@ -1568,10 +1824,84 @@ function RegulationHistoryPanel({ vehicleId }: { vehicleId: string }) {
 // Owners Tab
 // ─────────────────────────────────────────────
 
-interface DriverOption {
-  id: string;
-  first_name: string;
-  last_name: string;
+function DriverSearchSelect({ drivers, value, onChange, placeholder }: {
+  drivers: DriverOption[];
+  value: string;
+  onChange: (id: string) => void;
+  placeholder: string;
+}) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = drivers.filter(d => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return `${d.first_name} ${d.last_name}`.toLowerCase().includes(q);
+  });
+
+  const selected = drivers.find(d => d.id === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        className="flex items-center w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm bg-white cursor-pointer focus-within:ring-2 focus-within:ring-[#2D8B7E] focus-within:border-[#2D8B7E] transition-all"
+        onClick={() => setOpen(true)}
+      >
+        <Search className="w-4 h-4 text-slate-400 mr-2 flex-shrink-0" />
+        {open ? (
+          <input
+            autoFocus
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={placeholder}
+            className="flex-1 outline-none bg-transparent text-sm placeholder:text-slate-400"
+            onFocus={() => setOpen(true)}
+          />
+        ) : (
+          <span className={`flex-1 truncate ${selected ? 'text-slate-900' : 'text-slate-400'}`}>
+            {selected ? `${selected.first_name} ${selected.last_name}` : placeholder}
+          </span>
+        )}
+        {value && !open && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onChange(''); setSearch(''); }}
+            className="ml-1 p-0.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+        <ChevronDown className={`w-4 h-4 text-slate-400 ml-1 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </div>
+      {open && (
+        <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-3 py-3 text-sm text-slate-400 text-center">{placeholder}</div>
+          ) : (
+            filtered.map(d => (
+              <button
+                key={d.id}
+                onClick={() => { onChange(d.id); setSearch(''); setOpen(false); }}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                  d.id === value ? 'bg-[#2D8B7E]/5 text-[#2D8B7E] font-semibold' : 'text-slate-700'
+                }`}
+              >
+                {d.first_name} {d.last_name}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function OwnersTab({ vehicleId }: { vehicleId: string }) {
@@ -1590,10 +1920,11 @@ function OwnersTab({ vehicleId }: { vehicleId: string }) {
     try {
       const [ownersData, driversRes] = await Promise.all([
         vehicleService.getOwnerHistory(vehicleId),
-        api.get<DriverOption[]>('/driver/'),
+        api.get('/driver/'),
       ]);
       setOwners(ownersData);
-      setDrivers(driversRes.data);
+      const driverData = driversRes.data;
+      setDrivers(Array.isArray(driverData) ? driverData : (driverData as { results: DriverOption[] }).results ?? []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -1660,18 +1991,12 @@ function OwnersTab({ vehicleId }: { vehicleId: string }) {
 
       {showAdd && (
         <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-          <select
+          <DriverSearchSelect
+            drivers={drivers}
             value={selectedDriver}
-            onChange={(e) => setSelectedDriver(e.target.value)}
-            className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2D8B7E] bg-white"
-          >
-            <option value="">{t('selectDriver')}</option>
-            {drivers.map(d => (
-              <option key={d.id} value={d.id}>
-                {d.first_name} {d.last_name}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedDriver}
+            placeholder={t('selectDriver')}
+          />
           <input
             type="text"
             placeholder={t('agreementPlaceholder')}
@@ -1755,6 +2080,646 @@ function OwnersTab({ vehicleId }: { vehicleId: string }) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// History Tab (wrapper with sub-tabs: Owners / Mileage)
+// ══════════════════════════════════════════════════════════════════════════════
+
+type HistorySubTab = 'owners' | 'mileage';
+
+function HistoryTab({ vehicleId, onMileageChange }: { vehicleId: string; onMileageChange: () => void }) {
+  const t = useTranslations('vehicleWorkspace');
+  const [subTab, setSubTab] = useState<HistorySubTab>('owners');
+
+  const subTabs: { id: HistorySubTab; label: string; icon: typeof Users }[] = [
+    { id: 'owners',  label: t('tabs.owners'),  icon: Users },
+    { id: 'mileage', label: t('tabs.mileage'), icon: Gauge },
+  ];
+
+  return (
+    <div>
+      <div className="flex gap-1 mb-5">
+        {subTabs.map(st => {
+          const Icon = st.icon;
+          const isActive = subTab === st.id;
+          return (
+            <button
+              key={st.id}
+              onClick={() => setSubTab(st.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                isActive
+                  ? 'bg-slate-800 text-white shadow-md'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+              }`}
+            >
+              <Icon className="w-4 h-4" strokeWidth={isActive ? 2.5 : 2} />
+              {st.label}
+            </button>
+          );
+        })}
+      </div>
+      {subTab === 'owners'  && <OwnersTab  vehicleId={vehicleId} />}
+      {subTab === 'mileage' && <MileageTab vehicleId={vehicleId} onMileageChange={onMileageChange} />}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Mileage Tab
+// ══════════════════════════════════════════════════════════════════════════════
+
+function MileageTab({ vehicleId, onMileageChange }: { vehicleId: string; onMileageChange: () => void }) {
+  const t = useTranslations('vehicleWorkspace.mileage');
+  const [logs, setLogs] = useState<MileageLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [km, setKm] = useState('');
+  const [recordedAt, setRecordedAt] = useState(new Date().toISOString().split('T')[0]);
+  const [saving, setSaving] = useState(false);
+  const [addError, setAddError] = useState('');
+
+  const loadLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get<MileageLog[]>(`/vehicle/${vehicleId}/mileage/`);
+      setLogs(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [vehicleId]);
+
+  useEffect(() => { loadLogs(); }, [loadLogs]);
+
+  const currentKm = logs.length > 0 ? logs[0].km : 0;
+
+  const addLog = async () => {
+    const kmVal = parseInt(km, 10);
+    if (!kmVal || kmVal <= 0 || !recordedAt) return;
+    if (kmVal <= currentKm) {
+      setAddError(t('minError', { km: currentKm.toLocaleString() }));
+      return;
+    }
+    setAddError('');
+    setSaving(true);
+    try {
+      const res = await api.post<MileageLog>(`/vehicle/${vehicleId}/mileage/`, {
+        km: kmVal,
+        recorded_at: recordedAt,
+      });
+      setLogs(prev => [res.data, ...prev]);
+      setShowAdd(false);
+      setKm('');
+      setRecordedAt(new Date().toISOString().split('T')[0]);
+      onMileageChange();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="w-8 h-8 border-4 border-[#2D8B7E] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-black text-slate-900">{t('title')}</h2>
+          <p className="text-sm text-slate-500 mt-0.5 font-medium">{t('subtitle')}</p>
+        </div>
+        <button
+          onClick={() => setShowAdd(v => !v)}
+          className="flex items-center gap-2 bg-gradient-to-r from-[#2D8B7E] to-[#248B7B] text-white px-4 py-2 rounded-xl hover:shadow-lg hover:shadow-[#2D8B7E]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shadow-md text-sm font-bold"
+        >
+          <Plus className="w-4 h-4" strokeWidth={3} />
+          {t('add')}
+        </button>
+      </div>
+
+      {showAdd && (
+        <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input
+              type="number"
+              min={currentKm + 1}
+              value={km}
+              onChange={(e) => { setKm(e.target.value); setAddError(''); }}
+              placeholder={t('kmPlaceholder')}
+              className={`px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 bg-white ${addError ? 'border-red-400 focus:ring-red-300' : 'border-slate-300 focus:ring-[#2D8B7E]'}`}
+            />
+            <input
+              type="date"
+              value={recordedAt}
+              onChange={(e) => setRecordedAt(e.target.value)}
+              className="px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2D8B7E] bg-white"
+            />
+          </div>
+          {addError && <p className="text-xs text-red-500 font-medium">{addError}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={addLog}
+              disabled={saving || !km || parseInt(km, 10) <= 0}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#2D8B7E] hover:bg-[#248B7B] text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-50"
+            >
+              {saving && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+              {t('save')}
+            </button>
+            <button
+              onClick={() => { setShowAdd(false); setKm(''); setAddError(''); }}
+              className="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold transition-colors"
+            >
+              {t('cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {logs.length === 0 ? (
+        <div className="text-center py-16">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Gauge className="w-8 h-8 text-slate-300" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-500 mb-1">{t('empty')}</h3>
+          <p className="text-sm text-slate-400">{t('emptyDesc')}</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {logs.map((log, idx) => {
+            const prev = logs[idx + 1];
+            const diff = prev ? log.km - prev.km : null;
+            return (
+              <div key={log.id} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-2xl">
+                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Gauge className="w-5 h-5 text-slate-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-black text-slate-900">{log.km.toLocaleString()} км</span>
+                    {diff !== null && diff > 0 && (
+                      <span className="text-xs font-bold text-[#2D8B7E]">+{diff.toLocaleString()}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {new Date(log.recorded_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Inspection Tab
+// ══════════════════════════════════════════════════════════════════════════════
+
+function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; onInspectionChange: () => void }) {
+  const t = useTranslations('vehicleWorkspace.inspection');
+  const [inspections, setInspections] = useState<TechnicalInspection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
+  const [formNextDate, setFormNextDate] = useState('');
+  const [formNotes, setFormNotes] = useState('');
+  const [formFile, setFormFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-compute next inspection date (+1 year) when formDate changes
+  useEffect(() => {
+    if (formDate) {
+      const d = new Date(formDate);
+      d.setFullYear(d.getFullYear() + 1);
+      setFormNextDate(d.toISOString().split('T')[0]);
+    }
+  }, [formDate]);
+
+  const loadInspections = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await vehicleService.getInspections(vehicleId);
+      setInspections(data);
+    } catch (err) {
+      console.error('Failed to load inspections:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [vehicleId]);
+
+  useEffect(() => { loadInspections(); }, [loadInspections]);
+
+  const handleSubmit = async () => {
+    if (!formDate) return;
+    setSaving(true);
+    try {
+      await vehicleService.createInspection(vehicleId, {
+        inspection_date: formDate,
+        next_inspection_date: formNextDate || undefined,
+        notes: formNotes || undefined,
+        report: formFile || undefined,
+      });
+      setShowForm(false);
+      setFormDate(new Date().toISOString().split('T')[0]);
+      setFormNextDate('');
+      setFormNotes('');
+      setFormFile(null);
+      await loadInspections();
+      onInspectionChange();
+    } catch (err) {
+      console.error('Failed to create inspection:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (inspectionId: number) => {
+    if (!confirm(t('deleteConfirm'))) return;
+    setDeletingId(inspectionId);
+    try {
+      await vehicleService.deleteInspection(vehicleId, inspectionId);
+      await loadInspections();
+      onInspectionChange();
+    } catch (err) {
+      console.error('Failed to delete inspection:', err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const latest = inspections[0] ?? null;
+
+  const getStatusColor = (days: number) => {
+    if (days < 0)  return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-100 text-red-700' };
+    if (days <= 7) return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-600', badge: 'bg-red-100 text-red-600' };
+    if (days <= 30) return { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' };
+    return { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700' };
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-6 h-6 border-2 border-[#2D8B7E] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* ── Current status card ── */}
+      {latest ? (() => {
+        const daysLeft = Math.round((new Date(latest.next_inspection_date || latest.expiry_date).getTime() - Date.now()) / 86400000);
+        const sc = getStatusColor(daysLeft);
+        return (
+          <div className={`${sc.bg} border ${sc.border} rounded-2xl p-5`}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${sc.badge}`}>
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-slate-900">{t('current')}</h3>
+                <p className="text-sm text-slate-500">{t('subtitle')}</p>
+              </div>
+              <span className={`px-3 py-1.5 rounded-xl text-sm font-bold ${sc.badge}`}>
+                {daysLeft < 0
+                  ? t('overdue', { days: Math.abs(daysLeft) })
+                  : t('daysLeft', { days: daysLeft })}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-slate-500 font-medium mb-0.5">{t('inspectionDate')}</p>
+                <p className="text-sm font-bold text-slate-800">
+                  {new Date(latest.inspection_date).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium mb-0.5">{t('validUntil')}</p>
+                <p className={`text-sm font-bold ${sc.text}`}>
+                  {new Date(latest.next_inspection_date || latest.expiry_date).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            {latest.report && (
+              <a
+                href={latest.report}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#2D8B7E] hover:text-[#248B7B] transition-colors"
+              >
+                <FileText className="w-4 h-4" />
+                {t('downloadReport')}
+              </a>
+            )}
+          </div>
+        );
+      })() : (
+        <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-200">
+          <ShieldCheck className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500 font-semibold">{t('empty')}</p>
+          <p className="text-sm text-slate-400 mt-1">{t('emptyDesc')}</p>
+        </div>
+      )}
+
+      {/* ── Add button / Form ── */}
+      {!showForm ? (
+        <button
+          onClick={() => setShowForm(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-300 hover:border-[#2D8B7E] rounded-2xl text-sm font-bold text-slate-500 hover:text-[#2D8B7E] hover:bg-[#2D8B7E]/5 transition-all"
+        >
+          <Plus className="w-4 h-4" />
+          {t('add')}
+        </button>
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{t('inspectionDate')}</label>
+              <input
+                type="date"
+                value={formDate}
+                max={new Date().toISOString().split('T')[0]}
+                onChange={e => setFormDate(e.target.value)}
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-[#2D8B7E] focus:border-transparent outline-none transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{t('nextInspectionDate')}</label>
+              <input
+                type="date"
+                value={formNextDate}
+                onChange={e => setFormNextDate(e.target.value)}
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-[#2D8B7E] focus:border-transparent outline-none transition-all"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{t('report')}</label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 flex items-center gap-2 px-3 py-2.5 border border-slate-300 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors text-left"
+              >
+                <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="truncate">{formFile ? formFile.name : t('noReport')}</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                className="hidden"
+                onChange={e => { setFormFile(e.target.files?.[0] ?? null); e.target.value = ''; }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{t('notes')}</label>
+            <textarea
+              value={formNotes}
+              onChange={e => setFormNotes(e.target.value)}
+              placeholder={t('notesPlaceholder')}
+              rows={2}
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm resize-none focus:ring-2 focus:ring-[#2D8B7E] focus:border-transparent outline-none transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              onClick={handleSubmit}
+              disabled={!formDate || saving}
+              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#2D8B7E] to-[#248B7B] text-white rounded-xl text-sm font-bold shadow-lg shadow-[#2D8B7E]/20 hover:shadow-xl disabled:opacity-50 transition-all"
+            >
+              {saving && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+              {t('save')}
+            </button>
+            <button
+              onClick={() => { setShowForm(false); setFormFile(null); setFormNotes(''); }}
+              className="px-4 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all"
+            >
+              {t('cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── History list ── */}
+      {inspections.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">{t('subtitle')}</h3>
+          {inspections.map(ins => {
+            const daysLeft = Math.round((new Date(ins.next_inspection_date || ins.expiry_date).getTime() - Date.now()) / 86400000);
+            const isExpired = daysLeft < 0;
+            return (
+              <div key={ins.id} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
+                isExpired ? 'bg-red-50/50 border-red-200/60' : 'bg-white border-slate-200/60 hover:border-slate-300'
+              }`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  isExpired ? 'bg-red-100 text-red-500' : 'bg-emerald-100 text-emerald-500'
+                }`}>
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-slate-800">
+                      {new Date(ins.inspection_date).toLocaleDateString()}
+                    </span>
+                    <span className="text-slate-300">&rarr;</span>
+                    <span className={`text-sm font-semibold ${isExpired ? 'text-red-600' : 'text-slate-600'}`}>
+                      {new Date(ins.next_inspection_date || ins.expiry_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {ins.created_at && (
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {t('registeredAt')}: {new Date(ins.created_at).toLocaleDateString()}
+                    </p>
+                  )}
+                  {ins.notes && <p className="text-xs text-slate-500 mt-0.5 truncate">{ins.notes}</p>}
+                  {ins.report && (
+                    <a
+                      href={ins.report}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-semibold text-[#2D8B7E] hover:underline flex items-center gap-1 mt-1"
+                    >
+                      <FileText className="w-3 h-3" />
+                      PDF
+                    </a>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleDelete(ins.id)}
+                  disabled={deletingId === ins.id}
+                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all disabled:opacity-50 shrink-0"
+                >
+                  {deletingId === ins.id
+                    ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    : <Trash2 className="w-4 h-4" />}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Expenses Tab ──
+
+function ExpensesTab({ vehicleId }: { vehicleId: string }) {
+  const t = useTranslations('expenses');
+  const tCommon = useTranslations('common');
+
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<ExpenseFiltersType>({});
+
+  const loadExpenses = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await expenseService.getVehicleExpenses(vehicleId, filters);
+      setExpenses(data);
+    } catch {
+      setError(t('loadError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [vehicleId, filters, t]);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const data = await expenseService.getCategories();
+      setCategories(data);
+    } catch {
+      // silent
+    }
+  }, []);
+
+  useEffect(() => { loadExpenses(); }, [loadExpenses]);
+  useEffect(() => { loadCategories(); }, [loadCategories]);
+
+  const handleSubmit = async (data: CreateExpenseData) => {
+    try {
+      setIsSubmitting(true);
+      if (editingExpense) {
+        const updated = await expenseService.updateExpense(editingExpense.id, data);
+        setExpenses(prev => prev.map(e => e.id === updated.id ? updated : e));
+      } else {
+        const created = await expenseService.createVehicleExpense(vehicleId, data);
+        setExpenses(prev => [created, ...prev]);
+      }
+      setShowForm(false);
+      setEditingExpense(null);
+    } catch (err) {
+      console.error('Expense submit error:', err);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEdit = (expense: Expense) => {
+    setEditingExpense(expense);
+    setShowForm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!expenseToDelete) return;
+    try {
+      setIsDeleting(true);
+      await expenseService.deleteExpense(expenseToDelete.id);
+      setExpenses(prev => prev.filter(e => e.id !== expenseToDelete.id));
+      setExpenseToDelete(null);
+    } catch {
+      setError(t('deleteError'));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-bold text-slate-900">{t('title')}</h3>
+        <button
+          onClick={() => { setEditingExpense(null); setShowForm(true); }}
+          className="flex items-center gap-1.5 px-3 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          {t('addExpense')}
+        </button>
+      </div>
+
+      <ExpenseFilters filters={filters} onChange={setFilters} categories={categories} showSearch={false} />
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      <ExpenseTable expenses={expenses} onEdit={handleEdit} onDelete={(expense) => setExpenseToDelete(expense)} onView={setViewingExpense} isLoading={loading} />
+
+      <ExpenseDetailModal
+        expense={viewingExpense}
+        onClose={() => setViewingExpense(null)}
+        onEdit={(expense) => { setViewingExpense(null); handleEdit(expense); }}
+      />
+
+      {showForm && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50" onClick={() => { setShowForm(false); setEditingExpense(null); }} />
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-slate-900">
+                  {editingExpense ? t('editExpense') : t('addExpense')}
+                </h2>
+                <button onClick={() => { setShowForm(false); setEditingExpense(null); }} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <ExpenseForm
+                onSubmit={handleSubmit}
+                onCancel={() => { setShowForm(false); setEditingExpense(null); }}
+                categories={categories}
+                initialData={editingExpense}
+                isLoading={isSubmitting}
+                vehicleId={vehicleId}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        isOpen={!!expenseToDelete}
+        title={t('deleteConfirmTitle')}
+        message={t('deleteConfirmMessage')}
+        confirmLabel={tCommon('delete')}
+        cancelLabel={tCommon('cancel')}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setExpenseToDelete(null)}
+        isLoading={isDeleting}
+        variant="danger"
+      />
     </div>
   );
 }
