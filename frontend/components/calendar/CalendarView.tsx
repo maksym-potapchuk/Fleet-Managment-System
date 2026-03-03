@@ -5,9 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
-  AlertCircle,
   CheckCircle2,
-  Clock,
   X,
   ExternalLink,
   CalendarClock,
@@ -112,38 +110,37 @@ export function CalendarView({ plans = [], loading, onPlanUpdate, onOpenSidebar 
         <div className="flex flex-col flex-1 min-w-0 p-3 md:p-6 overflow-hidden">
 
           {/* ── Header ── */}
-          <div className="grid grid-cols-3 items-center gap-2 md:gap-3 mb-4 md:mb-5 shrink-0">
+          <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-5 shrink-0">
 
-            {/* col 1 — menu + title */}
-            <div className="flex items-center gap-2 min-w-0">
-              <button
-                onClick={onOpenSidebar}
-                className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:shadow-md transition-all hover:bg-slate-50 active:scale-95"
-                aria-label="Відкрити меню"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
+            {/* menu button */}
+            <button
+              onClick={onOpenSidebar}
+              className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:shadow-md transition-all hover:bg-slate-50 active:scale-95"
+              aria-label="Відкрити меню"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
 
-              <div className="flex items-center gap-1.5 min-w-0 hidden sm:flex">
-                <div className="shrink-0 p-1.5 rounded-lg bg-[#2D8B7E]/10">
-                  <CalendarIcon className="w-4 h-4 text-[#2D8B7E]" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-black text-slate-800 leading-none truncate">{t('title')}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">{t('subtitle')}</p>
-                </div>
+            {/* title — desktop only */}
+            <div className="hidden sm:flex items-center gap-1.5 min-w-0 shrink-0">
+              <div className="shrink-0 p-1.5 rounded-lg bg-[#2D8B7E]/10">
+                <CalendarIcon className="w-4 h-4 text-[#2D8B7E]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-black text-slate-800 leading-none truncate">{t('title')}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">{t('subtitle')}</p>
               </div>
             </div>
 
-            {/* col 2 — month navigation */}
-            <div className="flex items-center justify-center gap-1 bg-white rounded-xl p-1 shadow-sm border border-slate-200">
+            {/* month navigation — takes remaining space */}
+            <div className="flex-1 flex items-center justify-center gap-1 bg-white rounded-xl p-1 shadow-sm border border-slate-200">
               <button
                 onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
                 className="p-1.5 md:p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="min-w-[90px] md:min-w-[140px] text-center font-black text-slate-800 text-sm md:text-base capitalize truncate px-1">
+              <span className="text-center font-black text-slate-800 text-sm md:text-base capitalize truncate px-1">
                 {monthNames[month]} {year}
               </span>
               <button
@@ -154,18 +151,16 @@ export function CalendarView({ plans = [], loading, onPlanUpdate, onOpenSidebar 
               </button>
             </div>
 
-            {/* col 3 — today */}
-            <div className="flex items-center justify-end">
-              <button
-                onClick={() => {
-                  setCurrentDate(new Date(TODAY.getFullYear(), TODAY.getMonth(), 1));
-                  setSelectedDate(toDateStr(TODAY));
-                }}
-                className="px-2.5 py-2 md:px-3 bg-[#2D8B7E]/10 text-[#2D8B7E] rounded-xl font-bold text-xs md:text-sm hover:bg-[#2D8B7E]/20 transition-colors whitespace-nowrap"
-              >
-                {t('today')}
-              </button>
-            </div>
+            {/* today button */}
+            <button
+              onClick={() => {
+                setCurrentDate(new Date(TODAY.getFullYear(), TODAY.getMonth(), 1));
+                setSelectedDate(toDateStr(TODAY));
+              }}
+              className="shrink-0 px-2.5 py-2 md:px-3 bg-[#2D8B7E]/10 text-[#2D8B7E] rounded-xl font-bold text-xs md:text-sm hover:bg-[#2D8B7E]/20 transition-colors whitespace-nowrap"
+            >
+              {t('today')}
+            </button>
           </div>
 
           {/* ── Calendar grid card ── */}
@@ -238,25 +233,19 @@ export function CalendarView({ plans = [], loading, onPlanUpdate, onOpenSidebar 
                         )}
                       </div>
 
-                      {/* Mobile: colored dots */}
+                      {/* Colored dots */}
                       {dayPlans.length > 0 && (
-                        <div className="flex gap-0.5 flex-wrap mt-0.5 sm:hidden">
-                          {dayPlans.slice(0, 5).map(plan => {
+                        <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap mt-0.5">
+                          {dayPlans.slice(0, 4).map(plan => {
                             const isOverdue = !plan.is_done && new Date(plan.planned_at) < TODAY && !isToday;
                             const color = plan.is_done ? 'bg-emerald-400' : isOverdue ? 'bg-red-400' : 'bg-blue-400';
-                            return <div key={plan.id} className={`w-1.5 h-1.5 rounded-full ${color}`} />;
+                            return <div key={plan.id} className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${color}`} />;
                           })}
-                          {dayPlans.length > 5 && <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />}
+                          {dayPlans.length > 4 && (
+                            <span className="text-[9px] font-bold text-slate-400 hidden sm:inline">+{dayPlans.length - 4}</span>
+                          )}
                         </div>
                       )}
-
-                      {/* Desktop: plan chips */}
-                      <div className="hidden sm:flex flex-1 flex-col gap-1 overflow-hidden mt-1">
-                        {dayPlans.map((plan) => {
-                          const overdue = !plan.is_done && new Date(plan.planned_at) < TODAY && !isToday;
-                          return <PlanChip key={plan.id} plan={plan} overdue={overdue} />;
-                        })}
-                      </div>
                     </div>
                   );
                 })}
@@ -549,27 +538,6 @@ function PlanCard({
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function PlanChip({ plan, overdue }: { plan: CalendarServicePlan; overdue: boolean }) {
-  const color = plan.is_done
-    ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
-    : overdue
-    ? 'bg-red-50 border-red-100 text-red-800'
-    : 'bg-blue-50 border-blue-100 text-blue-800';
-
-  const Icon = plan.is_done ? CheckCircle2 : overdue ? AlertCircle : Clock;
-  const iconColor = plan.is_done ? 'text-emerald-600' : overdue ? 'text-red-600' : 'text-blue-600';
-
-  return (
-    <div className={`p-1.5 rounded-lg border text-[10px] flex flex-col gap-0.5 cursor-pointer hover:scale-[1.02] transition-transform ${color}`}>
-      <div className="flex items-center justify-between">
-        <span className="font-bold truncate">{plan.vehicle_car_number}</span>
-        <Icon className={`w-3 h-3 shrink-0 ${iconColor}`} />
-      </div>
-      <span className="truncate opacity-80 font-medium">{plan.title}</span>
-    </div>
-  );
-}
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (

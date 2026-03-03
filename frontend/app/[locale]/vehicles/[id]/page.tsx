@@ -314,14 +314,7 @@ export default function VehicleWorkspacePage() {
     ? `${vehicle.driver.first_name} ${vehicle.driver.last_name}`
     : tVehicles('noDriver');
 
-  const FUEL_LABELS: Record<FuelType, string> = {
-    GASOLINE: 'Бензин',
-    DIESEL: 'Дизель',
-    LPG: 'Газ (LPG)',
-    LPG_GASOLINE: 'Газ + Бензин',
-    ELECTRIC: 'Електро',
-    HYBRID: 'Гібрид',
-  };
+  const fuelLabel = (type: FuelType) => tVehicles(`fuelTypes.${type}`);
 
   const tabs: { id: WorkspaceTab; label: string; icon: typeof Wrench; secondary?: boolean }[] = [
     { id: 'service',    label: t('tabs.service'),    icon: Wrench },
@@ -453,7 +446,7 @@ export default function VehicleWorkspacePage() {
           <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-3 py-2 min-w-0">
             <Fuel className="w-4 h-4 text-amber-500 flex-shrink-0" />
             <span className="text-xs sm:text-sm font-bold text-slate-700 truncate">
-              {FUEL_LABELS[vehicle.fuel_type] || vehicle.fuel_type}
+              {fuelLabel(vehicle.fuel_type)}
             </span>
           </div>
           <div className="relative" ref={driverPickerRef}>
@@ -1076,6 +1069,16 @@ function ServiceTab({ vehicleId }: { vehicleId: string }) {
 function EquipmentTab({ vehicleId }: { vehicleId: string }) {
   const t = useTranslations('vehicleWorkspace.equipment');
 
+  const equipmentNames: Record<string, string> = {
+    'Вогнегасник': t('items.Вогнегасник'),
+    'Аптечка': t('items.Аптечка'),
+    'Трикутник': t('items.Трикутник'),
+    'Жилет': t('items.Жилет'),
+    'Буксирувальний трос': t('items.Буксирувальний трос'),
+    'Запасне колесо': t('items.Запасне колесо'),
+    'Домкрат': t('items.Домкрат'),
+  };
+
   const [items, setItems] = useState<EquipmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -1244,7 +1247,7 @@ function EquipmentTab({ vehicleId }: { vehicleId: string }) {
                     ? 'text-slate-400 line-through decoration-slate-300'
                     : 'text-slate-800'
                 }`}>
-                  {item.equipment}
+                  {equipmentNames[item.equipment] || item.equipment}
                 </span>
 
                 {/* Delete button */}

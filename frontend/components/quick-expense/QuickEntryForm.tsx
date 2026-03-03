@@ -297,10 +297,10 @@ export function QuickEntryForm({
     } else if (code === 'PARTS') {
       entry.source_name = sourceName;
       entry.supplier_type = supplierType;
-      entry.parts = parts.filter(p => p.name.trim());
+      entry.parts = parts.filter(p => p.name.trim()).map(p => ({ ...p, quantity: p.quantity || 1 }));
       if (invoiceFile) entry.invoice_files = [invoiceFile];
     } else if (code === 'ACCESSORIES' || code === 'DOCUMENTS') {
-      entry.parts = parts.filter(p => p.name.trim());
+      entry.parts = parts.filter(p => p.name.trim()).map(p => ({ ...p, quantity: p.quantity || 1 }));
       if (invoiceFile) entry.invoice_files = [invoiceFile];
     } else if (code === 'OTHER') {
       if (expenseFor) entry.expense_for = expenseFor;
@@ -647,7 +647,7 @@ export function QuickEntryForm({
                             value={part.quantity}
                             onChange={(e) => {
                               const val = e.target.value.replace(/\D/g, '');
-                              updatePart(idx, 'quantity', parseInt(val, 10) || 1);
+                              updatePart(idx, 'quantity', val === '' ? '' : parseInt(val, 10));
                             }}
                             className={inputClasses}
                           />
@@ -728,7 +728,7 @@ export function QuickEntryForm({
                             value={part.quantity}
                             onChange={(e) => {
                               const val = e.target.value.replace(/\D/g, '');
-                              updatePart(idx, 'quantity', parseInt(val, 10) || 1);
+                              updatePart(idx, 'quantity', val === '' ? '' : parseInt(val, 10));
                             }}
                             className={inputClasses}
                           />

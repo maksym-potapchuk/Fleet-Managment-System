@@ -163,11 +163,11 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
     } else if (categoryCode === 'PARTS') {
       if (formData.source_name) data.source_name = formData.source_name;
       data.supplier_type = formData.supplier_type as SupplierType;
-      const validParts = parts.filter(p => p.name.trim());
+      const validParts = parts.filter(p => p.name.trim()).map(p => ({ ...p, quantity: p.quantity || 1 }));
       if (validParts.length) data.parts_json = JSON.stringify(validParts);
       if (invoiceFile) data.invoice_files = [invoiceFile];
     } else if (categoryCode === 'ACCESSORIES' || categoryCode === 'DOCUMENTS') {
-      const validParts = parts.filter(p => p.name.trim());
+      const validParts = parts.filter(p => p.name.trim()).map(p => ({ ...p, quantity: p.quantity || 1 }));
       if (validParts.length) data.parts_json = JSON.stringify(validParts);
       if (invoiceFile) data.invoice_files = [invoiceFile];
     } else if (categoryCode === 'OTHER') {
@@ -204,6 +204,8 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
     ${errors[field] ? 'border-red-500' : 'border-slate-300'}
   `;
 
+  const noWheel = (e: React.WheelEvent<HTMLInputElement>) => (e.target as HTMLInputElement).blur();
+
   const labelClasses = 'block text-sm font-medium text-slate-700 mb-1';
 
   const renderError = (field: string) =>
@@ -217,7 +219,7 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelClasses}>{t('fields.liters')} *</label>
-                <input type="number" name="liters" step="0.01" value={formData.liters} onChange={handleChange} disabled={isLoading} className={inputClasses('liters')} />
+                <input type="number" name="liters" step="0.01" value={formData.liters} onChange={handleChange} onWheel={noWheel} disabled={isLoading} className={inputClasses('liters')} />
                 {renderError('liters')}
               </div>
               <div>
@@ -267,15 +269,17 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
                         <input type="text" placeholder={t('fields.serviceName')} value={item.name} onChange={(e) => handleServiceItemChange(idx, 'name', e.target.value)} disabled={isLoading} className={inputClasses('service_item_name')} />
                       </div>
                       <div>
-                        <input type="number" placeholder={t('fields.servicePrice')} step="0.01" value={item.price} onChange={(e) => handleServiceItemChange(idx, 'price', e.target.value)} disabled={isLoading} className={inputClasses('service_item_price')} />
+                        <input type="number" placeholder={t('fields.servicePrice')} step="0.01" value={item.price} onChange={(e) => handleServiceItemChange(idx, 'price', e.target.value)} onWheel={noWheel} disabled={isLoading} className={inputClasses('service_item_price')} />
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
               {serviceTotal > 0 && (
-                <div className="mt-2 text-right text-sm font-medium text-slate-700">
-                  {t('fields.amount')}: {serviceTotal.toFixed(2)}
+                <div className="mt-2 text-right">
+                  <span className="text-sm font-bold text-teal-700 tabular-nums bg-teal-50 px-3 py-1.5 rounded-lg inline-block">
+                    {t('fields.amount')}: {serviceTotal.toFixed(2)} PLN
+                  </span>
                 </div>
               )}
             </div>
@@ -332,18 +336,20 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelClasses}>{t('fields.officialCost')} *</label>
-                <input type="number" name="official_cost" step="0.01" value={formData.official_cost} onChange={handleChange} disabled={isLoading} className={inputClasses('official_cost')} />
+                <input type="number" name="official_cost" step="0.01" value={formData.official_cost} onChange={handleChange} onWheel={noWheel} disabled={isLoading} className={inputClasses('official_cost')} />
                 {renderError('official_cost')}
               </div>
               <div>
                 <label className={labelClasses}>{t('fields.additionalCost')}</label>
-                <input type="number" name="additional_cost" step="0.01" value={formData.additional_cost} onChange={handleChange} disabled={isLoading} className={inputClasses('additional_cost')} />
+                <input type="number" name="additional_cost" step="0.01" value={formData.additional_cost} onChange={handleChange} onWheel={noWheel} disabled={isLoading} className={inputClasses('additional_cost')} />
                 {renderError('additional_cost')}
               </div>
             </div>
             {inspectionTotal > 0 && (
-              <div className="text-right text-sm font-medium text-slate-700">
-                {t('fields.amount')}: {inspectionTotal.toFixed(2)}
+              <div className="text-right">
+                <span className="text-sm font-bold text-teal-700 tabular-nums bg-teal-50 px-3 py-1.5 rounded-lg inline-block">
+                  {t('fields.amount')}: {inspectionTotal.toFixed(2)} PLN
+                </span>
               </div>
             )}
           </div>
@@ -388,18 +394,20 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
                         <input type="text" placeholder={t('fields.partName')} value={part.name} onChange={(e) => handlePartChange(idx, 'name', e.target.value)} disabled={isLoading} className={inputClasses('part_name')} />
                       </div>
                       <div>
-                        <input type="number" placeholder={t('fields.quantity')} min="1" value={part.quantity} onChange={(e) => handlePartChange(idx, 'quantity', parseInt(e.target.value, 10) || 1)} disabled={isLoading} className={inputClasses('quantity')} />
+                        <input type="number" placeholder={t('fields.quantity')} min="1" value={part.quantity} onChange={(e) => handlePartChange(idx, 'quantity', e.target.value === '' ? '' : (parseInt(e.target.value, 10) || 1))} onWheel={noWheel} disabled={isLoading} className={inputClasses('quantity')} />
                       </div>
                       <div>
-                        <input type="number" placeholder={t('fields.unitPrice')} step="0.01" value={part.unit_price} onChange={(e) => handlePartChange(idx, 'unit_price', e.target.value)} disabled={isLoading} className={inputClasses('unit_price')} />
+                        <input type="number" placeholder={t('fields.unitPrice')} step="0.01" value={part.unit_price} onChange={(e) => handlePartChange(idx, 'unit_price', e.target.value)} onWheel={noWheel} disabled={isLoading} className={inputClasses('unit_price')} />
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
               {partsTotal > 0 && (
-                <div className="mt-2 text-right text-sm font-medium text-slate-700">
-                  {t('fields.amount')}: {partsTotal.toFixed(2)}
+                <div className="mt-2 text-right">
+                  <span className="text-sm font-bold text-teal-700 tabular-nums bg-teal-50 px-3 py-1.5 rounded-lg inline-block">
+                    {t('fields.amount')}: {partsTotal.toFixed(2)} PLN
+                  </span>
                 </div>
               )}
             </div>
@@ -435,18 +443,20 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
                         <input type="text" placeholder={t('fields.itemName')} value={part.name} onChange={(e) => handlePartChange(idx, 'name', e.target.value)} disabled={isLoading} className={inputClasses('item_name')} />
                       </div>
                       <div>
-                        <input type="number" placeholder={t('fields.quantity')} min="1" value={part.quantity} onChange={(e) => handlePartChange(idx, 'quantity', parseInt(e.target.value, 10) || 1)} disabled={isLoading} className={inputClasses('quantity')} />
+                        <input type="number" placeholder={t('fields.quantity')} min="1" value={part.quantity} onChange={(e) => handlePartChange(idx, 'quantity', e.target.value === '' ? '' : (parseInt(e.target.value, 10) || 1))} onWheel={noWheel} disabled={isLoading} className={inputClasses('quantity')} />
                       </div>
                       <div>
-                        <input type="number" placeholder={t('fields.unitPrice')} step="0.01" value={part.unit_price} onChange={(e) => handlePartChange(idx, 'unit_price', e.target.value)} disabled={isLoading} className={inputClasses('unit_price')} />
+                        <input type="number" placeholder={t('fields.unitPrice')} step="0.01" value={part.unit_price} onChange={(e) => handlePartChange(idx, 'unit_price', e.target.value)} onWheel={noWheel} disabled={isLoading} className={inputClasses('unit_price')} />
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
               {partsTotal > 0 && (
-                <div className="mt-2 text-right text-sm font-medium text-slate-700">
-                  {t('fields.amount')}: {partsTotal.toFixed(2)}
+                <div className="mt-2 text-right">
+                  <span className="text-sm font-bold text-teal-700 tabular-nums bg-teal-50 px-3 py-1.5 rounded-lg inline-block">
+                    {t('fields.amount')}: {partsTotal.toFixed(2)} PLN
+                  </span>
                 </div>
               )}
             </div>
@@ -506,7 +516,7 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
         {!isAutoAmountCategory && (
           <div>
             <label className={labelClasses}>{t('fields.amount')} *</label>
-            <input type="number" name="amount" step="0.01" value={formData.amount} onChange={handleChange} disabled={isLoading} className={inputClasses('amount')} />
+            <input type="number" name="amount" step="0.01" value={formData.amount} onChange={handleChange} onWheel={noWheel} disabled={isLoading} className={inputClasses('amount')} />
             {renderError('amount')}
           </div>
         )}

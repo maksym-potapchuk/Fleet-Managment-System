@@ -304,7 +304,16 @@
       "add": "Dodaj",
       "cancel": "Anuluj",
       "empty": "Brak przypisanego wyposażenia",
-      "emptyDesc": "Dodaj pozycję ręcznie lub poczekaj na automatyczne przypisanie przy tworzeniu pojazdu."
+      "emptyDesc": "Dodaj pozycję ręcznie lub poczekaj na automatyczne przypisanie przy tworzeniu pojazdu.",
+      "items": {
+        "Вогнегасник": "Gaśnica",
+        "Аптечка": "Apteczka",
+        "Трикутник": "Trójkąt ostrzegawczy",
+        "Жилет": "Kamizelka odblaskowa",
+        "Буксирувальний трос": "Linka holownicza",
+        "Запасне колесо": "Koło zapasowe",
+        "Домкрат": "Podnośnik"
+      }
     },
     "regulation": {
       "title": "Regulamin",
