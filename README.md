@@ -1,226 +1,336 @@
 # Fleet Management System
 
-A pet project for managing a vehicle fleet — tracking vehicles, drivers, service plans, equipment, and maintenance regulations.
+Full-stack fleet management platform for vehicle tracking, driver assignment, maintenance regulation, expense management, and operational control — with a Telegram bot for field operations.
 
-## Stack
+## Tech Stack
 
-**Backend**
-- Python 3.12, Django 5, Django REST Framework
-- PostgreSQL (psycopg3)
-- JWT authentication via `djangorestframework-simplejwt` (HTTP-only cookies)
-- `django-filter` for filtering querysets
-- Ruff for linting and formatting
-- Docker + Docker Compose
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| **Backend** | Django + Django REST Framework | 5.x + 3.16 |
+| **Auth** | SimpleJWT (HttpOnly cookie-based) | 5.5 |
+| **Database** | PostgreSQL | 16 |
+| **Cache** | Redis | 7 |
+| **Frontend** | Next.js (App Router) + React | 15 + 19 |
+| **Styling** | Tailwind CSS | 3.4 |
+| **i18n** | next-intl (Polish, Ukrainian) | 4.8 |
+| **Bot** | aiogram (Telegram, FSM) | 3.4 |
+| **CI/CD** | GitHub Actions | 5 parallel jobs |
+| **Containers** | Docker Compose | dev + prod configs |
+| **Web Server** | Nginx + Let's Encrypt | 1.27 |
 
-**Frontend**
-- Next.js 15 (App Router), TypeScript, Tailwind CSS
-- next-intl (i18n: `pl`, `uk`)
-
----
-
-## Project Structure
+## Architecture
 
 ```
-fleet-management-system/
-├── backend/
-│   ├── account/          # Auth: login, refresh, logout, user profile
-│   ├── driver/           # Driver CRUD
-│   ├── vehicle/          # Vehicle CRUD, driver history
-│   ├── fleet_management/ # Service plans, equipment, regulation schemas
-│   └── config/           # Django settings, root URLs
-├── frontend/
-└── docker-compose.yml
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   Frontend   │     │  Telegram    │     │    Nginx     │
+│  Next.js 15  │     │  Bot (FSM)   │     │  SSL/Proxy   │
+└──────┬───────┘     └──────┬───────┘     └──────┬───────┘
+       │                    │                    │
+       │  HttpOnly JWT      │  SQLAlchemy        │  /api/ /media/
+       │  cookies           │  (direct DB)       │  routing
+       │                    │                    │
+       └────────────┬───────┴────────────────────┘
+                    │
+            ┌───────▼───────┐
+            │    Backend    │
+            │  Django + DRF │
+            └───────┬───────┘
+                    │
+          ┌─────────┼─────────┐
+          │         │         │
+    ┌─────▼──┐ ┌────▼───┐ ┌──▼──────┐
+    │Postgres│ │ Redis  │ │ S3/Local│
+    │   16   │ │ Cache  │ │ Storage │
+    └────────┘ └────────┘ └─────────┘
+```
+
+```
+backend/
+├── config/            # Settings, URL root, cache utils, layout-aware search
+├── account/           # Custom User (UUID, email login), JWT cookie auth
+├── driver/            # Driver CRUD, phone validation, signal-managed flags
+├── vehicle/           # Vehicle + photos, inspections, mileage, owner history
+├── fleet_management/  # Regulations, equipment, service plans, service providers
+├── expense/           # Polymorphic expenses with category-specific details
+└── Dockerfile
 ```
 
 ---
 
-## API Endpoints
+## Backend — Business Logic
 
-Base URL: `http://localhost:8000`
+### Authentication (HttpOnly Cookie JWT)
 
-### Auth — `/api/auth/`
+Tokens are never exposed to JavaScript — the frontend uses `withCredentials: true` and never reads tokens directly.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/login/` | Obtain JWT tokens (set in HTTP-only cookies) |
-| POST | `/api/auth/refresh/` | Refresh access token |
-| POST | `/api/auth/logout/` | Blacklist refresh token |
-| GET | `/api/auth/me/` | Get current user profile |
-| PATCH | `/api/auth/me/` | Update current user profile |
+- `access_token` (5 min) + `refresh_token` (1 day) stored as HttpOnly, SameSite=Lax cookies
+- **Remember me**: persistent cookie (max_age=1 day) vs session cookie (cleared on browser close)
+- **Token rotation** with blacklisting — every refresh issues a new token pair and blacklists the old one
+- **Emergency recovery**: unauthenticated `unset-session` endpoint clears cookies when refresh fails (prevents infinite redirect loops)
+- **Rate limiting**: 5/min for auth, 300/min for authenticated users, 30/min for anonymous
 
-### Drivers — `/api/driver/`
+### Vehicle Management
 
-Standard DRF router (ModelViewSet).
+Core entity with Kanban workflow and rich sub-resources:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/driver/` | List all drivers |
-| POST | `/api/driver/` | Create a driver |
-| GET | `/api/driver/{id}/` | Retrieve a driver |
-| PATCH | `/api/driver/{id}/` | Update a driver |
-| DELETE | `/api/driver/{id}/` | Delete a driver |
+- **9 statuses** (CTO → FOCUS → CLEANING → PREPARATION → READY → LEASING → RENT → SELLING → SOLD) with drag-and-drop Kanban board
+- **Sparse positioning**: 1000-unit gaps in `status_position` allow insertions without renumbering; batch reorder endpoint supports cross-column drops
+- **Soft delete** (archive) with permanent delete guard:
+  - `DELETE` → archive (reversible, unassigns driver)
+  - `/delete-check/` → returns related data counts per relation
+  - `/permanent-delete/?confirm=true` → hard delete (requires explicit confirmation)
+- **Sub-resources**: photos (max 10), technical inspections, mileage logs, owner history
 
-### Vehicles — `/api/vehicle/`
+### Signal-Driven Driver History
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/vehicle/` | List vehicles (filterable) |
-| POST | `/api/vehicle/` | Create a vehicle |
-| GET | `/api/vehicle/{uuid}/` | Retrieve a vehicle |
-| PUT/PATCH | `/api/vehicle/{uuid}/` | Update a vehicle |
-| DELETE | `/api/vehicle/{uuid}/` | Delete a vehicle |
+Driver assignment is tracked entirely via Django signals (pre_save, post_save, pre_delete) — not view logic. This ensures consistency across API, admin, bot, and shell:
 
-### Fleet Management — `/api/fleet/`
+- Every assignment creates a `VehicleDriverHistory` entry with `assigned_at`
+- Unassignment closes the entry (`unassigned_at = now()`)
+- `Driver.has_vehicle` flag is automatically toggled based on active assignments
+- Cache invalidation fires only on `transaction.on_commit()` — no stale clears from rolled-back transactions
 
-**Fleet Services**
+### Maintenance Regulation System
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/POST | `/api/fleet/services/` | List / create fleet services |
-| GET/PUT/DELETE | `/api/fleet/services/{id}/` | Retrieve / update / delete |
+Configurable maintenance schedules with full audit trail:
 
-**Regulation Schemas**
+- **Schema** → **Items** (e.g., "Oil change every 10,000 km, notify 1,000 km before")
+- Assign schema to vehicle → creates per-item entries tracking `last_done_km`
+- Computed properties: `next_due_km`, `is_due(current_km)`, `km_remaining(current_km)`
+- **Immutable history** log: performed / km_updated / notified events
+- **Notification system**: PENDING → SENT → FAILED status tracking
+- `UniqueConstraint(condition=Q(is_default=True))` + `select_for_update()` ensures exactly one default schema (race-condition safe)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/fleet/regulation/schemas/` | List regulation schemas |
+### Equipment Checklist
 
-**Service Plans** (scoped to vehicle)
+- Global default items seeded via migration (fire extinguisher, first aid kit, etc.)
+- Auto-granted to every new vehicle on creation (`bulk_create` with `ignore_conflicts`)
+- Per-vehicle `is_equipped` toggle with approval tracking
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/POST | `/api/fleet/vehicles/{uuid}/service-plans/` | List / create service plans |
-| GET/PUT/DELETE | `/api/fleet/vehicles/{uuid}/service-plans/{id}/` | Retrieve / update / delete |
-| PATCH | `/api/fleet/vehicles/{uuid}/service-plans/{id}/done/` | Mark plan as done |
+### Polymorphic Expense System
 
-**Equipment** (scoped to vehicle)
+Single `Expense` base model with category-specific detail models driven by a `DETAIL_MAP` dict:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/fleet/vehicles/{uuid}/equipment/` | List equipment for vehicle |
-| GET/PUT/DELETE | `/api/fleet/vehicles/{uuid}/equipment/{id}/` | Retrieve / update / delete |
-| POST | `/api/fleet/vehicles/{uuid}/equipment/grant-defaults/` | Assign default equipment items |
+| Category | Detail Fields | Amount |
+|----------|--------------|--------|
+| Fuel | liters, fuel_type | manual |
+| Service | FK to FleetService + service items | sum(items.price) |
+| Parts / Accessories / Documents | line items (name, qty, unit_price) | sum(qty * price) |
+| Washing | wash_type (exterior / interior / full) | manual |
+| Inspection | official_cost, additional_cost | sum of costs |
+| Fines | fine_number, violation_type, driver_at_time | manual |
 
-**Equipment Defaults**
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/POST | `/api/fleet/equipment/defaults/` | List / create default equipment items |
-| GET/PUT/DELETE | `/api/fleet/equipment/defaults/{id}/` | Retrieve / update / delete |
+- **INSPECTION** expenses auto-create a linked `TechnicalInspection` record (cascade-deleted with expense)
+- Invoice uploads validated to PDF/Word only, organized by `expenses/invoices/{category_code}/`
+- Supports multipart/form-data with JSON-encoded nested items (`parts_json`, `service_items_json`)
 
 ---
 
-## Local Setup
+## Key Engineering Decisions
+
+### Two-Tier Redis Caching
+
+```
+List caches (version-based):
+  vehicle:list:v{N}:{query_hash}       — TTL 30s
+  ↑ version bumped on any write → old keys expire naturally
+
+Detail caches (per-PK):
+  vehicle:detail:{pk}                  — TTL 60s
+  ↑ explicitly deleted on update/delete
+```
+
+- **Fault-tolerant**: all cache ops wrapped in `try/except` — Redis outage = cache miss, never an error
+- **Transaction-safe**: invalidation via `transaction.on_commit()` prevents clearing cache for rolled-back writes
+- TTLs configurable via environment variables (vehicle 30s/60s, driver 300s, schema 600s)
+
+### Keyboard-Layout-Aware Search
+
+Custom `LayoutAwareSearchFilter` converts search terms between EN/UA keyboard layouts and ORs all variants. Typing "Njqjnf" (Ukrainian keyboard in EN mode) still finds "Тойота".
+
+### Storage Abstraction
+
+`media_url()` returns path-only URLs for local storage (Next.js proxies `/media/`) and full S3 URLs in production — zero serializer changes needed. Optional S3 via `django-storages` with `AWS_QUERYSTRING_AUTH=False`.
+
+---
+
+## API Reference
+
+Base: `/api/v1/`
+
+### Auth
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `auth/login/` | Set JWT cookies, returns `{"detail": "ok"}` |
+| POST | `auth/refresh/` | Rotate tokens |
+| POST | `auth/logout/` | Blacklist token, clear cookies |
+| GET/PATCH | `auth/me/` | User profile (email, role — read-only) |
+| POST | `auth/unset-session/` | Emergency cookie clear (no auth required) |
+
+### Driver `(paginated)`
+
+| Method | Endpoint |
+|--------|----------|
+| GET/POST | `driver/` |
+| GET/PUT/PATCH/DELETE | `driver/{uuid}/` |
+
+### Vehicle `(not paginated)`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/POST | `vehicle/` | List / create |
+| GET/PUT/PATCH/DELETE | `vehicle/{uuid}/` | Detail / soft-delete |
+| POST | `vehicle/reorder/` | Batch Kanban reorder |
+| GET | `vehicle/archive/` | Archived vehicles |
+| POST | `vehicle/{uuid}/restore/` | Restore from archive |
+| GET | `vehicle/{uuid}/delete-check/` | Related data counts |
+| DELETE | `vehicle/{uuid}/permanent-delete/` | Hard delete (`?confirm=true`) |
+| GET/POST/DELETE | `vehicle/{uuid}/photos/` | Photos (max 10) |
+| GET/POST/PATCH | `vehicle/{uuid}/owner-history/` | Ownership records |
+| GET/POST | `vehicle/{uuid}/inspections/` | Technical inspections |
+| GET/PATCH/DELETE | `vehicle/{uuid}/inspections/{id}/` | Single inspection |
+| GET/POST | `vehicle/{uuid}/mileage/` | Mileage logs |
+| GET/POST | `vehicle/{uuid}/expenses/` | Vehicle-scoped expenses |
+
+### Fleet Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| CRUD | `fleet/services/` | Service providers (paginated) |
+| CRUD | `fleet/regulation/schemas/` | Maintenance schemas (paginated) |
+| GET | `fleet/vehicles/{uuid}/regulation/` | Vehicle regulation plan |
+| POST | `fleet/regulation/{uuid}/assign/` | Assign schema to vehicle |
+| GET | `fleet/vehicles/{uuid}/regulation/history/` | Regulation event history |
+| PATCH | `fleet/vehicles/{uuid}/regulation/entries/{id}/` | Mark entry as performed |
+| CRUD | `fleet/vehicles/{uuid}/service-plans/` | Planned services |
+| PATCH | `fleet/vehicles/{uuid}/service-plans/{id}/done/` | Mark plan done |
+| GET/POST/DELETE | `fleet/vehicles/{uuid}/equipment/` | Vehicle equipment |
+| PATCH | `fleet/vehicles/{uuid}/equipment/{id}/toggle/` | Toggle equipped status |
+| CRUD | `fleet/equipment/defaults/` | Default equipment items |
+
+### Expense
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `expense/categories/` | Active categories (cached 600s) |
+| GET/POST | `expense/` | All expenses (paginated, multipart) |
+| GET/PATCH/DELETE | `expense/{uuid}/` | Single expense |
+
+### Filters
+
+- **Vehicle**: `model`, `manufacturer`, `year`, `status`
+- **Expense**: `category`, `category_code`, `vehicle`, `date_from/to`, `min/max_amount`, `payment_method`, `payer_type`
+- **Regulation Schema**: `title` (icontains), `is_default`, `min/max_km`
+- **All search endpoints**: keyboard-layout-aware (EN ↔ UA)
+
+---
+
+## Telegram Bot
+
+FSM-based aiogram 3 bot for field operations:
+
+- Driver phone authentication → Telegram ID linking
+- Vehicle selection and mileage reporting
+- Service type selection with photo capture
+- Regulation plan PDF generation and download
+- Direct PostgreSQL access via SQLAlchemy (shared database)
+
+---
+
+## Testing
+
+### Backend
+
+```bash
+cd backend && python manage.py test --settings=config.test_settings
+```
+
+- Django `TestCase` with per-test database isolation
+- JWT auth via cookie injection (`client.cookies["access_token"]`)
+- `LocMemCache` in tests — no Redis dependency
+- Coverage: auth flows, CRUD, signal side effects, validation rules, read-only field security, FK constraints (PROTECT), archive/restore, expense auto-computation, mileage tracking
+
+### Frontend
+
+```bash
+cd frontend && npm run test:run
+```
+
+- Vitest 2 + React Testing Library + jsdom + user-event
+
+### CI/CD
+
+```
+backend-lint  ──┐
+backend-test  ──┤
+                ├──▶  build (Docker)
+frontend-lint ──┤
+frontend-test ──┘
+```
+
+5 GitHub Actions jobs — lint and test in parallel, Docker build gates on all four passing. PostgreSQL 16 + Redis 7 as service containers for backend tests.
+
+---
+
+## Development Setup
 
 ### Prerequisites
 
-- Python 3.12
-- [Poetry](https://python-poetry.org/)
-- PostgreSQL
+- Docker & Docker Compose
+- Make (optional)
 
-### Install & Run
-
-```bash
-cd backend
-
-# Install dependencies
-poetry install
-
-# Copy and fill in environment variables
-cp .env.example .env
-
-# Apply migrations
-poetry run python manage.py migrate
-
-# Create a superuser
-poetry run python manage.py createsuperuser
-
-# Seed the default vehicle regulation schema (optional)
-poetry run python manage.py create_vehicle_reg_basic_schema
-
-# Run the dev server
-poetry run python manage.py runserver
-```
-
-### Environment Variables (`.env`)
-
-```env
-SECRET_KEY=your-secret-key
-DEBUG=True
-ALLOWED_HOSTS=["*"]
-
-POSTGRES_DB=fleet_db
-POSTGRES_USER=fleet_user
-POSTGRES_PASSWORD=your_password
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-
-ACCESS_TOKEN_LIFETIME=86400    # seconds (1 day)
-REFRESH_TOKEN_LIFETIME=604800  # seconds (7 days)
-
-SECURE_COOKIES=False           # set True in production (requires HTTPS)
-```
-
----
-
-## Docker Setup
+### Quick Start
 
 ```bash
-# Start all services
-make up
-
-# Stop
-make down
-
-# Rebuild
-make build
+make up              # Start all services (Redis, PostgreSQL, backend, frontend, Nginx, bot)
+make migrate         # Run Django migrations
+make createsuperuser # Create admin user
+make create-reg-schema  # Seed default regulation schema + equipment
 ```
 
-### Useful Make Commands
+### Commands
 
 | Command | Description |
 |---------|-------------|
-| `make up` | Start all services in background |
-| `make down` | Stop and remove containers |
+| `make up` / `make down` | Start / stop dev stack |
+| `make restart` | Restart all services |
 | `make logs-backend` | Tail backend logs |
-| `make shell-backend` | Open shell inside backend container |
-| `make migrate` | Run Django migrations inside container |
-| `make makemigrations` | Create new migrations inside container |
-| `make createsuperuser` | Create superuser (interactive) |
-| `make createsuperuser-auto` | Create superuser (non-interactive, uses defaults) |
-| `make create-reg-schema` | Seed default vehicle regulation schema |
-| `make db-dump` | Export DB to `backups/fleet_db.sql` |
-| `make db-seed` | Import DB from `backups/fleet_db.sql` |
+| `make migrate` | Run migrations |
+| `make shell-backend` | Django shell |
+| `make test` | Run all tests (backend + frontend) |
+| `make lint-fix` | Auto-fix linting (ruff + eslint) |
+| `make lint-check` | CI-mode lint check |
+| `make pre-push` | Full pipeline: lint-fix → lint-check → test |
+| `make db-dump` / `make db-seed` | Export / import database |
+| `make ssl-init` / `make ssl-renew` | SSL certificate management |
 
 ---
 
-## Code Quality
+## Production
 
 ```bash
-cd backend
-
-# Lint (with auto-fix)
-poetry run ruff check --fix .
-
-# Format
-poetry run ruff format .
+make prod-build && make prod
 ```
 
-Ruff is configured in `pyproject.toml` with Django-aware rules (DJ, UP, B, SIM, PERF, etc.).
+- **Gunicorn** behind Nginx with Let's Encrypt SSL (auto-renew via Certbot)
+- HTTP → HTTPS redirect, HSTS (2 years), OCSP stapling, TLS 1.2+
+- gzip for JSON, JS, CSS, SVG
+- Security headers: X-Frame-Options DENY, X-Content-Type-Options nosniff
+- Static files: 30-day cache; media: 7-day cache
+- `client_max_body_size 20M`
 
----
+## Environment Variables
 
-## Data Models Overview
-
-- **Driver** — name, phone number, active status, last active date
-- **Vehicle** — manufacturer, model, year, VIN, plate number, status, assigned driver
-- **VehicleDriverHistory** — log of driver↔vehicle assignments
-- **FleetService** — named service types
-- **ServicePlan** — planned maintenance per vehicle with a due date
-- **FleetVehicleRegulationSchema** — named package of maintenance rules (e.g. "Basic Regulation")
-- **FleetVehicleRegulationItem** — single rule: service every N km, notify before M km
-- **FleetVehicleRegulation** — schema assigned to a specific vehicle
-- **FleetVehicleRegulationEntry** — current state: last done km, next due km
-- **FleetVehicleRegulationHistory** — immutable log of regulation events
-- **EquipmentDefaultItem** — global list of standard equipment
-- **EquipmentList** — per-vehicle equipment with approval tracking
+| Variable | Description |
+|----------|-------------|
+| `SECRET_KEY` | Django secret key |
+| `POSTGRES_*` | Database connection (DB, USER, PASSWORD, HOST, PORT) |
+| `REDIS_URL` | Redis connection string |
+| `CORS_ALLOWED_ORIGINS` | Allowed CORS origins |
+| `CSRF_TRUSTED_ORIGINS` | Trusted CSRF origins |
+| `SECURE_COOKIES` | Enable Secure flag on cookies (requires HTTPS) |
+| `USE_S3` | Enable S3 storage (`django-storages`) |
+| `AWS_*` | S3 configuration (bucket, region, keys) |
+| `THROTTLE_AUTH` | Auth rate limit (default: `5/minute`) |
+| `CACHE_TTL_*` | Per-entity cache TTLs |
