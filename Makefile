@@ -55,6 +55,11 @@ help:
 >@echo "  make assign-regulation CAR=AA6601BB - Assign (fill) default regulation for vehicle"
 >@echo "  make drop-vehicles               - Delete ALL vehicles from the database (with confirmation)"
 >@echo ""
+>@echo "  SSL:"
+>@echo "  make ssl-init            - Obtain first Let's Encrypt certificate"
+>@echo "  make ssl-renew           - Force certificate renewal + reload nginx"
+>@echo "  make ssl-status          - Show certificate expiry info"
+>@echo ""
 >@echo "  Lint & Test:"
 >@echo "  make lint-fix            - Auto-fix lint (backend ruff + frontend eslint)"
 >@echo "  make lint-check          - Check lint without fixing (CI mode)"
@@ -89,6 +94,15 @@ prod-down:
 
 prod-up:
 >$(COMPOSE_PROD) up -d
+
+ssl-init:
+>chmod +x init-letsencrypt.sh && bash init-letsencrypt.sh
+
+ssl-renew:
+>$(COMPOSE_PROD) run --rm certbot renew && $(COMPOSE_PROD) exec nginx nginx -s reload
+
+ssl-status:
+>$(COMPOSE_PROD) run --rm --entrypoint "certbot certificates" certbot
 
 docker-clean:
 >$(COMPOSE_PROD) down -v --remove-orphans

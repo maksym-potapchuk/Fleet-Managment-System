@@ -6,6 +6,7 @@ import { Service } from '@/types/service';
 import { getAllServices } from '@/services/service';
 import { FileInput } from '@/components/common/FileInput';
 import { ChevronDown, ChevronUp, Plus, Check, Trash2 } from 'lucide-react';
+import { formatDate } from '@/components/expense/expense-utils';
 
 let _entryId = 0;
 
