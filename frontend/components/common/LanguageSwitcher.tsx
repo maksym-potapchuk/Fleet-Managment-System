@@ -27,18 +27,16 @@ export function LanguageSwitcher() {
   }, []);
 
   const switchLanguage = (newLocale: string) => {
-    // Get the current pathname without locale prefix
-    let currentPath = pathname;
+    // Persist locale choice in cookie so next-intl middleware remembers it
+    document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000;SameSite=Lax`;
 
-    // Remove /uk or /pl prefix if present
+    let currentPath = pathname;
     currentPath = currentPath.replace(/^\/(uk|pl)/, '');
 
-    // If empty, set to root
     if (!currentPath) {
       currentPath = '/';
     }
 
-    // Navigate using next-intl router which handles locale automatically
     router.push(currentPath, { locale: newLocale });
     setIsOpen(false);
   };

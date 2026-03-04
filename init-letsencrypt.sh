@@ -6,7 +6,7 @@
 
 set -e
 
-DOMAIN="fdfleetmanager.site"
+DOMAIN="domain-here"
 EMAIL="email-here"   
 COMPOSE="docker compose -f docker-compose.prod.yml"
 DATA_PATH="./certbot"
