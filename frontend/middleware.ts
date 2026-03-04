@@ -10,18 +10,25 @@ const REFRESH_TOKEN_COOKIE = 'refresh_token';
 // Public routes (no auth required) — canonical form (no locale prefix)
 const PUBLIC_PATHS = new Set(['/login']);
 
-// With localePrefix: 'as-needed', only non-default locales (uk) carry a prefix.
-// Default locale (pl) has no prefix: /dashboard, /login, etc.
 function getPathLocale(pathname: string): string {
-  return pathname.startsWith('/uk') ? 'uk' : routing.defaultLocale;
+  for (const locale of routing.locales) {
+    if (pathname === `/${locale}` || pathname.startsWith(`/${locale}/`)) {
+      return locale;
+    }
+  }
+  return routing.defaultLocale;
 }
 
 function getCanonicalPath(pathname: string): string {
-  return pathname.replace(/^\/uk(?=\/|$)/, '') || '/';
+  for (const locale of routing.locales) {
+    if (pathname === `/${locale}`) return '/';
+    if (pathname.startsWith(`/${locale}/`)) return pathname.slice(locale.length + 1);
+  }
+  return pathname;
 }
 
 function buildLocalizedPath(locale: string, path: string): string {
-  return locale === routing.defaultLocale ? path : `/${locale}${path}`;
+  return `/${locale}${path}`;
 }
 
 export default function middleware(request: NextRequest) {

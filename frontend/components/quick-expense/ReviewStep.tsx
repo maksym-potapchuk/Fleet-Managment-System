@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { QuickExpenseEntry } from '@/types/expense';
+import { formatDate } from '@/components/expense/expense-utils';
 import {
   Fuel, Wrench, Package, Shield, Droplets, AlertTriangle, MoreHorizontal,
   Pencil, Trash2, Plus, Car,
@@ -127,7 +128,7 @@ export function ReviewStep({
                   </div>
                   <div className="flex items-center justify-between">
                     {detail && <span className="text-xs text-slate-500">{detail}</span>}
-                    <span className="text-xs text-slate-400">{entry.expense_date}</span>
+                    <span className="text-xs text-slate-400">{formatDate(entry.expense_date)}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -158,7 +159,7 @@ export function ReviewStep({
 
       {/* Bottom actions */}
       <div className="fixed bottom-0 inset-x-0 p-4 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent">
-        <div className="max-w-lg lg:max-w-2xl mx-auto flex flex-col-reverse sm:flex-row gap-3">
+        <div className="max-w-lg lg:max-w-3xl mx-auto flex flex-col-reverse sm:flex-row gap-3">
           <button
             onClick={onAddMore}
             className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-slate-300 text-slate-700 rounded-xl font-medium transition hover:bg-slate-50 hover:shadow-sm active:scale-[0.98]"

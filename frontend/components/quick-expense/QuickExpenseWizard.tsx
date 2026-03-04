@@ -199,8 +199,8 @@ export function QuickExpenseWizard() {
   return (
     <div className="flex h-screen flex-col bg-slate-50 overflow-x-hidden">
       {/* Header */}
-      <header className="flex-shrink-0 border-b border-slate-200 bg-white px-4 lg:px-6 py-3">
-        <div className="flex items-center gap-3 max-w-6xl mx-auto">
+      <header className="flex-shrink-0 border-b border-slate-200 bg-white px-4 lg:px-8 py-3">
+        <div className="flex items-center gap-3 max-w-7xl mx-auto">
           <div className="flex items-center">
             <button onClick={openSidebar} className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 active:scale-95">
               <Menu className="h-5 w-5" />
@@ -228,7 +228,7 @@ export function QuickExpenseWizard() {
             </button>
           )}
         </div>
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <StepIndicator currentStep={state.step} t={t} />
         </div>
       </header>
@@ -242,7 +242,7 @@ export function QuickExpenseWizard() {
         ) : (
           <>
             {state.step === 'vehicle' && (
-              <div className="max-w-lg lg:max-w-2xl mx-auto lg:flex lg:items-start lg:justify-center lg:min-h-full lg:pt-12">
+              <div className="max-w-lg mx-auto lg:flex lg:items-start lg:justify-center lg:min-h-full lg:pt-16">
                 <VehicleStep
                   vehicles={vehicles}
                   onSelect={(vehicleId, label) => dispatch({ type: 'SET_VEHICLE', vehicleId, label })}
@@ -302,9 +302,9 @@ export function QuickExpenseWizard() {
                 </div>
 
                 {/* ═══ DESKTOP: 3-column panel layout ═══ */}
-                <div className="hidden lg:flex flex-1 overflow-hidden max-w-6xl mx-auto w-full">
+                <div className="hidden lg:flex flex-1 overflow-hidden max-w-7xl mx-auto w-full">
                   {/* Left panel: category grid (always visible) */}
-                  <div className="w-[280px] flex-shrink-0 border-r border-slate-200 bg-white overflow-y-auto p-5">
+                  <div className="w-[300px] flex-shrink-0 border-r border-slate-200 bg-white overflow-y-auto p-5">
                     <CategoryGrid
                       categories={categories}
                       activeCategoryId={state.activeCategoryId}
@@ -314,9 +314,9 @@ export function QuickExpenseWizard() {
                   </div>
 
                   {/* Center: form area */}
-                  <div className="flex-1 overflow-y-auto p-6 pb-24">
+                  <div className="flex-1 overflow-y-auto p-6 pb-24 flex flex-col items-center">
                     {showForm ? (
-                      <div className="max-w-md">
+                      <div className="w-full max-w-lg">
                         <QuickEntryForm
                           categories={categories}
                           activeCategoryId={state.activeCategoryId!}
@@ -344,7 +344,7 @@ export function QuickExpenseWizard() {
                   </div>
 
                   {/* Right panel: entry list + review button */}
-                  <div className="w-[300px] flex-shrink-0 border-l border-slate-200 bg-white flex flex-col">
+                  <div className="w-[320px] flex-shrink-0 border-l border-slate-200 bg-white flex flex-col">
                     <div className="flex-1 overflow-y-auto p-4">
                       {state.entries.length > 0 ? (
                         <ExpenseEntryList
@@ -389,7 +389,7 @@ export function QuickExpenseWizard() {
             )}
 
             {state.step === 'review' && (
-              <div className="max-w-lg lg:max-w-2xl mx-auto w-full">
+              <div className="max-w-lg lg:max-w-3xl mx-auto w-full px-4 lg:px-6 lg:pt-8">
                 <ReviewStep
                   vehicleLabel={state.vehicleLabel}
                   entries={state.entries}
@@ -404,7 +404,7 @@ export function QuickExpenseWizard() {
             )}
 
             {(state.step === 'submitting' || state.step === 'done') && (
-              <div className="max-w-lg lg:max-w-2xl mx-auto w-full">
+              <div className="max-w-lg lg:max-w-3xl mx-auto w-full px-4 lg:px-6 lg:pt-8">
                 <SubmissionProgress
                   entries={state.entries}
                   results={state.results}

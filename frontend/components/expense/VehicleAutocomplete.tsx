@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Vehicle } from '@/types/vehicle';
 import { Car, X, ChevronDown } from 'lucide-react';
+import { matchesWithLayout } from '@/lib/keyboard-layout';
 
 interface VehicleAutocompleteProps {
   vehicles: Vehicle[];
@@ -30,11 +31,10 @@ export function VehicleAutocomplete({
 
   const filtered = query.trim()
     ? vehicles.filter(v => {
-        const q = query.toLowerCase();
         return (
-          v.car_number.toLowerCase().includes(q) ||
-          v.manufacturer.toLowerCase().includes(q) ||
-          v.model.toLowerCase().includes(q)
+          matchesWithLayout(v.car_number, query) ||
+          matchesWithLayout(v.manufacturer, query) ||
+          matchesWithLayout(v.model, query)
         );
       })
     : vehicles;

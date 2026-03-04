@@ -35,6 +35,7 @@ import {
   Receipt,
 } from 'lucide-react';
 import { Vehicle, VehicleStatus } from '@/types/vehicle';
+import { matchesWithLayout } from '@/lib/keyboard-layout';
 
 export type KanbanColumnConfig = {
   id: VehicleStatus;
@@ -123,12 +124,11 @@ export function VehicleKanban({
     return vehicles
       .filter(v => {
         if (searchTerm) {
-          const searchLower = searchTerm.toLowerCase();
           const matchesSearch = (
-            v.car_number.toLowerCase().includes(searchLower) ||
-            v.manufacturer.toLowerCase().includes(searchLower) ||
-            v.model.toLowerCase().includes(searchLower) ||
-            v.vin_number.toLowerCase().includes(searchLower)
+            matchesWithLayout(v.car_number, searchTerm) ||
+            matchesWithLayout(v.manufacturer, searchTerm) ||
+            matchesWithLayout(v.model, searchTerm) ||
+            matchesWithLayout(v.vin_number, searchTerm)
           );
           if (!matchesSearch) return false;
         }

@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { ExpenseCategory, QuickExpenseEntry, ExpensePart, ServiceItem, FuelType, WashType, PaymentMethod, PayerType, SupplierType } from '@/types/expense';
+import { ExpenseCategory, QuickExpenseEntry, ExpensePart, ServiceItem, FuelType, WashType, PaymentMethod, PayerType } from '@/types/expense';
 import { Service } from '@/types/service';
 import { getAllServices } from '@/services/service';
 import { FileInput } from '@/components/common/FileInput';
-import { ChevronDown, ChevronUp, Plus, Check, Trash2 } from 'lucide-react';
-import { formatDate } from '@/components/expense/expense-utils';
+import { ChevronDown, Plus, Check, Trash2 } from 'lucide-react';
 
 let _entryId = 0;
 
@@ -33,10 +32,6 @@ const PAYER_TYPES_OPTIONS: { value: PayerType; short: string }[] = [
   { value: 'CLIENT', short: 'client' },
 ];
 
-const SUPPLIER_TYPES_OPTIONS: { value: SupplierType; short: string }[] = [
-  { value: 'DISASSEMBLY', short: 'dis' },
-  { value: 'INDIVIDUAL', short: 'ind' },
-];
 
 const emptyPart = (): ExpensePart => ({ name: '', quantity: 1, unit_price: '' });
 const emptyServiceItem = (): ServiceItem => ({ name: '', price: '' });
@@ -155,8 +150,7 @@ export function QuickEntryForm({
 
   // ── Base fields ──
   const [amount, setAmount] = useState(editingEntry?.amount || '');
-  const [expenseDate, setExpenseDate] = useState(editingEntry?.expense_date || new Date().toISOString().split('T')[0]);
-  const [showDate, setShowDate] = useState(false);
+  const [expenseDate, setExpenseDate] = useState(editingEntry?.expense_date?.slice(0, 10) || new Date().toISOString().slice(0, 10));
 
   // ── Payment & payer ──
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(editingEntry?.payment_method || 'CASHLESS');
@@ -164,8 +158,6 @@ export function QuickEntryForm({
   const [expenseFor, setExpenseFor] = useState(editingEntry?.expense_for || '');
 
   // ── PARTS detail ──
-  const [sourceName, setSourceName] = useState(editingEntry?.source_name || '');
-  const [supplierType, setSupplierType] = useState<SupplierType>(editingEntry?.supplier_type || 'DISASSEMBLY');
 
   // ── FUEL ──
   const [liters, setLiters] = useState(editingEntry?.liters || '');
@@ -263,6 +255,10 @@ export function QuickEntryForm({
     else if (code === 'PARTS' || code === 'ACCESSORIES' || code === 'DOCUMENTS') computedAmount = String(partsTotal);
     else if (code === 'INSPECTION') computedAmount = String(inspectionTotal);
 
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const fullDateTime = `${expenseDate}T${timeStr}`;
+
     const entry: QuickExpenseEntry = {
       id: editingEntry?.id || String(++_entryId),
       category: category.id,
@@ -271,7 +267,7 @@ export function QuickEntryForm({
       category_icon: category.icon,
       category_color: category.color,
       amount: computedAmount,
-      expense_date: expenseDate,
+      expense_date: fullDateTime,
       payment_method: paymentMethod,
       payer_type: payerType,
     };
@@ -296,8 +292,6 @@ export function QuickEntryForm({
       entry.service_items = serviceItems.filter(i => i.name.trim());
       if (invoiceFile) entry.invoice_files = [invoiceFile];
     } else if (code === 'PARTS') {
-      entry.source_name = sourceName;
-      entry.supplier_type = supplierType;
       entry.parts = parts.filter(p => p.name.trim()).map(p => ({ ...p, quantity: p.quantity || 1 }));
       if (invoiceFile) entry.invoice_files = [invoiceFile];
     } else if (code === 'ACCESSORIES' || code === 'DOCUMENTS') {
@@ -581,30 +575,6 @@ export function QuickEntryForm({
           {/* ── PARTS ── */}
           {code === 'PARTS' && (
             <>
-              <div className="grid grid-cols-1 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-                <div>
-                  <label className={labelClasses}>{tExpenses('fields.sourceName')}</label>
-                  <input
-                    type="text"
-                    value={sourceName}
-                    onChange={(e) => setSourceName(e.target.value)}
-                    placeholder="Allegro, OLX..."
-                    className={inputClasses}
-                  />
-                </div>
-                <div>
-                  <label className={labelClasses}>{tExpenses('fields.supplierType')}</label>
-                  <div className="pt-0.5">
-                    <SegmentedControl
-                      options={SUPPLIER_TYPES_OPTIONS}
-                      value={supplierType}
-                      onChange={setSupplierType}
-                      renderLabel={(opt) => tExpenses(`supplierTypes.${opt.value}`)}
-                    />
-                  </div>
-                </div>
-              </div>
-
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className={labelClasses + ' mb-0'}>{tExpenses('fields.partName')}</label>
@@ -778,24 +748,15 @@ export function QuickEntryForm({
             </div>
           )}
 
-          {/* Date (collapsible) */}
+          {/* Date */}
           <div className="pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setShowDate(!showDate)}
-              className="flex items-center gap-1.5 text-xs text-slate-500 font-medium py-1.5 px-1 -mx-1 rounded-lg transition-colors hover:text-slate-700 hover:bg-slate-50"
-            >
-              {showDate ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-              {t('addStep.date')}: <span className="text-slate-700 font-semibold">{expenseDate}</span>
-            </button>
-            {showDate && (
-              <input
-                type="date"
-                value={expenseDate}
-                onChange={(e) => setExpenseDate(e.target.value)}
-                className={`${inputClasses} mt-2`}
-              />
-            )}
+            <label className={labelClasses}>{t('addStep.date')}</label>
+            <input
+              type="date"
+              value={expenseDate}
+              onChange={(e) => setExpenseDate(e.target.value)}
+              className={inputClasses}
+            />
           </div>
 
           {/* Add / Update button */}

@@ -37,7 +37,7 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
     vehicle: initialData?.vehicle || vehicleId || '',
     category: initialData?.category || '',
     amount: initialData?.amount || '',
-    expense_date: initialData?.expense_date || new Date().toISOString().split('T')[0],
+    expense_date: initialData?.expense_date?.slice(0, 16) || new Date().toISOString().slice(0, 16),
     // Payment & payer
     payment_method: initialData?.payment_method || 'CASHLESS',
     payer_type: initialData?.payer_type || 'COMPANY',
@@ -524,7 +524,7 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
 
       <div>
         <label className={labelClasses}>{t('fields.expenseDate')} *</label>
-        <input type="date" name="expense_date" value={formData.expense_date} onChange={handleChange} disabled={isLoading} className={inputClasses('expense_date')} />
+        <input type="datetime-local" name="expense_date" value={formData.expense_date} onChange={handleChange} disabled={isLoading} className={inputClasses('expense_date')} />
         {renderError('expense_date')}
       </div>
 

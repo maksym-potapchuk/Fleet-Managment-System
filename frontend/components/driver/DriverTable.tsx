@@ -22,15 +22,8 @@ const formatDate = (dateString: string | null, locale?: string): string => {
   });
 };
 
-/**
- * Format phone number for display
- * Example: "48123456789" -> "+48 123 456 789"
- */
 const formatPhoneNumber = (phone: string): string => {
-  if (phone.startsWith('48')) {
-    return `+${phone.slice(0, 2)} ${phone.slice(2, 5)} ${phone.slice(5, 8)} ${phone.slice(8)}`;
-  }
-  return phone;
+  return phone.startsWith('48') ? `+${phone}` : phone;
 };
 
 export function DriverTable({ drivers, onEdit, onDelete, isLoading = false }: DriverTableProps) {
@@ -103,12 +96,13 @@ export function DriverTable({ drivers, onEdit, onDelete, isLoading = false }: Dr
             {/* Driver Info Grid */}
             <div className="space-y-3 mb-4">
               {/* Phone */}
-              <div className="flex items-center gap-2 min-w-0">
+              <a
+                href={`tel:${formatPhoneNumber(driver.phone_number)}`}
+                className="flex items-center gap-2 min-w-0 text-sm font-medium text-slate-900 hover:text-teal-700 transition-colors"
+              >
                 <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                <span className="text-sm font-medium text-slate-900 truncate">
-                  {formatPhoneNumber(driver.phone_number)}
-                </span>
-              </div>
+                <span className="truncate">{formatPhoneNumber(driver.phone_number)}</span>
+              </a>
 
               {/* Vehicle Status */}
               <div className="flex items-center gap-2">
@@ -216,12 +210,15 @@ export function DriverTable({ drivers, onEdit, onDelete, isLoading = false }: Dr
 
               {/* Phone Number */}
               <td className="px-4 py-4">
-                <div className="flex items-center gap-2 text-slate-700">
+                <a
+                  href={`tel:${formatPhoneNumber(driver.phone_number)}`}
+                  className="flex items-center gap-2 text-slate-700 hover:text-teal-700 transition-colors"
+                >
                   <Phone className="w-4 h-4 text-slate-400" />
                   <span className="font-mono text-sm">
                     {formatPhoneNumber(driver.phone_number)}
                   </span>
-                </div>
+                </a>
               </td>
 
               {/* Has Vehicle */}

@@ -43,7 +43,13 @@ export function getCategoryLabel(expense: Expense, t: (key: string) => string): 
 export const formatDate = (dateString: string, locale?: string): string => {
   const date = new Date(dateString);
   const loc = locale === 'uk' ? 'uk-UA' : locale === 'pl' ? 'pl-PL' : locale || 'pl-PL';
-  return date.toLocaleDateString(loc, { day: '2-digit', month: 'short', year: 'numeric' });
+  const datePart = date.toLocaleDateString(loc, { day: '2-digit', month: 'short', year: 'numeric' });
+  const hasTime = dateString.includes('T') && !dateString.endsWith('T00:00:00Z');
+  if (hasTime) {
+    const timePart = date.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
+    return `${datePart}, ${timePart}`;
+  }
+  return datePart;
 };
 
 export const formatAmount = (amount: string): string => {
