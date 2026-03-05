@@ -30,6 +30,7 @@ services:
     volumes:
       - backend_media:/app/media
       - backend_static:/app/staticfiles
+      - ./backups:/backups
     depends_on:
       redis:
         condition: service_healthy
