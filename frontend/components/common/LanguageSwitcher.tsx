@@ -6,6 +6,10 @@ import { useRouter } from '@/src/i18n/routing';
 import { Languages } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
+function persistLocale(locale: string) {
+  document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000;SameSite=Lax`;
+}
+
 export function LanguageSwitcher() {
   const t = useTranslations('language');
   const locale = useLocale();
@@ -27,6 +31,7 @@ export function LanguageSwitcher() {
   }, []);
 
   const switchLanguage = (newLocale: string) => {
+    persistLocale(newLocale);
     const currentPath = pathname.replace(/^\/(uk|pl)/, '') || '/';
     router.push(currentPath, { locale: newLocale });
     setIsOpen(false);
