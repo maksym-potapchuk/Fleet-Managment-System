@@ -23,11 +23,15 @@ function isJwtExpired(token: string): boolean {
   }
 }
 
-function getPathLocale(pathname: string): string {
+function getPathLocale(pathname: string, request: NextRequest): string {
   for (const locale of routing.locales) {
     if (pathname === `/${locale}` || pathname.startsWith(`/${locale}/`)) {
       return locale;
     }
+  }
+  const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value;
+  if (cookieLocale && (routing.locales as readonly string[]).includes(cookieLocale)) {
+    return cookieLocale;
   }
   return routing.defaultLocale;
 }
@@ -57,7 +61,7 @@ export default function middleware(request: NextRequest) {
   }
 
   const canonical = getCanonicalPath(pathname);
-  const locale = getPathLocale(pathname);
+  const locale = getPathLocale(pathname, request);
   const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
   const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
 
