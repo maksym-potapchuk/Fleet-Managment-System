@@ -73,6 +73,7 @@ const makeVehicle = (overrides: Partial<Vehicle>): Vehicle => ({
   initial_km: 0,
   is_selected: false,
   status: 'READY',
+  status_position: 0,
   driver: null,
   photos: [],
   last_inspection_date: null,
@@ -92,9 +93,9 @@ const makeVehicle = (overrides: Partial<Vehicle>): Vehicle => ({
 });
 
 const vehicles: Vehicle[] = [
-  makeVehicle({ id: 'v1', car_number: 'AA1234BB', manufacturer: 'Toyota', model: 'Corolla', status: 'READY', driver: { id: 'd1', first_name: 'Jan', last_name: 'Kowalski' } }),
-  makeVehicle({ id: 'v2', car_number: 'CC5678DD', manufacturer: 'BMW', model: 'X5', status: 'LEASING', driver: null }),
-  makeVehicle({ id: 'v3', car_number: 'EE9012FF', manufacturer: 'Toyota', model: 'Camry', status: 'CTO', driver: { id: 'd2', first_name: 'Anna', last_name: 'Nowak' } }),
+  makeVehicle({ id: 'v1', car_number: 'AA1234BB', manufacturer: 'Toyota', model: 'Corolla', status: 'READY', status_position: 1000, driver: { id: 'd1', first_name: 'Jan', last_name: 'Kowalski' } }),
+  makeVehicle({ id: 'v2', car_number: 'CC5678DD', manufacturer: 'BMW', model: 'X5', status: 'LEASING', status_position: 1000, driver: null }),
+  makeVehicle({ id: 'v3', car_number: 'EE9012FF', manufacturer: 'Toyota', model: 'Camry', status: 'AUCTION', status_position: 1000, driver: { id: 'd2', first_name: 'Anna', last_name: 'Nowak' } }),
 ];
 
 const defaultProps = {
@@ -102,6 +103,7 @@ const defaultProps = {
   onSelectVehicle: vi.fn(),
   onAddVehicle: vi.fn(),
   onUpdateStatus: vi.fn(),
+  onReorderVehicles: vi.fn().mockResolvedValue(undefined),
 };
 
 beforeEach(() => {
@@ -204,11 +206,11 @@ describe('VehicleKanban – status filter', () => {
     render(<VehicleKanban {...defaultProps} />);
 
     await user.click(screen.getByRole('button', { name: /statuses\.READY \(/ }));
-    await user.click(screen.getByRole('button', { name: /statuses\.CTO \(/ }));
+    await user.click(screen.getByRole('button', { name: /statuses\.AUCTION \(/ }));
 
     expectVisible('AA1234BB');  // READY
     expectAbsent('CC5678DD');   // LEASING
-    expectVisible('EE9012FF');  // CTO
+    expectVisible('EE9012FF');  // AUCTION
   });
 
   it('deselecting a status filter shows all vehicles again', async () => {
@@ -302,5 +304,42 @@ describe('VehicleKanban – handleDragEnd', () => {
     });
 
     expect(defaultProps.onUpdateStatus).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Arrow reorder buttons ───────────────────────────────────────────────────
+
+describe('VehicleKanban – arrow reorder buttons', () => {
+  const twoInColumn: Vehicle[] = [
+    makeVehicle({ id: 'r1', car_number: 'RR1111AA', status: 'READY', status_position: 1000 }),
+    makeVehicle({ id: 'r2', car_number: 'RR2222BB', status: 'READY', status_position: 2000 }),
+  ];
+
+  it('hides up arrow on first card and down arrow on last card', () => {
+    render(<VehicleKanban {...defaultProps} vehicles={twoInColumn} />);
+
+    const moveUpButtons = screen.queryAllByTitle('moveUp');
+    const moveDownButtons = screen.queryAllByTitle('moveDown');
+
+    // First card: no up arrow, has down arrow
+    // Last card: has up arrow, no down arrow
+    // Total: 1 up + 1 down per rendering context (desktop + mobile = doubled)
+    expect(moveUpButtons.length).toBeGreaterThan(0);
+    expect(moveDownButtons.length).toBeGreaterThan(0);
+  });
+
+  it('calls onReorderVehicles with swapped positions when down arrow clicked', async () => {
+    const user = userEvent.setup();
+    const onReorder = vi.fn().mockResolvedValue(undefined);
+
+    render(<VehicleKanban {...defaultProps} vehicles={twoInColumn} onReorderVehicles={onReorder} />);
+
+    const moveDownButtons = screen.getAllByTitle('moveDown');
+    await user.click(moveDownButtons[0]);
+
+    expect(onReorder).toHaveBeenCalledWith([
+      { id: 'r1', status_position: 2000 },
+      { id: 'r2', status_position: 1000 },
+    ]);
   });
 });

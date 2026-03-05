@@ -15,6 +15,18 @@ import { VehicleModal } from '@/components/vehicle/VehicleModal';
 import { vehicleService } from '@/services/vehicle';
 import { Vehicle } from '@/types/vehicle';
 
+vi.mock('next-intl', () => ({
+  useTranslations: (namespace: string) => {
+    return (key: string, params?: Record<string, unknown>) => {
+      const full = `${namespace}.${key}`;
+      if (params) {
+        return `${full}(${JSON.stringify(params)})`;
+      }
+      return full;
+    };
+  },
+}));
+
 vi.mock('@/services/vehicle', () => ({
   vehicleService: {
     createVehicle: vi.fn(),
@@ -41,6 +53,7 @@ const mockVehicle: Vehicle = {
   initial_km: 50000,
   is_selected: false,
   status: 'READY',
+  status_position: 0,
   driver: null,
   photos: [],
   last_inspection_date: null,
@@ -75,9 +88,9 @@ async function fillStep1(user: ReturnType<typeof userEvent.setup>) {
   const yearInput = screen.getByDisplayValue(String(new Date().getFullYear()));
   await user.clear(yearInput);
   await user.type(yearInput, '2022');
-  // Select a color: open dropdown then pick
-  await user.click(screen.getByText('Оберіть колір'));
-  await user.click(screen.getByText('Білий'));
+  // Select a color: open dropdown then pick the first color (white)
+  await user.click(screen.getByText('vehicleModal.selectColor'));
+  await user.click(screen.getByText('vehicleModal.colors.white'));
   const costInput = screen.getByPlaceholderText('50 000.00');
   await user.type(costInput, '30000');
   await user.type(screen.getByPlaceholderText('0'), '10000');
@@ -85,7 +98,7 @@ async function fillStep1(user: ReturnType<typeof userEvent.setup>) {
 
 /** Advance from step 1 to step 2 */
 async function goToStep2(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: /Далі/ }));
+  await user.click(screen.getByRole('button', { name: /vehicleModal\.next/ }));
 }
 
 beforeEach(() => {
@@ -100,24 +113,24 @@ describe('VehicleModal – rendering', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('shows "Додати автомобіль" title when no vehicle is provided', () => {
+  it('shows add title when no vehicle is provided', () => {
     render(<VehicleModal {...baseProps} vehicle={null} />);
-    expect(screen.getByText('Додати автомобіль')).toBeInTheDocument();
+    expect(screen.getByText('vehicleModal.addVehicle')).toBeInTheDocument();
   });
 
-  it('shows "Редагувати автомобіль" title when a vehicle is provided', () => {
+  it('shows edit title when a vehicle is provided', () => {
     render(<VehicleModal {...baseProps} vehicle={mockVehicle} />);
-    expect(screen.getByText('Редагувати автомобіль')).toBeInTheDocument();
+    expect(screen.getByText('vehicleModal.editVehicle')).toBeInTheDocument();
   });
 
   it('shows the archive button only when editing an existing vehicle', () => {
     render(<VehicleModal {...baseProps} vehicle={mockVehicle} />);
-    expect(screen.getByRole('button', { name: /Архівувати/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /vehicleModal\.archive/ })).toBeInTheDocument();
   });
 
   it('does not show archive button for a new vehicle', () => {
     render(<VehicleModal {...baseProps} vehicle={null} />);
-    expect(screen.queryByRole('button', { name: /Архівувати/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /vehicleModal\.archive/ })).not.toBeInTheDocument();
   });
 });
 
@@ -146,7 +159,7 @@ describe('VehicleModal – form submission', () => {
 
     await fillStep1(user);
     await goToStep2(user);
-    await user.click(screen.getByRole('button', { name: /Зберегти/ }));
+    await user.click(screen.getByRole('button', { name: /vehicleModal\.save/ }));
 
     await waitFor(() => expect(vehicleService.createVehicle).toHaveBeenCalledOnce());
     expect(vehicleService.updateVehicle).not.toHaveBeenCalled();
@@ -159,7 +172,7 @@ describe('VehicleModal – form submission', () => {
 
     // Edit mode: step 1 is pre-filled, go to step 2 and submit
     await goToStep2(user);
-    await user.click(screen.getByRole('button', { name: /Зберегти/ }));
+    await user.click(screen.getByRole('button', { name: /vehicleModal\.save/ }));
 
     await waitFor(() => expect(vehicleService.updateVehicle).toHaveBeenCalledOnce());
     expect(vehicleService.updateVehicle).toHaveBeenCalledWith('v1', expect.any(Object));
@@ -175,7 +188,7 @@ describe('VehicleModal – form submission', () => {
 
     await fillStep1(user);
     await goToStep2(user);
-    await user.click(screen.getByRole('button', { name: /Зберегти/ }));
+    await user.click(screen.getByRole('button', { name: /vehicleModal\.save/ }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
     expect(onClose).toHaveBeenCalledOnce();
@@ -188,10 +201,10 @@ describe('VehicleModal – form submission', () => {
 
     await fillStep1(user);
     await goToStep2(user);
-    await user.click(screen.getByRole('button', { name: /Зберегти/ }));
+    await user.click(screen.getByRole('button', { name: /vehicleModal\.save/ }));
 
     await waitFor(() =>
-      expect(screen.getByText('Не вдалося зберегти автомобіль')).toBeInTheDocument()
+      expect(screen.getByText('vehicleModal.errorSaveVehicle')).toBeInTheDocument()
     );
   });
 });

@@ -6,7 +6,7 @@ export interface VehiclePhoto {
   uploaded_at: string;
 }
 
-export interface VehicleOwnerHistory {
+export interface VehicleOwner {
   id: number;
   driver: {
     id: string;
@@ -14,8 +14,21 @@ export interface VehicleOwnerHistory {
     last_name: string;
   };
   agreement_number: string;
-  acquired_at: string;
-  released_at: string | null;
+  assigned_at: string;
+  created_by: number | null;
+}
+
+export interface OwnerHistoryRecord {
+  id: number;
+  driver: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  };
+  agreement_number: string;
+  assigned_at: string;
+  unassigned_at: string;
+  created_by: number | null;
 }
 
 export interface TechnicalInspection {
@@ -29,13 +42,15 @@ export interface TechnicalInspection {
 }
 
 export type VehicleStatus =
-  | 'CTO'
+  | 'AUCTION'
   | 'FOCUS'
+  | 'GAS_INSTALL'
+  | 'SERVICE'
   | 'CLEANING'
-  | 'PREPARATION'
+  | 'PRE_DELIVERY'
   | 'READY'
-  | 'LEASING'
   | 'RENT'
+  | 'LEASING'
   | 'SELLING'
   | 'SOLD';
 
@@ -63,6 +78,7 @@ export interface Vehicle {
   initial_km: number;
   is_selected: boolean;
   status: VehicleStatus;
+  status_position: number;
   driver: {
     id: string;
     first_name: string;
@@ -87,8 +103,8 @@ export interface Vehicle {
 export interface VehicleDeleteCheck {
   has_related_data: boolean;
   related_counts: {
-    owner_history: number;
-    driver_history: number;
+    current_owner: number;
+    ownership_history: number;
     photos: number;
     inspections: number;
     service_history: number;
@@ -96,6 +112,7 @@ export interface VehicleDeleteCheck {
     service_plans: number;
     equipment: number;
     mileage_logs: number;
+    expenses: number;
   };
 }
 
@@ -118,7 +135,6 @@ export interface CreateVehicleData {
   fuel_type: FuelType;
   initial_km: number;
   status?: VehicleStatus;
-  driver?: string | null; // driver ID
 }
 
 export interface UpdateVehicleData extends Partial<CreateVehicleData> {}

@@ -116,15 +116,14 @@ describe('expenseService – submitQuickExpenses', () => {
     expect(formData.get('next_inspection_date')).toBe('2028-03-01');
   });
 
-  it('sends fuel-specific fields in FormData', async () => {
+  it('sends fuel-specific fields in FormData via fuel_entries', async () => {
     mockedApi.post.mockResolvedValue({ data: { id: 'exp-1' } });
 
     const entry = makeEntry({
       id: 'e1',
       category_code: 'FUEL',
       amount: '200',
-      liters: '80',
-      fuel_type: 'GASOLINE',
+      fuel_entries: [{ amount: '200', liters: '80', fuel_type: 'GASOLINE' }],
     });
 
     await expenseService.submitQuickExpenses('v-1', [entry], () => {});

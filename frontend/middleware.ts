@@ -10,6 +10,19 @@ const REFRESH_TOKEN_COOKIE = 'refresh_token';
 // Public routes (no auth required) — canonical form (no locale prefix)
 const PUBLIC_PATHS = new Set(['/login']);
 
+function isJwtExpired(token: string): boolean {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return true;
+    const { exp } = JSON.parse(atob(payload));
+    if (!exp) return true;
+    // 30s buffer to account for clock skew
+    return Date.now() >= (exp - 30) * 1000;
+  } catch {
+    return true;
+  }
+}
+
 function getPathLocale(pathname: string): string {
   for (const locale of routing.locales) {
     if (pathname === `/${locale}` || pathname.startsWith(`/${locale}/`)) {
@@ -45,8 +58,13 @@ export default function middleware(request: NextRequest) {
 
   const canonical = getCanonicalPath(pathname);
   const locale = getPathLocale(pathname);
+  const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
+  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
+
+  // Session is valid if at least one token exists and is not expired
   const hasSession =
-    request.cookies.has(ACCESS_TOKEN_COOKIE) || request.cookies.has(REFRESH_TOKEN_COOKIE);
+    (!!accessToken && !isJwtExpired(accessToken)) ||
+    (!!refreshToken && !isJwtExpired(refreshToken));
   const isPublic = PUBLIC_PATHS.has(canonical);
 
   // No token on a protected route → redirect to /login

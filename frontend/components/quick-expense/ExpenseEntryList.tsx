@@ -3,6 +3,7 @@
 import { QuickExpenseEntry } from '@/types/expense';
 import {
   Fuel, Wrench, Package, Shield, Droplets, AlertTriangle, MoreHorizontal,
+  FileText, ShoppingBag,
   Pencil, Trash2,
   type LucideIcon,
 } from 'lucide-react';
@@ -15,6 +16,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   droplets: Droplets,
   'alert-triangle': AlertTriangle,
   'more-horizontal': MoreHorizontal,
+  'file-text': FileText,
+  'shopping-bag': ShoppingBag,
 };
 
 const COLOR_STYLES: Record<string, { bg: string; text: string }> = {
@@ -25,14 +28,23 @@ const COLOR_STYLES: Record<string, { bg: string; text: string }> = {
   '#06B6D4': { bg: 'bg-cyan-50', text: 'text-cyan-600' },
   '#EF4444': { bg: 'bg-red-50', text: 'text-red-600' },
   '#64748B': { bg: 'bg-slate-100', text: 'text-slate-600' },
+  '#EC4899': { bg: 'bg-pink-50', text: 'text-pink-600' },
+  '#6366F1': { bg: 'bg-indigo-50', text: 'text-indigo-600' },
 };
 
 function getDetail(entry: QuickExpenseEntry, tExpenses: (key: string) => string): string {
   const parts: string[] = [];
   if (entry.category_code === 'FUEL') {
-    if (entry.liters) parts.push(`${entry.liters}L`);
-    if (entry.fuel_type) parts.push(tExpenses(`fuelTypes.${entry.fuel_type}`));
-    if (entry.receipt) parts.push('+receipt');
+    const fuelCount = entry.fuel_entries?.length || 0;
+    if (fuelCount > 1) {
+      const totalLiters = entry.fuel_entries!.reduce((s, fe) => s + (parseFloat(fe.liters) || 0), 0);
+      parts.push(`${fuelCount}x`);
+      if (totalLiters > 0) parts.push(`${totalLiters.toFixed(1)}L`);
+    } else {
+      if (entry.liters) parts.push(`${entry.liters}L`);
+      if (entry.fuel_type) parts.push(tExpenses(`fuelTypes.${entry.fuel_type}`));
+      if (entry.receipt) parts.push('+receipt');
+    }
   } else if (entry.category_code === 'WASHING' && entry.wash_type) {
     parts.push(tExpenses(`washTypes.${entry.wash_type}`));
   } else if (entry.category_code === 'FINES') {
@@ -46,6 +58,7 @@ function getDetail(entry: QuickExpenseEntry, tExpenses: (key: string) => string)
     if (count > 0) parts.push(`${count} items`);
     if (entry.invoice_files?.length) parts.push('+invoice');
   } else if (entry.category_code === 'PARTS') {
+    if (entry.source_name) parts.push(entry.source_name);
     const count = entry.parts?.filter(p => p.name.trim()).length || 0;
     if (count > 0) parts.push(`${count} parts`);
     if (entry.invoice_files?.length) parts.push('+invoice');

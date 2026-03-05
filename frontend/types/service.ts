@@ -4,6 +4,7 @@
 export interface Service {
   id: number;
   name: string;
+  address: string;
   description: string | null;
   created_at: string;
   updated_at: string;
@@ -14,5 +15,6 @@ export interface Service {
  */
 export interface CreateServiceData {
   name: string;
+  address?: string;
   description?: string;
 }

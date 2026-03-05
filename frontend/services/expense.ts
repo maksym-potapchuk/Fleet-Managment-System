@@ -4,6 +4,7 @@ import {
   ExpenseCategory,
   CreateExpenseData,
   ExpenseFilters,
+  FuelSubEntry,
   PaginatedExpenseResponse,
   QuickExpenseEntry,
   QuickExpenseResult,
@@ -121,61 +122,72 @@ export const expenseService = {
     for (const entry of entries) {
       onProgress({ entryId: entry.id, status: 'submitting' });
       try {
-        const data: CreateExpenseData = {
-          category: entry.category,
-          expense_date: entry.expense_date,
-        };
-
         const code = entry.category_code;
-        data.amount = entry.amount || '0';
 
-        // Payment & payer (all categories)
-        if (entry.payment_method) data.payment_method = entry.payment_method;
-        if (entry.payer_type) data.payer_type = entry.payer_type;
+        // FUEL: each sub-entry becomes a separate expense
+        if (code === 'FUEL' && entry.fuel_entries?.length) {
+          for (const fe of entry.fuel_entries) {
+            const data: CreateExpenseData = {
+              category: entry.category,
+              expense_date: entry.expense_date,
+              amount: fe.amount || '0',
+              liters: fe.liters,
+              fuel_type: fe.fuel_type,
+            };
+            if (entry.payment_method) data.payment_method = entry.payment_method;
+            if (entry.payer_type) data.payer_type = entry.payer_type;
+            if (fe.receipt) data.receipt = fe.receipt;
+            await this.createVehicleExpense(vehicleId, data);
+          }
+        } else {
+          const data: CreateExpenseData = {
+            category: entry.category,
+            expense_date: entry.expense_date,
+            amount: entry.amount || '0',
+          };
 
-        if (code === 'INSPECTION') {
-          data.official_cost = entry.official_cost;
-          data.additional_cost = entry.additional_cost;
-          data.inspection_date = entry.inspection_date || entry.expense_date;
-          if (entry.next_inspection_date) data.next_inspection_date = entry.next_inspection_date;
-        } else if (code === 'SERVICE') {
-          if (entry.service) data.service = entry.service;
-          if (entry.service_items?.length) {
-            const valid = entry.service_items.filter(i => i.name.trim());
-            if (valid.length) data.service_items_json = JSON.stringify(valid);
+          if (entry.payment_method) data.payment_method = entry.payment_method;
+          if (entry.payer_type) data.payer_type = entry.payer_type;
+
+          if (code === 'INSPECTION') {
+            data.official_cost = entry.official_cost;
+            data.additional_cost = entry.additional_cost;
+            data.inspection_date = entry.inspection_date || entry.expense_date;
+            if (entry.next_inspection_date) data.next_inspection_date = entry.next_inspection_date;
+          } else if (code === 'SERVICE') {
+            if (entry.service) data.service = entry.service;
+            if (entry.service_items?.length) {
+              const valid = entry.service_items.filter(i => i.name.trim());
+              if (valid.length) data.service_items_json = JSON.stringify(valid);
+            }
+            if (entry.invoice_files?.length) data.invoice_files = entry.invoice_files;
+          } else if (code === 'PARTS') {
+            if (entry.source_name) data.source_name = entry.source_name;
+            if (entry.supplier_type) data.supplier_type = entry.supplier_type;
+            if (entry.parts?.length) {
+              const valid = entry.parts.filter(p => p.name.trim());
+              if (valid.length) data.parts_json = JSON.stringify(valid);
+            }
+            if (entry.invoice_files?.length) data.invoice_files = entry.invoice_files;
+          } else if (code === 'ACCESSORIES' || code === 'DOCUMENTS') {
+            if (entry.parts?.length) {
+              const valid = entry.parts.filter(p => p.name.trim());
+              if (valid.length) data.parts_json = JSON.stringify(valid);
+            }
+            if (entry.invoice_files?.length) data.invoice_files = entry.invoice_files;
+          } else if (code === 'OTHER') {
+            if (entry.expense_for) data.expense_for = entry.expense_for;
+          } else if (code === 'WASHING') {
+            data.wash_type = entry.wash_type;
+          } else if (code === 'FINES') {
+            data.violation_type = entry.violation_type;
+            if (entry.fine_number) data.fine_number = entry.fine_number;
+            if (entry.fine_date) data.fine_date = entry.fine_date;
           }
-          if (entry.invoice_files?.length) data.invoice_files = entry.invoice_files;
-        } else if (code === 'PARTS') {
-          if (entry.source_name) data.source_name = entry.source_name;
-          if (entry.supplier_type) data.supplier_type = entry.supplier_type;
-          if (entry.parts?.length) {
-            const valid = entry.parts.filter(p => p.name.trim());
-            if (valid.length) data.parts_json = JSON.stringify(valid);
-          }
-          if (entry.invoice_files?.length) data.invoice_files = entry.invoice_files;
-        } else if (code === 'ACCESSORIES' || code === 'DOCUMENTS') {
-          if (entry.parts?.length) {
-            const valid = entry.parts.filter(p => p.name.trim());
-            if (valid.length) data.parts_json = JSON.stringify(valid);
-          }
-          if (entry.invoice_files?.length) data.invoice_files = entry.invoice_files;
-        } else if (code === 'OTHER') {
-          if (entry.expense_for) data.expense_for = entry.expense_for;
+
+          await this.createVehicleExpense(vehicleId, data);
         }
 
-        if (code === 'FUEL') {
-          data.liters = entry.liters;
-          data.fuel_type = entry.fuel_type;
-          if (entry.receipt) data.receipt = entry.receipt;
-        } else if (code === 'WASHING') {
-          data.wash_type = entry.wash_type;
-        } else if (code === 'FINES') {
-          data.violation_type = entry.violation_type;
-          if (entry.fine_number) data.fine_number = entry.fine_number;
-          if (entry.fine_date) data.fine_date = entry.fine_date;
-        }
-
-        await this.createVehicleExpense(vehicleId, data);
         const result: QuickExpenseResult = { entryId: entry.id, status: 'success' };
         results.push(result);
         onProgress(result);

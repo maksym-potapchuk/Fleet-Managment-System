@@ -93,6 +93,23 @@ export default function VehiclesPage() {
     loadVehicles();
   };
 
+  const handleReorderVehicles = async (items: { id: string; status_position: number }[]) => {
+    const previousVehicles = [...vehicles];
+    try {
+      const posMap = new Map(items.map(i => [i.id, i.status_position]));
+      setVehicles(prev =>
+        prev.map(v => {
+          const newPos = posMap.get(v.id);
+          return newPos !== undefined ? { ...v, status_position: newPos } : v;
+        })
+      );
+      await vehicleService.reorderVehicles(items);
+    } catch (err) {
+      console.error('Failed to reorder vehicles:', err);
+      setVehicles(previousVehicles);
+    }
+  };
+
   const handleArchiveVehicle = async (id: string) => {
     try {
       await vehicleService.archiveVehicle(id);
@@ -117,7 +134,7 @@ export default function VehiclesPage() {
         car_number: (vehicle.car_number.slice(0, 5) + '-COPY').slice(0, 10),
         color: vehicle.color || '',
         fuel_type: vehicle.fuel_type,
-        status: 'PREPARATION' as const,
+        status: 'AUCTION' as const,
         initial_km: vehicle.initial_km,
       };
 
@@ -170,6 +187,7 @@ export default function VehiclesPage() {
         onUpdateStatus={handleUpdateStatus}
         onArchiveVehicle={handleArchiveVehicle}
         onDuplicateVehicle={handleDuplicateVehicle}
+        onReorderVehicles={handleReorderVehicles}
         onOpenSidebar={openSidebar}
         onGoToArchive={() => router.push('/vehicles/archive')}
       />

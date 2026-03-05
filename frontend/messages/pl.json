@@ -14,7 +14,8 @@
     "yes": "Tak",
     "no": "Nie",
     "chooseFile": "Wybierz plik",
-    "noFileChosen": "Nie wybrano pliku"
+    "noFileChosen": "Nie wybrano pliku",
+    "processing": "Przetwarzanie..."
   },
   "nav": {
     "dashboard": "Panel główny",
@@ -33,7 +34,12 @@
     "password": "Hasło",
     "loginError": "Nieprawidłowy email lub hasło",
     "rememberMe": "Zapamiętaj mnie",
-    "welcomeBack": "Witaj ponownie"
+    "welcomeBack": "Witaj ponownie!",
+    "loginSubtitle": "Wprowadź swoje dane logowania",
+    "passwordLabel": "Hasło",
+    "hidePassword": "Ukryj hasło",
+    "showPassword": "Pokaż hasło",
+    "loggingIn": "Logowanie..."
   },
   "dashboard": {
     "title": "Panel główny",
@@ -102,6 +108,8 @@
     "noServices": "Nie ma jeszcze serwisów",
     "noServicesDesc": "Kliknij przycisk 'Dodaj serwis', aby utworzyć pierwszy serwis",
     "name": "Nazwa",
+    "address": "Adres",
+    "noAddress": "Brak adresu",
     "description": "Opis",
     "createdAt": "Data utworzenia",
     "noDescription": "Brak opisu",
@@ -115,6 +123,7 @@
   },
   "serviceForm": {
     "name": "Nazwa",
+    "address": "Adres",
     "description": "Opis",
     "addService": "Dodaj serwis",
     "updateService": "Zaktualizuj serwis",
@@ -125,6 +134,7 @@
     },
     "placeholders": {
       "name": "Wpisz nazwę serwisu",
+      "address": "Wpisz adres serwisu (opcjonalnie)",
       "description": "Wpisz opis serwisu (opcjonalnie)"
     }
   },
@@ -154,6 +164,9 @@
     "deleteConfirm": "Usunąć pojazd {number}?",
     "archive": "Archiwum",
     "archiveVehicle": "Archiwizuj",
+    "moveUp": "Przesuń w górę",
+    "moveDown": "Przesuń w dół",
+    "moveToPosition": "Wybierz pozycję",
     "archiveConfirm": "Archiwizować pojazd {number}?",
     "archiveSuccess": "Pojazd zarchiwizowany",
     "archiveError": "Nie udało się zarchiwizować pojazdu",
@@ -169,8 +182,8 @@
     "noArchivedVehicles": "Brak zarchiwizowanych pojazdów",
     "noArchivedVehiclesDesc": "Zarchiwizowane pojazdy pojawią się tutaj",
     "relatedData": {
-      "ownerHistory": "właścicieli: {count}",
-      "driverHistory": "kierowców: {count}",
+      "currentOwner": "aktualny właściciel: {count}",
+      "ownershipHistory": "historia właścicieli: {count}",
       "photos": "zdjęć: {count}",
       "inspections": "przeglądów: {count}",
       "serviceHistory": "serwisów: {count}",
@@ -202,14 +215,16 @@
       "none": "Brak regulaminu"
     },
     "statuses": {
-      "CTO": "CTO",
+      "AUCTION": "Wybór z aukcji",
       "FOCUS": "Focus",
-      "CLEANING": "Czyszczenie",
-      "PREPARATION": "Przygotowanie",
-      "READY": "Gotowe",
-      "LEASING": "Leasing",
+      "GAS_INSTALL": "Instalacja gazu",
+      "SERVICE": "Serwis",
+      "CLEANING": "Czyszczenie chemiczne",
+      "PRE_DELIVERY": "Przygotowanie do wydania",
+      "READY": "Gotowe do wydania",
       "RENT": "Wynajem",
-      "SELLING": "Sprzedaż",
+      "LEASING": "Leasing",
+      "SELLING": "Zgłoszenie sprzedaży",
       "SOLD": "Sprzedane"
     },
     "totalCost": "Koszt całkowity",
@@ -250,7 +265,8 @@
       "reschedule": "Przesuń datę",
       "pinned": "Przypięto",
       "preview": "Podgląd",
-      "hint": "Najedź na datę, aby zobaczyć zdarzenia"
+      "hint": "Najedź na datę, aby zobaczyć zdarzenia",
+      "cancel": "Anuluj"
     }
   },
   "vehicleWorkspace": {
@@ -504,9 +520,13 @@
       "additionalCost": "Koszty dodatkowe",
       "nextInspectionDate": "Data następnego przeglądu",
       "parts": "Części",
+      "sourceName": "Źródło",
+      "supplierType": "Typ dostawcy",
+      "description": "Opis",
       "attachments": "Załączniki",
       "receipt": "Paragon",
       "invoices": "Faktury",
+      "createdBy": "Dodał",
       "createdAt": "Utworzono",
       "updatedAt": "Zaktualizowano"
     },
@@ -545,6 +565,67 @@
       "clearAll": "Wyczyść filtry"
     }
   },
+  "vehicleModal": {
+    "editVehicle": "Edytuj pojazd",
+    "addVehicle": "Dodaj pojazd",
+    "step1Subtitle": "Podstawowe informacje",
+    "step2Subtitle": "Kierowca i zdjęcia",
+    "carNumber": "Numer rejestracyjny",
+    "vinNumber": "Numer VIN",
+    "vinHint": "17 znaków",
+    "manufacturer": "Marka",
+    "model": "Model",
+    "year": "Rok",
+    "color": "Kolor pojazdu",
+    "selectColor": "Wybierz kolor",
+    "fuelType": "Typ paliwa",
+    "cost": "Koszt (PLN)",
+    "status": "Status",
+    "mileage": "Aktualny przebieg (km)",
+    "mileageHint": "Używany do obliczania regulaminu",
+    "assignDriver": "Przypisz kierowcę",
+    "assignDriverHint": "Wybierz istniejącego lub utwórz nowego",
+    "loadingDrivers": "Ładowanie...",
+    "noDriver": "— Bez kierowcy —",
+    "createNewDriver": "Utwórz nowego kierowcę",
+    "newDriver": "Nowy kierowca",
+    "firstName": "Imię",
+    "lastName": "Nazwisko",
+    "phone": "Telefon (48xxxxxxxxx)",
+    "creating": "Tworzenie...",
+    "createAndAssign": "Utwórz i przypisz",
+    "vehiclePhotos": "Zdjęcia pojazdu",
+    "photosHint": "Dodaj do 10 zdjęć",
+    "addPhoto": "Dodaj zdjęcie",
+    "morePhotos": "jeszcze {count}",
+    "photoLimit": "Osiągnięto limit 10 zdjęć",
+    "new": "NOWE",
+    "archive": "Archiwizuj",
+    "archiveConfirm": "Archiwizować ten pojazd?",
+    "back": "Wstecz",
+    "next": "Dalej",
+    "saving": "Zapisywanie...",
+    "save": "Zapisz",
+    "errorDeletePhoto": "Nie udało się usunąć zdjęcia",
+    "errorCreateDriver": "Nie udało się utworzyć kierowcy",
+    "errorInvalidMileage": "Wprowadź prawidłowy przebieg",
+    "errorSaveVehicle": "Nie udało się zapisać pojazdu",
+    "errorArchiveVehicle": "Nie udało się zarchiwizować pojazdu",
+    "colors": {
+      "white": "Biały",
+      "black": "Czarny",
+      "gray": "Szary",
+      "silver": "Srebrny",
+      "red": "Czerwony",
+      "blue": "Niebieski",
+      "green": "Zielony",
+      "yellow": "Żółty",
+      "brown": "Brązowy",
+      "beige": "Beżowy",
+      "orange": "Pomarańczowy",
+      "burgundy": "Bordowy"
+    }
+  },
   "quickExpenses": {
     "title": "Szybkie wydatki",
     "subtitle": "Dodaj wiele wydatków dla jednego pojazdu",
@@ -565,7 +646,8 @@
       "noEntries": "Dodaj pierwszy wydatek",
       "changeVehicle": "Zmień pojazd",
       "date": "Data",
-      "amount": "Kwota"
+      "amount": "Kwota",
+      "addMore": "Dodaj więcej"
     },
     "reviewStep": {
       "title": "Podsumowanie",

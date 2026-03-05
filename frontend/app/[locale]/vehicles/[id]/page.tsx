@@ -35,7 +35,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import api from '@/lib/api';
 import { vehicleService } from '@/services/vehicle';
 import { expenseService } from '@/services/expense';
-import { Vehicle, VehicleOwnerHistory, VehicleStatus, FuelType, TechnicalInspection, MileageLog } from '@/types/vehicle';
+import { Vehicle, VehicleOwner, OwnerHistoryRecord, VehicleStatus, FuelType, TechnicalInspection, MileageLog } from '@/types/vehicle';
 import { Expense, CreateExpenseData, ExpenseCategory, ExpenseFilters as ExpenseFiltersType } from '@/types/expense';
 import { VehicleModal } from '@/components/vehicle/VehicleModal';
 import { ExpenseTable } from '@/components/expense/ExpenseTable';
@@ -46,15 +46,17 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useSidebar } from '../SidebarContext';
 
 const STATUS_COLORS: Record<VehicleStatus, { bg: string; text: string; border: string }> = {
-  CTO:         { bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200' },
-  FOCUS:       { bg: 'bg-purple-50',  text: 'text-purple-700',  border: 'border-purple-200' },
-  CLEANING:    { bg: 'bg-cyan-50',    text: 'text-cyan-700',    border: 'border-cyan-200' },
-  PREPARATION: { bg: 'bg-indigo-50',  text: 'text-indigo-700',  border: 'border-indigo-200' },
-  READY:       { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  LEASING:     { bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200' },
-  RENT:        { bg: 'bg-sky-50',     text: 'text-sky-700',     border: 'border-sky-200' },
-  SELLING:     { bg: 'bg-yellow-50',  text: 'text-yellow-700',  border: 'border-yellow-200' },
-  SOLD:        { bg: 'bg-slate-50',   text: 'text-slate-700',   border: 'border-slate-200' },
+  AUCTION:      { bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200' },
+  FOCUS:        { bg: 'bg-purple-50',  text: 'text-purple-700',  border: 'border-purple-200' },
+  GAS_INSTALL:  { bg: 'bg-orange-50',  text: 'text-orange-700',  border: 'border-orange-200' },
+  SERVICE:      { bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200' },
+  CLEANING:     { bg: 'bg-cyan-50',    text: 'text-cyan-700',    border: 'border-cyan-200' },
+  PRE_DELIVERY: { bg: 'bg-indigo-50',  text: 'text-indigo-700',  border: 'border-indigo-200' },
+  READY:        { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+  RENT:         { bg: 'bg-sky-50',     text: 'text-sky-700',     border: 'border-sky-200' },
+  LEASING:      { bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200' },
+  SELLING:      { bg: 'bg-yellow-50',  text: 'text-yellow-700',  border: 'border-yellow-200' },
+  SOLD:         { bg: 'bg-slate-50',   text: 'text-slate-700',   border: 'border-slate-200' },
 };
 
 type WorkspaceTab = 'service' | 'equipment' | 'regulation' | 'history' | 'inspection' | 'expenses';
@@ -238,7 +240,11 @@ export default function VehicleWorkspacePage() {
     if (!vehicle) return;
     setSavingDriver(true);
     try {
-      await vehicleService.updateVehicle(vehicle.id, { driver: driverId });
+      if (driverId) {
+        await vehicleService.assignOwner(vehicle.id, { driver: driverId });
+      } else {
+        await vehicleService.unassignOwner(vehicle.id);
+      }
       await loadVehicle();
       setShowDriverPicker(false);
       setDriverSearch('');
@@ -1940,23 +1946,26 @@ function DriverSearchSelect({ drivers, value, onChange, placeholder }: {
 
 function OwnersTab({ vehicleId }: { vehicleId: string }) {
   const t = useTranslations('vehicleWorkspace.owners');
-  const [owners, setOwners] = useState<VehicleOwnerHistory[]>([]);
+  const [currentOwner, setCurrentOwner] = useState<VehicleOwner | null>(null);
+  const [history, setHistory] = useState<OwnerHistoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [drivers, setDrivers] = useState<DriverOption[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState('');
   const [agreementNumber, setAgreementNumber] = useState('');
   const [saving, setSaving] = useState(false);
-  const [closingId, setClosingId] = useState<number | null>(null);
+  const [unassigning, setUnassigning] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [ownersData, driversRes] = await Promise.all([
-        vehicleService.getOwnerHistory(vehicleId),
+      const [ownerData, historyData, driversRes] = await Promise.all([
+        vehicleService.getCurrentOwner(vehicleId),
+        vehicleService.getOwnershipHistory(vehicleId),
         api.get('/driver/'),
       ]);
-      setOwners(ownersData);
+      setCurrentOwner(ownerData);
+      setHistory(historyData);
       const driverData = driversRes.data;
       setDrivers(Array.isArray(driverData) ? driverData : (driverData as { results: DriverOption[] }).results ?? []);
     } catch (err) {
@@ -1968,18 +1977,18 @@ function OwnersTab({ vehicleId }: { vehicleId: string }) {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const addOwner = async () => {
+  const handleAssign = async () => {
     if (!selectedDriver) return;
     setSaving(true);
     try {
-      const newOwner = await vehicleService.addOwner(vehicleId, {
+      await vehicleService.assignOwner(vehicleId, {
         driver: selectedDriver,
         agreement_number: agreementNumber.trim(),
       });
-      setOwners(prev => [newOwner, ...prev]);
       setShowAdd(false);
       setSelectedDriver('');
       setAgreementNumber('');
+      await loadData();
     } catch (err) {
       console.error(err);
     } finally {
@@ -1987,15 +1996,15 @@ function OwnersTab({ vehicleId }: { vehicleId: string }) {
     }
   };
 
-  const closeOwnership = async (histId: number) => {
-    setClosingId(histId);
+  const handleUnassign = async () => {
+    setUnassigning(true);
     try {
-      const updated = await vehicleService.closeOwnership(vehicleId, histId);
-      setOwners(prev => prev.map(o => o.id === histId ? updated : o));
+      await vehicleService.unassignOwner(vehicleId);
+      await loadData();
     } catch (err) {
       console.error(err);
     } finally {
-      setClosingId(null);
+      setUnassigning(false);
     }
   };
 
@@ -2046,7 +2055,7 @@ function OwnersTab({ vehicleId }: { vehicleId: string }) {
               {t('cancel')}
             </button>
             <button
-              onClick={addOwner}
+              onClick={handleAssign}
               disabled={!selectedDriver || saving}
               className="flex items-center gap-2 px-4 py-2 text-sm font-bold bg-[#2D8B7E] text-white rounded-xl hover:bg-[#246f65] disabled:opacity-50 transition-colors"
             >
@@ -2057,61 +2066,80 @@ function OwnersTab({ vehicleId }: { vehicleId: string }) {
         </div>
       )}
 
-      {owners.length === 0 ? (
+      {/* Current owner */}
+      {currentOwner && (
+        <div className="mb-6">
+          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">{t('current')}</h3>
+          <div className="flex items-center justify-between p-4 rounded-2xl border bg-emerald-50 border-emerald-200">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-emerald-100">
+                <User className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-900 truncate">
+                  {currentOwner.driver.first_name} {currentOwner.driver.last_name}
+                </p>
+                {currentOwner.agreement_number && (
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">
+                    {t('agreement')}: {currentOwner.agreement_number}
+                  </p>
+                )}
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {new Date(currentOwner.assigned_at).toLocaleDateString()} — <span className="text-emerald-600 font-semibold">{t('current')}</span>
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleUnassign}
+              disabled={unassigning}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:border-red-300 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 transition-all flex-shrink-0 ml-3"
+            >
+              {unassigning && (
+                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              )}
+              {t('close')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* History */}
+      {history.length === 0 && !currentOwner ? (
         <div className="flex flex-col items-center justify-center py-24 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400">
           <Users className="w-12 h-12 mb-3 opacity-30" />
           <p className="font-semibold text-sm">{t('empty')}</p>
           <p className="text-xs mt-1">{t('emptyDesc')}</p>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {owners.map((owner) => {
-            const isActive = owner.released_at === null;
-            return (
+      ) : history.length > 0 && (
+        <div>
+          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">{t('title')}</h3>
+          <div className="space-y-3">
+            {history.map((record) => (
               <div
-                key={owner.id}
-                className={`flex items-center justify-between p-4 rounded-2xl border transition-colors ${
-                  isActive ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'
-                }`}
+                key={record.id}
+                className="flex items-center justify-between p-4 rounded-2xl border bg-white border-slate-200"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    isActive ? 'bg-emerald-100' : 'bg-slate-100'
-                  }`}>
-                    <User className={`w-5 h-5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-slate-100">
+                    <User className="w-5 h-5 text-slate-400" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-slate-900 truncate">
-                      {owner.driver.first_name} {owner.driver.last_name}
+                      {record.driver.first_name} {record.driver.last_name}
                     </p>
-                    {owner.agreement_number && (
+                    {record.agreement_number && (
                       <p className="text-xs text-slate-500 mt-0.5 truncate">
-                        {t('agreement')}: {owner.agreement_number}
+                        {t('agreement')}: {record.agreement_number}
                       </p>
                     )}
                     <p className="text-xs text-slate-500 mt-0.5">
-                      {new Date(owner.acquired_at).toLocaleDateString()} —{' '}
-                      {owner.released_at
-                        ? new Date(owner.released_at).toLocaleDateString()
-                        : <span className="text-emerald-600 font-semibold">{t('current')}</span>}
+                      {new Date(record.assigned_at).toLocaleDateString()} — {new Date(record.unassigned_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
-                {isActive && (
-                  <button
-                    onClick={() => closeOwnership(owner.id)}
-                    disabled={closingId === owner.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:border-red-300 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 transition-all flex-shrink-0 ml-3"
-                  >
-                    {closingId === owner.id && (
-                      <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    )}
-                    {t('close')}
-                  </button>
-                )}
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       )}
     </div>

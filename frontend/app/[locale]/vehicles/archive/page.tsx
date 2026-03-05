@@ -80,8 +80,8 @@ export default function VehicleArchivePage() {
   const buildRelatedDetails = (check: VehicleDeleteCheck): string => {
     const parts: string[] = [];
     const c = check.related_counts;
-    if (c.owner_history > 0) parts.push(t('relatedData.ownerHistory', { count: c.owner_history }));
-    if (c.driver_history > 0) parts.push(t('relatedData.driverHistory', { count: c.driver_history }));
+    if (c.current_owner > 0) parts.push(t('relatedData.currentOwner', { count: c.current_owner }));
+    if (c.ownership_history > 0) parts.push(t('relatedData.ownershipHistory', { count: c.ownership_history }));
     if (c.photos > 0) parts.push(t('relatedData.photos', { count: c.photos }));
     if (c.inspections > 0) parts.push(t('relatedData.inspections', { count: c.inspections }));
     if (c.service_history > 0) parts.push(t('relatedData.serviceHistory', { count: c.service_history }));

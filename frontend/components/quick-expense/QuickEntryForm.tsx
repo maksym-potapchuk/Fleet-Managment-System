@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { ExpenseCategory, QuickExpenseEntry, ExpensePart, ServiceItem, FuelType, WashType, PaymentMethod, PayerType } from '@/types/expense';
+import { ExpenseCategory, QuickExpenseEntry, ExpensePart, ServiceItem, FuelSubEntry, FuelType, WashType, PaymentMethod, PayerType } from '@/types/expense';
 import { Service } from '@/types/service';
 import { getAllServices } from '@/services/service';
 import { FileInput } from '@/components/common/FileInput';
@@ -35,6 +35,7 @@ const PAYER_TYPES_OPTIONS: { value: PayerType; short: string }[] = [
 
 const emptyPart = (): ExpensePart => ({ name: '', quantity: 1, unit_price: '' });
 const emptyServiceItem = (): ServiceItem => ({ name: '', price: '' });
+const emptyFuelEntry = (): FuelSubEntry => ({ amount: '', liters: '', fuel_type: undefined, receipt: undefined });
 
 interface QuickEntryFormProps {
   categories: ExpenseCategory[];
@@ -146,7 +147,7 @@ export function QuickEntryForm({
 }: QuickEntryFormProps) {
   const category = categories.find(c => c.id === activeCategoryId);
   const code = category?.code || null;
-  const isAutoAmount = code === 'SERVICE' || code === 'PARTS' || code === 'INSPECTION' || code === 'ACCESSORIES' || code === 'DOCUMENTS';
+  const isAutoAmount = code === 'FUEL' || code === 'SERVICE' || code === 'PARTS' || code === 'INSPECTION' || code === 'ACCESSORIES' || code === 'DOCUMENTS';
 
   // ── Base fields ──
   const [amount, setAmount] = useState(editingEntry?.amount || '');
@@ -158,11 +159,26 @@ export function QuickEntryForm({
   const [expenseFor, setExpenseFor] = useState(editingEntry?.expense_for || '');
 
   // ── PARTS detail ──
+  const [sourceName, setSourceName] = useState(editingEntry?.source_name || '');
 
-  // ── FUEL ──
-  const [liters, setLiters] = useState(editingEntry?.liters || '');
-  const [fuelType, setFuelType] = useState<FuelType | undefined>(editingEntry?.fuel_type);
-  const [receiptFile, setReceiptFile] = useState<File | null>(editingEntry?.receipt || null);
+  // ── FUEL (multi-entry) ──
+  const [fuelEntries, setFuelEntries] = useState<FuelSubEntry[]>(() => {
+    if (editingEntry?.fuel_entries?.length) return editingEntry.fuel_entries;
+    if (editingEntry?.liters || editingEntry?.fuel_type) {
+      return [{ amount: editingEntry.amount || '', liters: editingEntry.liters || '', fuel_type: editingEntry.fuel_type, receipt: editingEntry.receipt }];
+    }
+    return [emptyFuelEntry()];
+  });
+
+  const updateFuelEntry = useCallback((idx: number, field: keyof FuelSubEntry, value: string | File | undefined) => {
+    setFuelEntries(prev => prev.map((fe, i) => i === idx ? { ...fe, [field]: value } : fe));
+  }, []);
+
+  const removeFuelEntry = useCallback((idx: number) => {
+    setFuelEntries(prev => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const fuelTotal = fuelEntries.reduce((sum, fe) => sum + (parseFloat(fe.amount) || 0), 0);
 
   // ── WASHING ──
   const [washType, setWashType] = useState<WashType | undefined>(editingEntry?.wash_type);
@@ -238,12 +254,12 @@ export function QuickEntryForm({
     if (code === 'INSPECTION') return parseFloat(officialCost) > 0 && inspectionDate;
     if (code === 'SERVICE') return serviceItems.some(i => i.name.trim() && parseFloat(i.price) > 0);
     if (code === 'PARTS' || code === 'ACCESSORIES' || code === 'DOCUMENTS') return parts.some(p => p.name.trim() && parseFloat(p.unit_price as string) > 0);
+    if (code === 'FUEL') return fuelEntries.every(fe => parseFloat(fe.amount) > 0 && parseFloat(fe.liters) > 0 && fe.fuel_type);
     if (!amount || parseFloat(amount) <= 0) return false;
-    if (code === 'FUEL' && (!liters || !fuelType)) return false;
     if (code === 'WASHING' && !washType) return false;
     if (code === 'FINES' && !violationType.trim()) return false;
     return true;
-  }, [amount, code, liters, fuelType, washType, violationType, officialCost, inspectionDate, serviceItems, parts]);
+  }, [amount, code, fuelEntries, washType, violationType, officialCost, inspectionDate, serviceItems, parts]);
 
   if (!category) return null;
 
@@ -251,7 +267,8 @@ export function QuickEntryForm({
     if (!isValid) return;
 
     let computedAmount = amount;
-    if (code === 'SERVICE') computedAmount = String(serviceTotal);
+    if (code === 'FUEL') computedAmount = String(fuelTotal);
+    else if (code === 'SERVICE') computedAmount = String(serviceTotal);
     else if (code === 'PARTS' || code === 'ACCESSORIES' || code === 'DOCUMENTS') computedAmount = String(partsTotal);
     else if (code === 'INSPECTION') computedAmount = String(inspectionTotal);
 
@@ -273,9 +290,11 @@ export function QuickEntryForm({
     };
 
     if (code === 'FUEL') {
-      entry.liters = liters;
-      entry.fuel_type = fuelType;
-      if (receiptFile) entry.receipt = receiptFile;
+      entry.fuel_entries = fuelEntries;
+      // Keep first entry fields for backward compat with entry list display
+      entry.liters = fuelEntries[0]?.liters;
+      entry.fuel_type = fuelEntries[0]?.fuel_type;
+      if (fuelEntries[0]?.receipt) entry.receipt = fuelEntries[0].receipt;
     } else if (code === 'WASHING') {
       entry.wash_type = washType;
     } else if (code === 'FINES') {
@@ -292,6 +311,7 @@ export function QuickEntryForm({
       entry.service_items = serviceItems.filter(i => i.name.trim());
       if (invoiceFile) entry.invoice_files = [invoiceFile];
     } else if (code === 'PARTS') {
+      if (sourceName.trim()) entry.source_name = sourceName.trim();
       entry.parts = parts.filter(p => p.name.trim()).map(p => ({ ...p, quantity: p.quantity || 1 }));
       if (invoiceFile) entry.invoice_files = [invoiceFile];
     } else if (code === 'ACCESSORIES' || code === 'DOCUMENTS') {
@@ -365,32 +385,79 @@ export function QuickEntryForm({
             </div>
           </div>
 
-          {/* ── FUEL ── */}
+          {/* ── FUEL (multi-entry) ── */}
           {code === 'FUEL' && (
             <>
-              <NumericInput
-                value={liters}
-                onChange={setLiters}
-                placeholder="0.00"
-                label={`${tExpenses('fields.liters')} *`}
-                className={inputClasses}
-              />
               <div>
-                <label className={labelClasses}>{tExpenses('fields.fuelType')} *</label>
-                <div className="pt-0.5">
-                  <SegmentedControl
-                    options={FUEL_TYPES}
-                    value={fuelType}
-                    onChange={setFuelType}
-                    renderLabel={(opt) => tExpenses(`fuelTypes.${opt.value}`)}
-                  />
+                <div className="flex items-center justify-between mb-2">
+                  <label className={labelClasses + ' mb-0'}>{tExpenses('types.FUEL')}</label>
+                  <button
+                    type="button"
+                    onClick={() => setFuelEntries(prev => [...prev, emptyFuelEntry()])}
+                    className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-700 font-medium transition-all duration-150 hover:gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> {t('addStep.addMore')}
+                  </button>
                 </div>
+                <div className="space-y-2">
+                  {fuelEntries.map((fe, idx) => (
+                    <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2 transition-all duration-150 hover:border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">#{idx + 1}</span>
+                        {fuelEntries.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeFuelEntry(idx)}
+                            className="p-1.5 text-slate-400 hover:text-red-500 transition-all duration-150 rounded-lg hover:bg-red-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <NumericInput
+                          value={fe.amount}
+                          onChange={(val) => updateFuelEntry(idx, 'amount', val)}
+                          placeholder="0.00 PLN"
+                          autoFocus={idx === 0 && !editingEntry}
+                          label={`${t('addStep.amount')} *`}
+                          className={inputClasses}
+                        />
+                        <NumericInput
+                          value={fe.liters}
+                          onChange={(val) => updateFuelEntry(idx, 'liters', val)}
+                          placeholder="0.00"
+                          label={`${tExpenses('fields.liters')} *`}
+                          className={inputClasses}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClasses}>{tExpenses('fields.fuelType')} *</label>
+                        <div className="pt-0.5">
+                          <SegmentedControl
+                            options={FUEL_TYPES}
+                            value={fe.fuel_type}
+                            onChange={(val) => updateFuelEntry(idx, 'fuel_type', val)}
+                            renderLabel={(opt) => tExpenses(`fuelTypes.${opt.value}`)}
+                          />
+                        </div>
+                      </div>
+                      <FileInput
+                        label={tExpenses('fields.receipt')}
+                        onChange={(f) => updateFuelEntry(idx, 'receipt', f ?? undefined)}
+                        disabled={false}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {fuelTotal > 0 && (
+                  <div className="mt-2 text-right">
+                    <span className="text-sm font-semibold text-teal-700 tabular-nums bg-teal-50 px-3 py-1.5 rounded-lg inline-block">
+                      = {fuelTotal.toFixed(2)} PLN
+                    </span>
+                  </div>
+                )}
               </div>
-              <FileInput
-                label={tExpenses('fields.receipt')}
-                onChange={(f) => setReceiptFile(f)}
-                disabled={false}
-              />
             </>
           )}
 
@@ -575,6 +642,17 @@ export function QuickEntryForm({
           {/* ── PARTS ── */}
           {code === 'PARTS' && (
             <>
+              <div>
+                <label className={labelClasses}>{tExpenses('fields.sourceName')}</label>
+                <input
+                  type="text"
+                  value={sourceName}
+                  onChange={(e) => setSourceName(e.target.value)}
+                  placeholder="Allegro, OLX..."
+                  className={inputClasses}
+                />
+              </div>
+
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className={labelClasses + ' mb-0'}>{tExpenses('fields.partName')}</label>

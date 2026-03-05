@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Eye, EyeOff, ArrowRight, Car, Mail, Lock } from "lucide-react";
 
 type Props = {
@@ -10,6 +11,8 @@ type Props = {
 };
 
 export function LoginForm({ loading, error, onSubmit }: Props) {
+    const t = useTranslations("auth");
+
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -32,9 +35,9 @@ export function LoginForm({ loading, error, onSubmit }: Props) {
                     </div>
                 </div>
 
-                <h2 className="text-3xl font-black text-slate-900 mb-1">З поверненням!</h2>
+                <h2 className="text-3xl font-black text-slate-900 mb-1">{t("welcomeBack")}</h2>
                 <p className="text-slate-500 font-medium mb-8">
-                    Введіть свої дані для входу
+                    {t("loginSubtitle")}
                 </p>
 
                 {error && (
@@ -52,7 +55,7 @@ export function LoginForm({ loading, error, onSubmit }: Props) {
                 >
                     {/* Email */}
                     <div>
-                        <label className="text-sm font-bold text-slate-700 mb-1.5 block">Email</label>
+                        <label className="text-sm font-bold text-slate-700 mb-1.5 block">{t("email")}</label>
                         <div className="relative">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
                             <input
@@ -69,7 +72,7 @@ export function LoginForm({ loading, error, onSubmit }: Props) {
 
                     {/* Password */}
                     <div>
-                        <label className="text-sm font-bold text-slate-700 mb-1.5 block">Пароль</label>
+                        <label className="text-sm font-bold text-slate-700 mb-1.5 block">{t("passwordLabel")}</label>
                         <div className="relative">
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
                             <input
@@ -84,7 +87,7 @@ export function LoginForm({ loading, error, onSubmit }: Props) {
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
-                                aria-label={showPassword ? "Сховати пароль" : "Показати пароль"}
+                                aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                             >
                                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
@@ -99,7 +102,7 @@ export function LoginForm({ loading, error, onSubmit }: Props) {
                             onChange={(e) => setRememberMe(e.target.checked)}
                             className="w-5 h-5 rounded-lg border-2 border-slate-300 text-[#2D8B7E] focus:ring-[#2D8B7E]/20 focus:ring-offset-0 cursor-pointer accent-[#2D8B7E]"
                         />
-                        <span className="text-sm font-semibold text-slate-600">Запам&apos;ятати мене</span>
+                        <span className="text-sm font-semibold text-slate-600">{t("rememberMe")}</span>
                     </label>
 
                     <div className="pt-2">
@@ -111,11 +114,11 @@ export function LoginForm({ loading, error, onSubmit }: Props) {
                             {loading ? (
                                 <>
                                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    Вхід...
+                                    {t("loggingIn")}
                                 </>
                             ) : (
                                 <>
-                                    Увійти
+                                    {t("login")}
                                     <ArrowRight className="w-5 h-5" />
                                 </>
                             )}

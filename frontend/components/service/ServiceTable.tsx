@@ -2,7 +2,7 @@
 
 import { useTranslations, useLocale } from 'next-intl';
 import { Service } from '@/types/service';
-import { Pencil, Trash2, Calendar, FileText } from 'lucide-react';
+import { Pencil, Trash2, Calendar, FileText, MapPin } from 'lucide-react';
 
 interface ServiceTableProps {
   services: Service[];
@@ -84,6 +84,14 @@ export function ServiceTable({ services, onEdit, onDelete, isLoading = false }: 
               </div>
             )}
 
+            {/* Address */}
+            {service.address && (
+              <div className="flex items-center gap-2 mb-3 text-sm text-slate-600 min-w-0">
+                <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <span className="break-words">{service.address}</span>
+              </div>
+            )}
+
             {/* Service Info */}
             <div className="flex items-center gap-2 mb-4 text-sm text-slate-600 min-w-0">
               <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
@@ -130,6 +138,9 @@ export function ServiceTable({ services, onEdit, onDelete, isLoading = false }: 
                 {t('name')}
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                {t('address')}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                 {t('description')}
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
@@ -160,6 +171,18 @@ export function ServiceTable({ services, onEdit, onDelete, isLoading = false }: 
                       </div>
                     </div>
                   </div>
+                </td>
+
+                {/* Address */}
+                <td className="px-4 py-4">
+                  {service.address ? (
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span>{service.address}</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-slate-400 italic">{t('noAddress')}</span>
+                  )}
                 </td>
 
                 {/* Description */}

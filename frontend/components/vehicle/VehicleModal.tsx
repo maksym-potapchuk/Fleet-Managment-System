@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { X, Save, Archive, Car, Upload, Plus, UserPlus, ChevronDown } from 'lucide-react';
 import { Vehicle, CreateVehicleData, ManufacturerChoice, VehicleStatus, FuelType, VehiclePhoto } from '@/types/vehicle';
 import { Driver } from '@/types/driver';
@@ -17,41 +18,27 @@ interface VehicleModalProps {
 
 const MANUFACTURERS: ManufacturerChoice[] = ['Toyota', 'Ford', 'Honda', 'Chevrolet', 'BMW', 'Lexus', 'Audi'];
 
-const STATUSES: { value: VehicleStatus; label: string }[] = [
-  { value: 'CTO', label: 'СТО' },
-  { value: 'FOCUS', label: 'Фокус' },
-  { value: 'CLEANING', label: 'Хімчистка' },
-  { value: 'PREPARATION', label: 'Підготовка' },
-  { value: 'READY', label: 'Готове' },
-  { value: 'LEASING', label: 'Лізинг' },
-  { value: 'RENT', label: 'Оренда' },
-  { value: 'SELLING', label: 'Продаж' },
-  { value: 'SOLD', label: 'Продано' },
+const STATUS_VALUES: VehicleStatus[] = [
+  'AUCTION', 'FOCUS', 'GAS_INSTALL', 'SERVICE', 'CLEANING',
+  'PRE_DELIVERY', 'READY', 'RENT', 'LEASING', 'SELLING', 'SOLD',
 ];
 
-const COLORS: { value: string; hex: string }[] = [
-  { value: 'Білий', hex: '#FFFFFF' },
-  { value: 'Чорний', hex: '#1a1a1a' },
-  { value: 'Сірий', hex: '#9CA3AF' },
-  { value: 'Сріблястий', hex: '#C0C0C0' },
-  { value: 'Червоний', hex: '#EF4444' },
-  { value: 'Синій', hex: '#3B82F6' },
-  { value: 'Зелений', hex: '#22C55E' },
-  { value: 'Жовтий', hex: '#EAB308' },
-  { value: 'Коричневий', hex: '#92400E' },
-  { value: 'Бежевий', hex: '#D4A574' },
-  { value: 'Помаранчевий', hex: '#F97316' },
-  { value: 'Бордовий', hex: '#881337' },
+const COLORS: { value: string; key: string; hex: string }[] = [
+  { value: 'Білий', key: 'white', hex: '#FFFFFF' },
+  { value: 'Чорний', key: 'black', hex: '#1a1a1a' },
+  { value: 'Сірий', key: 'gray', hex: '#9CA3AF' },
+  { value: 'Сріблястий', key: 'silver', hex: '#C0C0C0' },
+  { value: 'Червоний', key: 'red', hex: '#EF4444' },
+  { value: 'Синій', key: 'blue', hex: '#3B82F6' },
+  { value: 'Зелений', key: 'green', hex: '#22C55E' },
+  { value: 'Жовтий', key: 'yellow', hex: '#EAB308' },
+  { value: 'Коричневий', key: 'brown', hex: '#92400E' },
+  { value: 'Бежевий', key: 'beige', hex: '#D4A574' },
+  { value: 'Помаранчевий', key: 'orange', hex: '#F97316' },
+  { value: 'Бордовий', key: 'burgundy', hex: '#881337' },
 ];
 
-const FUEL_TYPES: { value: FuelType; label: string }[] = [
-  { value: 'GASOLINE', label: 'Бензин' },
-  { value: 'DIESEL', label: 'Дизель' },
-  { value: 'LPG', label: 'Газ (LPG)' },
-  { value: 'LPG_GASOLINE', label: 'Газ + Бензин' },
-  { value: 'ELECTRIC', label: 'Електро' },
-  { value: 'HYBRID', label: 'Гібрид' },
-];
+const FUEL_VALUES: FuelType[] = ['GASOLINE', 'DIESEL', 'LPG', 'LPG_GASOLINE', 'ELECTRIC', 'HYBRID'];
 
 const inputBase = 'w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] transition-all text-sm';
 const inputEmpty = `${inputBase} bg-slate-50 border-slate-200 text-slate-400`;
@@ -60,6 +47,11 @@ const inputFilled = `${inputBase} bg-white border-slate-300 text-slate-800`;
 type FormData = Omit<CreateVehicleData, 'initial_km' | 'driver'>;
 
 export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: VehicleModalProps) {
+  const t = useTranslations('vehicleModal');
+  const tStatuses = useTranslations('vehicles.statuses');
+  const tFuelTypes = useTranslations('vehicles.fuelTypes');
+  const tCommon = useTranslations('common');
+
   const [formData, setFormData] = useState<FormData>({
     model: '',
     manufacturer: 'Toyota',
@@ -69,7 +61,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
     car_number: '',
     color: '',
     fuel_type: 'GASOLINE',
-    status: 'PREPARATION',
+    status: 'AUCTION',
   });
   const [kmStr, setKmStr] = useState('');
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
@@ -140,7 +132,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
         car_number: '',
         color: '',
         fuel_type: 'GASOLINE',
-        status: 'PREPARATION',
+        status: 'AUCTION',
       });
       setKmStr('');
       setSelectedDriverId(null);
@@ -200,7 +192,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
       await vehicleService.deleteVehiclePhoto(vehicle.id, photoId);
       setExistingPhotos(prev => prev.filter(p => p.id !== photoId));
     } catch {
-      setError('Не вдалося видалити фото');
+      setError(t('errorDeletePhoto'));
     } finally {
       setDeletingPhotoId(null);
     }
@@ -216,7 +208,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
       setShowDriverCreate(false);
       setNewDriver({ first_name: '', last_name: '', phone_number: '' });
     } catch {
-      setError('Не вдалося створити водія');
+      setError(t('errorCreateDriver'));
     } finally {
       setCreatingDriver(false);
     }
@@ -228,7 +220,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
 
     const kmNum = parseInt(kmStr);
     if (isNaN(kmNum) || kmNum < 0) {
-      setError('Введіть коректний пробіг');
+      setError(t('errorInvalidMileage'));
       setLoading(false);
       return;
     }
@@ -238,15 +230,27 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
       const vehicleData: CreateVehicleData = {
         ...formData,
         initial_km: kmNum,
-        driver: selectedDriverId || null,
       };
 
       if (vehicle) {
         await vehicleService.updateVehicle(vehicle.id, vehicleData);
         vehicleId = vehicle.id;
+
+        const currentDriverId = vehicle.driver?.id || null;
+        if (selectedDriverId !== currentDriverId) {
+          if (selectedDriverId) {
+            await vehicleService.assignOwner(vehicleId, { driver: selectedDriverId });
+          } else {
+            await vehicleService.unassignOwner(vehicleId);
+          }
+        }
       } else {
         const created = await vehicleService.createVehicle(vehicleData);
         vehicleId = created.id;
+
+        if (selectedDriverId) {
+          await vehicleService.assignOwner(vehicleId, { driver: selectedDriverId });
+        }
       }
 
       for (const file of stagedFiles) {
@@ -257,7 +261,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
       onClose();
     } catch (err: unknown) {
       console.error('Failed to save vehicle:', err);
-      let message = 'Не вдалося зберегти автомобіль';
+      let message = t('errorSaveVehicle');
       if (
         err &&
         typeof err === 'object' &&
@@ -276,7 +280,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
   };
 
   const handleArchive = async () => {
-    if (!vehicle || !confirm('Архівувати цей автомобіль?')) return;
+    if (!vehicle || !confirm(t('archiveConfirm'))) return;
 
     setLoading(true);
     try {
@@ -289,7 +293,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
       }
     } catch (err) {
       console.error('Failed to archive vehicle:', err);
-      setError('Не вдалося архівувати автомобіль');
+      setError(t('errorArchiveVehicle'));
     } finally {
       setLoading(false);
     }
@@ -315,10 +319,10 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-800">
-                {vehicle ? 'Редагувати автомобіль' : 'Додати автомобіль'}
+                {vehicle ? t('editVehicle') : t('addVehicle')}
               </h2>
               <p className="text-xs text-slate-400">
-                {step === 1 ? 'Основна інформація' : 'Водій та фото'}
+                {step === 1 ? t('step1Subtitle') : t('step2Subtitle')}
               </p>
             </div>
           </div>
@@ -350,11 +354,10 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
             {/* STEP 1: Main info */}
             {step === 1 && (
               <div className="space-y-5 py-3">
-                {/* Номер авто + VIN */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      Номер авто <span className="text-red-400">*</span>
+                      {t('carNumber')} <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="text"
@@ -367,7 +370,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      VIN номер <span className="text-red-400">*</span>
+                      {t('vinNumber')} <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="text"
@@ -378,15 +381,14 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                       className={`${formData.vin_number ? inputFilled : inputEmpty} font-mono tracking-wider`}
                       placeholder="1HGBH41JXMN109186"
                     />
-                    <p className="text-[11px] text-slate-400 mt-1">17 символів</p>
+                    <p className="text-[11px] text-slate-400 mt-1">{t('vinHint')}</p>
                   </div>
                 </div>
 
-                {/* Марка + Модель + Рік */}
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      Марка <span className="text-red-400">*</span>
+                      {t('manufacturer')} <span className="text-red-400">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -404,7 +406,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      Модель <span className="text-red-400">*</span>
+                      {t('model')} <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="text"
@@ -417,7 +419,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      Рік <span className="text-red-400">*</span>
+                      {t('year')} <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="number"
@@ -431,10 +433,10 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                 </div>
 
-                {/* Колір — dropdown */}
+                {/* Color dropdown */}
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                    Колір авто <span className="text-red-400">*</span>
+                    {t('color')} <span className="text-red-400">*</span>
                   </label>
                   <div className="relative" ref={colorRef}>
                     <button
@@ -449,10 +451,10 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                               className="w-5 h-5 rounded-full flex-shrink-0 ring-1 ring-slate-200"
                               style={{ backgroundColor: selectedColor.hex }}
                             />
-                            <span>{selectedColor.value}</span>
+                            <span>{t(`colors.${selectedColor.key}`)}</span>
                           </>
                         ) : (
-                          <span>Оберіть колір</span>
+                          <span>{t('selectColor')}</span>
                         )}
                       </span>
                       <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${colorOpen ? 'rotate-180' : ''}`} />
@@ -476,7 +478,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                               className="w-5 h-5 rounded-full flex-shrink-0 ring-1 ring-slate-200"
                               style={{ backgroundColor: c.hex }}
                             />
-                            <span className="text-slate-700">{c.value}</span>
+                            <span className="text-slate-700">{t(`colors.${c.key}`)}</span>
                             {formData.color === c.value && (
                               <span className="ml-auto text-[#2D8B7E] text-xs font-bold">&#10003;</span>
                             )}
@@ -487,11 +489,10 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                 </div>
 
-                {/* Тип палива + Вартість + Статус */}
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      Тип палива <span className="text-red-400">*</span>
+                      {t('fuelType')} <span className="text-red-400">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -500,8 +501,8 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                         onChange={(e) => setFormData({ ...formData, fuel_type: e.target.value as FuelType })}
                         className={`${inputFilled} appearance-none cursor-pointer pr-10`}
                       >
-                        {FUEL_TYPES.map(f => (
-                          <option key={f.value} value={f.value}>{f.label}</option>
+                        {FUEL_VALUES.map(f => (
+                          <option key={f} value={f}>{tFuelTypes(f)}</option>
                         ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -509,7 +510,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      Вартість (PLN) <span className="text-red-400">*</span>
+                      {t('cost')} <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="number"
@@ -524,7 +525,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      Статус <span className="text-red-400">*</span>
+                      {t('status')} <span className="text-red-400">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -533,8 +534,8 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as VehicleStatus })}
                         className={`${inputFilled} appearance-none cursor-pointer pr-10`}
                       >
-                        {STATUSES.map(s => (
-                          <option key={s.value} value={s.value}>{s.label}</option>
+                        {STATUS_VALUES.map(s => (
+                          <option key={s} value={s}>{tStatuses(s)}</option>
                         ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -542,10 +543,9 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                 </div>
 
-                {/* Пробіг */}
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                    Поточний пробіг (км) <span className="text-red-400">*</span>
+                    {t('mileage')} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="number"
@@ -556,7 +556,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                     className={kmStr ? inputFilled : inputEmpty}
                     placeholder="0"
                   />
-                  <p className="text-[11px] text-slate-400 mt-1">Використовується для розрахунку регламенту</p>
+                  <p className="text-[11px] text-slate-400 mt-1">{t('mileageHint')}</p>
                 </div>
               </div>
             )}
@@ -572,9 +572,9 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-slate-700">
-                        Призначити водія
+                        {t('assignDriver')}
                       </label>
-                      <p className="text-[11px] text-slate-400">Оберіть існуючого або створіть нового</p>
+                      <p className="text-[11px] text-slate-400">{t('assignDriverHint')}</p>
                     </div>
                   </div>
 
@@ -588,7 +588,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                           className={`${selectedDriverId ? inputFilled : inputEmpty} appearance-none cursor-pointer pr-10 disabled:opacity-50`}
                         >
                           <option value="">
-                            {driversLoading ? 'Завантаження...' : '— Без водія —'}
+                            {driversLoading ? t('loadingDrivers') : t('noDriver')}
                           </option>
                           {drivers.map(d => (
                             <option key={d.id} value={d.id}>
@@ -605,7 +605,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                         className="mt-2 flex items-center gap-1.5 text-sm text-[#2D8B7E] hover:text-[#246f65] font-medium transition-colors"
                       >
                         <UserPlus className="w-4 h-4" />
-                        Створити нового водія
+                        {t('createNewDriver')}
                       </button>
                     </>
                   ) : (
@@ -613,27 +613,27 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                       <div className="flex items-center justify-between mb-1">
                         <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
                           <UserPlus className="w-4 h-4 text-[#2D8B7E]" />
-                          Новий водій
+                          {t('newDriver')}
                         </h4>
                         <button
                           type="button"
                           onClick={() => setShowDriverCreate(false)}
                           className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
                         >
-                          Скасувати
+                          {tCommon('cancel')}
                         </button>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <input
                           type="text"
-                          placeholder="Ім'я"
+                          placeholder={t('firstName')}
                           value={newDriver.first_name}
                           onChange={(e) => setNewDriver({ ...newDriver, first_name: e.target.value })}
                           className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] text-sm text-slate-800 placeholder:text-slate-400"
                         />
                         <input
                           type="text"
-                          placeholder="Прізвище"
+                          placeholder={t('lastName')}
                           value={newDriver.last_name}
                           onChange={(e) => setNewDriver({ ...newDriver, last_name: e.target.value })}
                           className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] text-sm text-slate-800 placeholder:text-slate-400"
@@ -641,7 +641,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                       </div>
                       <input
                         type="text"
-                        placeholder="Телефон (48xxxxxxxxx)"
+                        placeholder={t('phone')}
                         value={newDriver.phone_number}
                         onChange={(e) => setNewDriver({ ...newDriver, phone_number: e.target.value })}
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] text-sm text-slate-800 placeholder:text-slate-400"
@@ -655,12 +655,12 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                         {creatingDriver ? (
                           <>
                             <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Створення...
+                            {t('creating')}
                           </>
                         ) : (
                           <>
                             <Plus className="w-4 h-4" />
-                            Створити та призначити
+                            {t('createAndAssign')}
                           </>
                         )}
                       </button>
@@ -676,9 +676,9 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                     </div>
                     <div className="flex-1">
                       <label className="block text-sm font-semibold text-slate-700">
-                        Фото автомобіля
+                        {t('vehiclePhotos')}
                       </label>
-                      <p className="text-[11px] text-slate-400">Додайте до 10 фото</p>
+                      <p className="text-[11px] text-slate-400">{t('photosHint')}</p>
                     </div>
                     <span className="text-xs text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
                       {totalPhotos}/10
@@ -720,7 +720,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                             <X className="w-3 h-3" />
                           </button>
                           <div className="absolute bottom-0 left-0 right-0 bg-[#2D8B7E]/80 text-white text-[9px] font-bold text-center py-0.5">
-                            НОВЕ
+                            {t('new')}
                           </div>
                         </div>
                       ))}
@@ -743,14 +743,14 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                         className="w-full py-4 border-2 border-dashed border-slate-200 hover:border-[#2D8B7E] hover:bg-[#2D8B7E]/5 rounded-xl text-sm font-medium text-slate-400 hover:text-[#2D8B7E] transition-all flex items-center justify-center gap-2"
                       >
                         <Upload className="w-4 h-4" />
-                        Додати фото
+                        {t('addPhoto')}
                         {totalPhotos > 0 && (
-                          <span className="text-xs font-normal">(ще {10 - totalPhotos})</span>
+                          <span className="text-xs font-normal">({t('morePhotos', { count: 10 - totalPhotos })})</span>
                         )}
                       </button>
                     </>
                   ) : (
-                    <p className="text-xs text-slate-400 text-center py-2">Досягнуто ліміт 10 фото</p>
+                    <p className="text-xs text-slate-400 text-center py-2">{t('photoLimit')}</p>
                   )}
                 </div>
               </div>
@@ -769,7 +769,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                 className="flex items-center gap-1.5 px-3 py-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-colors text-sm font-medium disabled:opacity-50"
               >
                 <Archive className="w-4 h-4" />
-                Архівувати
+                {t('archive')}
               </button>
             ) : (
               <div />
@@ -781,7 +781,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   onClick={() => setStep(1)}
                   className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors text-sm font-medium"
                 >
-                  Назад
+                  {t('back')}
                 </button>
               )}
               {step === 1 ? (
@@ -791,7 +791,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   disabled={!isStep1Valid}
                   className="flex items-center gap-2 px-6 py-2.5 bg-[#2D8B7E] text-white rounded-xl hover:bg-[#246f65] transition-colors text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Далі
+                  {t('next')}
                   <ChevronDown className="w-4 h-4 -rotate-90" />
                 </button>
               ) : (
@@ -804,12 +804,12 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   {loading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Збереження...
+                      {t('saving')}
                     </>
                   ) : (
                     <>
                       <Save className="w-4 h-4" />
-                      Зберегти
+                      {t('save')}
                     </>
                   )}
                 </button>

@@ -3,6 +3,7 @@
 import { ExpenseCategory } from '@/types/expense';
 import {
   Fuel, Wrench, Package, Shield, Droplets, AlertTriangle, MoreHorizontal,
+  FileText, ShoppingBag,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -14,6 +15,20 @@ const ICON_MAP: Record<string, LucideIcon> = {
   droplets: Droplets,
   'alert-triangle': AlertTriangle,
   'more-horizontal': MoreHorizontal,
+  'file-text': FileText,
+  'shopping-bag': ShoppingBag,
+};
+
+const QUICK_CATEGORY_ORDER: Record<string, number> = {
+  FUEL: 1,
+  DOCUMENTS: 2,
+  OTHER: 3,
+  PARTS: 4,
+  WASHING: 5,
+  INSPECTION: 6,
+  ACCESSORIES: 7,
+  FINES: 8,
+  SERVICE: 9,
 };
 
 const COLOR_STYLES: Record<string, { bg: string; text: string; border: string; activeBorder: string }> = {
@@ -24,6 +39,8 @@ const COLOR_STYLES: Record<string, { bg: string; text: string; border: string; a
   '#06B6D4': { bg: 'bg-cyan-50', text: 'text-cyan-600', border: 'border-cyan-200', activeBorder: 'border-cyan-500' },
   '#EF4444': { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200', activeBorder: 'border-red-500' },
   '#64748B': { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200', activeBorder: 'border-slate-500' },
+  '#EC4899': { bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-200', activeBorder: 'border-pink-500' },
+  '#6366F1': { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-200', activeBorder: 'border-indigo-500' },
 };
 
 function getIcon(iconName: string): LucideIcon {
@@ -42,13 +59,19 @@ interface CategoryGridProps {
 }
 
 export function CategoryGrid({ categories, activeCategoryId, onSelect, tExpenses }: CategoryGridProps) {
+  const sorted = [...categories].sort((a, b) => {
+    const orderA = a.code ? (QUICK_CATEGORY_ORDER[a.code] ?? 99) : 99;
+    const orderB = b.code ? (QUICK_CATEGORY_ORDER[b.code] ?? 99) : 99;
+    return orderA - orderB;
+  });
+
   return (
     <div className="py-2">
       <h3 className="text-sm font-semibold text-slate-500 mb-3">
         {tExpenses('fields.category')}
       </h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2.5 sm:gap-3 lg:gap-2">
-        {categories.map((cat) => {
+        {sorted.map((cat) => {
           const Icon = getIcon(cat.icon);
           const style = getStyle(cat.color);
           const label = cat.code ? tExpenses(`types.${cat.code}`) : cat.name;

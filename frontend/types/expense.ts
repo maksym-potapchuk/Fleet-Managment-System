@@ -100,7 +100,7 @@ export interface Expense {
   parts: ExpensePart[];
   invoices: ExpenseInvoice[];
   // Meta
-  created_by: string | null;
+  created_by: { id: string; username: string; email: string } | null;
   created_at: string;
   updated_at: string;
 }
@@ -161,6 +161,13 @@ export interface PaginatedExpenseResponse {
 
 // ── Quick Expenses ──
 
+export interface FuelSubEntry {
+  amount: string;
+  liters: string;
+  fuel_type?: FuelType;
+  receipt?: File;
+}
+
 export interface QuickExpenseEntry {
   id: string;
   category: string;
@@ -178,6 +185,7 @@ export interface QuickExpenseEntry {
   liters?: string;
   fuel_type?: FuelType;
   receipt?: File;
+  fuel_entries?: FuelSubEntry[];
   // WASHING
   wash_type?: WashType;
   // FINES

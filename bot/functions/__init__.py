@@ -36,7 +36,14 @@ class Vehicle(Base):
     vin_number = Column(String(17), nullable=False, unique=True)
     car_number = Column(String(10), nullable=False, unique=True)
     initial_km = Column(Integer, default=0, nullable=False)
-    driver_id = Column(PG_UUID(as_uuid=True), ForeignKey("driver_driver.id"))
+
+
+class VehicleOwner(Base):
+    __tablename__ = "vehicle_vehicleowner"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    vehicle_id = Column(PG_UUID(as_uuid=True), ForeignKey("vehicle_vehicle.id"), nullable=False, unique=True)
+    driver_id = Column(PG_UUID(as_uuid=True), ForeignKey("driver_driver.id"), nullable=False)
 
 
 class FleetVehicleRegulationSchema(Base):
@@ -110,7 +117,8 @@ def get_vehicles_for_driver(telegram_id: int) -> List[Vehicle]:
             return []
         return (
             session.query(Vehicle)
-            .filter(Vehicle.driver_id == driver.id)
+            .join(VehicleOwner, VehicleOwner.vehicle_id == Vehicle.id)
+            .filter(VehicleOwner.driver_id == driver.id)
             .all()
         )
 

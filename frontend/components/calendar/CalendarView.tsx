@@ -499,7 +499,7 @@ function PlanCard({
           </button>
           <button onClick={() => { setRescheduling(false); setNewDate(plan.planned_at.split('T')[0]); }}
             className="text-xs font-semibold text-slate-500 hover:text-slate-700 active:text-slate-900 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">
-            Скасувати
+            {t('panel.cancel')}
           </button>
         </div>
       )}

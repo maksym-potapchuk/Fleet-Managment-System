@@ -1,11 +1,8 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { AlertTriangle, X } from 'lucide-react';
 
-/**
- * Props for the ConfirmDialog component
- * A reusable confirmation dialog for dangerous actions
- */
 interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
@@ -22,16 +19,17 @@ export function ConfirmDialog({
   isOpen,
   title,
   message,
-  confirmLabel = 'Підтвердити',
-  cancelLabel = 'Скасувати',
+  confirmLabel,
+  cancelLabel,
   onConfirm,
   onCancel,
   isLoading = false,
   variant = 'danger',
 }: ConfirmDialogProps) {
+  const t = useTranslations('common');
+
   if (!isOpen) return null;
 
-  // Color schemes for different variants
   const variantStyles = {
     danger: {
       icon: 'bg-red-100 text-red-600',
@@ -51,16 +49,13 @@ export function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop with animation */}
       <div
         className="fixed inset-0 bg-black/50 transition-opacity duration-300"
         onClick={onCancel}
       />
 
-      {/* Modal container */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6 transform transition-all duration-300 scale-100">
-          {/* Close button */}
           <button
             onClick={onCancel}
             disabled={isLoading}
@@ -69,26 +64,21 @@ export function ConfirmDialog({
             <X className="w-5 h-5" />
           </button>
 
-          {/* Icon */}
           <div className="flex items-center justify-center mb-4">
             <div className={`w-12 h-12 rounded-full flex items-center justify-center ${styles.icon}`}>
               <AlertTriangle className="w-6 h-6" />
             </div>
           </div>
 
-          {/* Title */}
           <h2 className="text-xl font-bold text-slate-900 text-center mb-2">
             {title}
           </h2>
 
-          {/* Message */}
           <p className="text-slate-600 text-center mb-6">
             {message}
           </p>
 
-          {/* Action buttons */}
           <div className="flex gap-3">
-            {/* Cancel button */}
             <button
               type="button"
               onClick={onCancel}
@@ -99,10 +89,9 @@ export function ConfirmDialog({
                 disabled:opacity-50 disabled:cursor-not-allowed
               "
             >
-              {cancelLabel}
+              {cancelLabel || t('cancel')}
             </button>
 
-            {/* Confirm button */}
             <button
               type="button"
               onClick={onConfirm}
@@ -114,7 +103,7 @@ export function ConfirmDialog({
                 ${styles.button}
               `}
             >
-              {isLoading ? 'Обробка...' : confirmLabel}
+              {isLoading ? t('processing') : (confirmLabel || t('confirm'))}
             </button>
           </div>
         </div>

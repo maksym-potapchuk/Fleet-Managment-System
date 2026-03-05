@@ -14,7 +14,8 @@
     "yes": "Так",
     "no": "Ні",
     "chooseFile": "Оберіть файл",
-    "noFileChosen": "Файл не обрано"
+    "noFileChosen": "Файл не обрано",
+    "processing": "Обробка..."
   },
   "nav": {
     "dashboard": "Панель",
@@ -33,7 +34,12 @@
     "password": "Пароль",
     "loginError": "Невірний email або пароль",
     "rememberMe": "Запам'ятати мене",
-    "welcomeBack": "Ласкаво просимо"
+    "welcomeBack": "З поверненням!",
+    "loginSubtitle": "Введіть свої дані для входу",
+    "passwordLabel": "Пароль",
+    "hidePassword": "Сховати пароль",
+    "showPassword": "Показати пароль",
+    "loggingIn": "Вхід..."
   },
   "dashboard": {
     "title": "Панель керування",
@@ -102,6 +108,8 @@
     "noServices": "Сервісів ще немає",
     "noServicesDesc": "Натисніть кнопку 'Додати сервіс' щоб створити перший сервіс",
     "name": "Назва",
+    "address": "Адреса",
+    "noAddress": "Немає адреси",
     "description": "Опис",
     "createdAt": "Дата створення",
     "noDescription": "Немає опису",
@@ -115,6 +123,7 @@
   },
   "serviceForm": {
     "name": "Назва",
+    "address": "Адреса",
     "description": "Опис",
     "addService": "Додати сервіс",
     "updateService": "Оновити сервіс",
@@ -125,6 +134,7 @@
     },
     "placeholders": {
       "name": "Введіть назву сервісу",
+      "address": "Введіть адресу сервісу (необов'язково)",
       "description": "Введіть опис сервісу (необов'язково)"
     }
   },
@@ -154,6 +164,9 @@
     "deleteConfirm": "Видалити автомобіль {number}?",
     "archive": "Архів",
     "archiveVehicle": "Архівувати",
+    "moveUp": "Перемістити вгору",
+    "moveDown": "Перемістити вниз",
+    "moveToPosition": "Обрати позицію",
     "archiveConfirm": "Архівувати автомобіль {number}?",
     "archiveSuccess": "Автомобіль архівовано",
     "archiveError": "Не вдалося архівувати автомобіль",
@@ -169,8 +182,8 @@
     "noArchivedVehicles": "Немає архівованих автомобілів",
     "noArchivedVehiclesDesc": "Архівовані автомобілі з'являться тут",
     "relatedData": {
-      "ownerHistory": "власників: {count}",
-      "driverHistory": "водіїв: {count}",
+      "currentOwner": "поточний власник: {count}",
+      "ownershipHistory": "історія власників: {count}",
       "photos": "фото: {count}",
       "inspections": "техоглядів: {count}",
       "serviceHistory": "сервісів: {count}",
@@ -202,14 +215,16 @@
       "none": "Без регламенту"
     },
     "statuses": {
-      "CTO": "СТО",
+      "AUCTION": "Відбір з аукціону",
       "FOCUS": "Фокус",
+      "GAS_INSTALL": "Встановлення Газу",
+      "SERVICE": "Сервіс",
       "CLEANING": "Хімчистка",
-      "PREPARATION": "Підготовка",
-      "READY": "Готове",
-      "LEASING": "Лізинг",
+      "PRE_DELIVERY": "Підготовка до видачі",
+      "READY": "Готова до видачі",
       "RENT": "Оренда",
-      "SELLING": "Продаж",
+      "LEASING": "Лізинг",
+      "SELLING": "Зголосити продажу",
       "SOLD": "Продано"
     },
     "totalCost": "Собівартість",
@@ -250,7 +265,8 @@
       "reschedule": "Перенести",
       "pinned": "Закріплено",
       "preview": "Перегляд",
-      "hint": "Наведіть на дату щоб переглянути події"
+      "hint": "Наведіть на дату щоб переглянути події",
+      "cancel": "Скасувати"
     }
   },
   "vehicleWorkspace": {
@@ -516,9 +532,13 @@
       "additionalCost": "Додаткові витрати",
       "nextInspectionDate": "Наступний огляд",
       "parts": "Запчастини",
+      "sourceName": "Джерело",
+      "supplierType": "Тип постачальника",
+      "description": "Опис",
       "attachments": "Вкладення",
       "receipt": "Чек",
       "invoices": "Фактури",
+      "createdBy": "Додав",
       "createdAt": "Створено",
       "updatedAt": "Оновлено"
     },
@@ -545,6 +565,67 @@
       "clearAll": "Очистити фільтри"
     }
   },
+  "vehicleModal": {
+    "editVehicle": "Редагувати автомобіль",
+    "addVehicle": "Додати автомобіль",
+    "step1Subtitle": "Основна інформація",
+    "step2Subtitle": "Водій та фото",
+    "carNumber": "Номер авто",
+    "vinNumber": "VIN номер",
+    "vinHint": "17 символів",
+    "manufacturer": "Марка",
+    "model": "Модель",
+    "year": "Рік",
+    "color": "Колір авто",
+    "selectColor": "Оберіть колір",
+    "fuelType": "Тип палива",
+    "cost": "Вартість (PLN)",
+    "status": "Статус",
+    "mileage": "Поточний пробіг (км)",
+    "mileageHint": "Використовується для розрахунку регламенту",
+    "assignDriver": "Призначити водія",
+    "assignDriverHint": "Оберіть існуючого або створіть нового",
+    "loadingDrivers": "Завантаження...",
+    "noDriver": "— Без водія —",
+    "createNewDriver": "Створити нового водія",
+    "newDriver": "Новий водій",
+    "firstName": "Ім'я",
+    "lastName": "Прізвище",
+    "phone": "Телефон (48xxxxxxxxx)",
+    "creating": "Створення...",
+    "createAndAssign": "Створити та призначити",
+    "vehiclePhotos": "Фото автомобіля",
+    "photosHint": "Додайте до 10 фото",
+    "addPhoto": "Додати фото",
+    "morePhotos": "ще {count}",
+    "photoLimit": "Досягнуто ліміт 10 фото",
+    "new": "НОВЕ",
+    "archive": "Архівувати",
+    "archiveConfirm": "Архівувати цей автомобіль?",
+    "back": "Назад",
+    "next": "Далі",
+    "saving": "Збереження...",
+    "save": "Зберегти",
+    "errorDeletePhoto": "Не вдалося видалити фото",
+    "errorCreateDriver": "Не вдалося створити водія",
+    "errorInvalidMileage": "Введіть коректний пробіг",
+    "errorSaveVehicle": "Не вдалося зберегти автомобіль",
+    "errorArchiveVehicle": "Не вдалося архівувати автомобіль",
+    "colors": {
+      "white": "Білий",
+      "black": "Чорний",
+      "gray": "Сірий",
+      "silver": "Сріблястий",
+      "red": "Червоний",
+      "blue": "Синій",
+      "green": "Зелений",
+      "yellow": "Жовтий",
+      "brown": "Коричневий",
+      "beige": "Бежевий",
+      "orange": "Помаранчевий",
+      "burgundy": "Бордовий"
+    }
+  },
   "quickExpenses": {
     "title": "Швидкі витрати",
     "subtitle": "Додайте кілька витрат для одного авто",
@@ -565,7 +646,8 @@
       "noEntries": "Додайте першу витрату",
       "changeVehicle": "Змінити авто",
       "date": "Дата",
-      "amount": "Сума"
+      "amount": "Сума",
+      "addMore": "Додати ще"
     },
     "reviewStep": {
       "title": "Підсумок",

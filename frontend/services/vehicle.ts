@@ -1,5 +1,5 @@
 import api from '@/lib/api';
-import { Vehicle, VehiclePhoto, VehicleOwnerHistory, TechnicalInspection, CreateVehicleData, UpdateVehicleData, VehicleFilters, VehicleDeleteCheck } from '@/types/vehicle';
+import { Vehicle, VehiclePhoto, VehicleOwner, OwnerHistoryRecord, TechnicalInspection, CreateVehicleData, UpdateVehicleData, VehicleFilters, VehicleDeleteCheck } from '@/types/vehicle';
 
 export const vehicleService = {
   // Get all vehicles
@@ -97,23 +97,30 @@ export const vehicleService = {
     await api.delete(`/vehicle/${vehicleId}/photos/${photoId}/`);
   },
 
-  // Owner history
-  async getOwnerHistory(vehicleId: string): Promise<VehicleOwnerHistory[]> {
-    const response = await api.get<VehicleOwnerHistory[] | { results: VehicleOwnerHistory[] }>(`/vehicle/${vehicleId}/owner-history/`);
+  // Current owner
+  async getCurrentOwner(vehicleId: string): Promise<VehicleOwner | null> {
+    const response = await api.get<VehicleOwner | null>(`/vehicle/${vehicleId}/owner/`);
+    return response.data;
+  },
+
+  async assignOwner(vehicleId: string, data: { driver: string; agreement_number?: string }): Promise<VehicleOwner> {
+    const response = await api.post<VehicleOwner>(`/vehicle/${vehicleId}/owner/`, data);
+    return response.data;
+  },
+
+  async updateOwner(vehicleId: string, data: { agreement_number: string }): Promise<VehicleOwner> {
+    const response = await api.patch<VehicleOwner>(`/vehicle/${vehicleId}/owner/`, data);
+    return response.data;
+  },
+
+  async unassignOwner(vehicleId: string): Promise<void> {
+    await api.delete(`/vehicle/${vehicleId}/owner/`);
+  },
+
+  // Ownership history
+  async getOwnershipHistory(vehicleId: string): Promise<OwnerHistoryRecord[]> {
+    const response = await api.get<OwnerHistoryRecord[] | { results: OwnerHistoryRecord[] }>(`/vehicle/${vehicleId}/owner/history/`);
     return Array.isArray(response.data) ? response.data : (response.data.results ?? []);
-  },
-
-  async addOwner(vehicleId: string, data: { driver: string; agreement_number?: string }): Promise<VehicleOwnerHistory> {
-    const response = await api.post<VehicleOwnerHistory>(`/vehicle/${vehicleId}/owner-history/`, data);
-    return response.data;
-  },
-
-  async closeOwnership(vehicleId: string, historyId: number): Promise<VehicleOwnerHistory> {
-    const response = await api.patch<VehicleOwnerHistory>(
-      `/vehicle/${vehicleId}/owner-history/${historyId}/`,
-      { released_at: new Date().toISOString() },
-    );
-    return response.data;
   },
 
   // Technical inspections
@@ -159,5 +166,11 @@ export const vehicleService = {
 
   async deleteInspection(vehicleId: string, inspectionId: number): Promise<void> {
     await api.delete(`/vehicle/${vehicleId}/inspections/${inspectionId}/`);
+  },
+
+  // Reorder vehicles (batch position update)
+  async reorderVehicles(items: { id: string; status_position: number }[]): Promise<{ updated: number }> {
+    const response = await api.post<{ updated: number }>('/vehicle/reorder/', items);
+    return response.data;
   },
 };

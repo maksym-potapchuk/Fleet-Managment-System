@@ -77,6 +77,11 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
             <span className="font-mono font-semibold tracking-wide">{expense.vehicle_car_number}</span>
           } />
         )}
+        <DetailRow label={t('fields.paymentMethod')} value={t(`paymentMethods.${expense.payment_method}`)} />
+        <DetailRow label={t('fields.payerType')} value={t(`payerTypes.${expense.payer_type}`)} />
+        {expense.expense_for && (
+          <DetailRow label={t('detail.description')} value={expense.expense_for} />
+        )}
       </div>
 
       {/* Category-specific details */}
@@ -132,25 +137,31 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
             </>
           )}
 
-          {code === 'PARTS' && expense.parts && expense.parts.length > 0 && (
-            <div className="mt-1">
-              <p className="text-xs font-semibold text-slate-500 mb-2">{t('detail.parts')}</p>
-              <div className="space-y-1.5">
-                {expense.parts.map((part, i) => (
-                  <div key={part.id || i} className="bg-slate-50 rounded-lg px-3 py-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-700">{part.name}</span>
-                      <span className="text-sm font-bold text-slate-900 tabular-nums">
-                        {formatAmount(String(parseFloat(part.unit_price) * part.quantity))} PLN
-                      </span>
-                    </div>
-                    <div className="text-xs text-slate-400 mt-0.5">
-                      {part.quantity} x {formatAmount(part.unit_price)} PLN
-                    </div>
+          {(code === 'PARTS' || code === 'ACCESSORIES' || code === 'DOCUMENTS') && (
+            <>
+              <DetailRow label={t('detail.sourceName')} value={expense.source_name || null} />
+              <DetailRow label={t('detail.supplierType')} value={expense.supplier_type ? t(`supplierTypes.${expense.supplier_type}`) : null} />
+              {expense.parts && expense.parts.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-semibold text-slate-500 mb-2">{t('detail.parts')}</p>
+                  <div className="space-y-1.5">
+                    {expense.parts.map((part, i) => (
+                      <div key={part.id || i} className="bg-slate-50 rounded-lg px-3 py-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-slate-700">{part.name}</span>
+                          <span className="text-sm font-bold text-slate-900 tabular-nums">
+                            {formatAmount(String(parseFloat(part.unit_price) * part.quantity))} PLN
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          {part.quantity} x {formatAmount(part.unit_price)} PLN
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -193,6 +204,9 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
 
       {/* Meta */}
       <div className="text-xs text-slate-400 space-y-1 pt-3 border-t border-slate-100">
+        {expense.created_by && (
+          <p>{t('detail.createdBy')}: <span className="text-slate-600 font-medium">{expense.created_by.username}</span></p>
+        )}
         <p>{t('detail.createdAt')}: {formatDate(expense.created_at, locale)}</p>
         <p>{t('detail.updatedAt')}: {formatDate(expense.updated_at, locale)}</p>
       </div>

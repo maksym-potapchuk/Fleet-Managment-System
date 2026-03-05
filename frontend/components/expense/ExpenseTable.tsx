@@ -211,6 +211,9 @@ export function ExpenseTable({ expenses, onEdit, onDelete, onView, isLoading = f
                   </td>
                   <td className="px-5 py-3.5">
                     <span className="text-sm text-slate-600">{formatDate(expense.expense_date, locale)}</span>
+                    {expense.created_by && (
+                      <div className="text-[10px] text-slate-400 mt-0.5">{expense.created_by.username}</div>
+                    )}
                   </td>
                   <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

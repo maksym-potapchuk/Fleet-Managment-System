@@ -17,6 +17,7 @@ export function ServiceForm({ onSubmit, onCancel, initialData, isLoading = false
 
   const [formData, setFormData] = useState<CreateServiceData>({
     name: initialData?.name || '',
+    address: initialData?.address || '',
     description: initialData?.description || '',
   });
 
@@ -97,6 +98,32 @@ export function ServiceForm({ onSubmit, onCancel, initialData, isLoading = false
         />
         {errors.name && (
           <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+        )}
+      </div>
+
+      {/* Address Field */}
+      <div>
+        <label htmlFor="address" className="block text-sm font-medium text-slate-700 mb-2">
+          {t('address')}
+        </label>
+        <input
+          type="text"
+          id="address"
+          name="address"
+          value={formData.address}
+          onChange={handleChange}
+          disabled={isLoading}
+          className={`
+            w-full px-4 py-2 border rounded-lg transition-colors
+            text-slate-900 font-medium placeholder:text-slate-400 placeholder:font-normal
+            focus:outline-none focus:ring-2 focus:ring-teal-500
+            disabled:bg-slate-100 disabled:cursor-not-allowed
+            ${errors.address ? 'border-red-500' : 'border-slate-300'}
+          `}
+          placeholder={t('placeholders.address')}
+        />
+        {errors.address && (
+          <p className="mt-1 text-sm text-red-600">{errors.address}</p>
         )}
       </div>
 

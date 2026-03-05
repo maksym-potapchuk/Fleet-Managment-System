@@ -11,7 +11,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LoginForm } from '@/components/login/LoginForm';
 
-// LoginForm has no i18n, DnD, or external services — no mocks needed.
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+}));
 
 describe('LoginForm', () => {
   const defaultProps = {
@@ -40,8 +42,7 @@ describe('LoginForm', () => {
     const user = userEvent.setup();
     render(<LoginForm {...defaultProps} />);
 
-    // Button has aria-label that changes between "Показати пароль" / "Сховати пароль"
-    const toggleBtn = screen.getByRole('button', { name: /пароль/i });
+    const toggleBtn = screen.getByRole('button', { name: /password/i });
     await user.click(toggleBtn);
 
     expect(screen.getByPlaceholderText('••••••••')).toHaveAttribute('type', 'text');
@@ -51,7 +52,7 @@ describe('LoginForm', () => {
     const user = userEvent.setup();
     render(<LoginForm {...defaultProps} />);
 
-    const toggleBtn = screen.getByRole('button', { name: /пароль/i });
+    const toggleBtn = screen.getByRole('button', { name: /password/i });
     await user.click(toggleBtn);
     await user.click(toggleBtn);
 
@@ -68,7 +69,7 @@ describe('LoginForm', () => {
     await user.type(screen.getByPlaceholderText('name@company.com'), 'admin@fleet.com');
     await user.type(screen.getByPlaceholderText('••••••••'), 'secret123');
 
-    fireEvent.submit(screen.getByRole('button', { name: /Увійти/ }).closest('form')!);
+    fireEvent.submit(screen.getByRole('button', { name: /login/ }).closest('form')!);
 
     expect(onSubmit).toHaveBeenCalledOnce();
     expect(onSubmit).toHaveBeenCalledWith('admin@fleet.com', 'secret123', false);
@@ -82,26 +83,24 @@ describe('LoginForm', () => {
   });
 
   it('shows the error message with role="alert" when error prop is set', () => {
-    render(<LoginForm loading={false} error="Невірний email або пароль" onSubmit={vi.fn()} />);
+    render(<LoginForm loading={false} error="Invalid credentials" onSubmit={vi.fn()} />);
     const alert = screen.getByRole('alert');
     expect(alert).toBeInTheDocument();
-    expect(alert).toHaveTextContent('Невірний email або пароль');
+    expect(alert).toHaveTextContent('Invalid credentials');
   });
 
   // ─── Loading state ────────────────────────────────────────────────────────
 
   it('disables the submit button while loading', () => {
     render(<LoginForm loading={true} error="" onSubmit={vi.fn()} />);
-    // Any button with disabled attribute
     const buttons = screen.getAllByRole('button');
     const submitBtn = buttons.find((b) => b.hasAttribute('disabled'));
     expect(submitBtn).toBeDefined();
   });
 
-  it('shows "Вхід" text while loading instead of "Увійти"', () => {
+  it('shows loading text while loading instead of login text', () => {
     render(<LoginForm loading={true} error="" onSubmit={vi.fn()} />);
-    // Loading button may show "Вхід" or "Вхід..." — match with regex
-    expect(screen.getByText(/Вхід/)).toBeInTheDocument();
-    expect(screen.queryByText('Увійти')).not.toBeInTheDocument();
+    expect(screen.getByText('loggingIn')).toBeInTheDocument();
+    expect(screen.queryByText('login')).not.toBeInTheDocument();
   });
 });
