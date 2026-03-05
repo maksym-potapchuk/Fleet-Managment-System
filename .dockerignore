@@ -16,5 +16,9 @@ backend/htmlcov/
 backend/staticfiles/
 backend/media/
 
+# Trello exports
+trello_export.json
+backend/trello_export.json
+
 # Dev artifacts
 .claude/

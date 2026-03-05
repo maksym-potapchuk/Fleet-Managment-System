@@ -35,9 +35,11 @@ import {
   AlertTriangle,
   ScrollText,
   Receipt,
+  Zap,
 } from 'lucide-react';
 import { Vehicle, VehicleStatus } from '@/types/vehicle';
 import { matchesWithLayout } from '@/lib/keyboard-layout';
+import { Link } from '@/src/i18n/routing';
 
 export type KanbanColumnConfig = {
   id: VehicleStatus;
@@ -57,7 +59,6 @@ interface VehicleKanbanProps {
   onDuplicateVehicle?: (id: string) => void;
   onReorderVehicles?: (items: { id: string; status_position: number }[]) => Promise<void>;
   onOpenSidebar?: () => void;
-  onGoToArchive?: () => void;
 }
 
 export function VehicleKanban({
@@ -70,9 +71,9 @@ export function VehicleKanban({
   onDuplicateVehicle,
   onReorderVehicles,
   onOpenSidebar,
-  onGoToArchive,
 }: VehicleKanbanProps) {
   const t = useTranslations('vehicles');
+  const tNav = useTranslations('nav');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<VehicleStatus[]>([]);
   const [driverFilter, setDriverFilter] = useState<'all' | 'with_driver' | 'without_driver'>('all');
@@ -248,16 +249,14 @@ export function VehicleKanban({
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            {onGoToArchive && (
-              <button
-                onClick={onGoToArchive}
-                className="flex items-center justify-center w-10 h-10 md:w-auto md:px-4 md:py-3 bg-white border-2 border-slate-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition-all shadow-sm text-amber-600"
-                title={t('archive')}
-              >
-                <Archive className="w-4 h-4 md:w-5 md:h-5" />
-                <span className="hidden md:inline ml-1.5 text-sm font-bold">{t('archive')}</span>
-              </button>
-            )}
+            <Link
+              href="/quick-expenses"
+              className="flex items-center justify-center w-10 h-10 md:w-auto md:px-4 md:py-3 bg-white border-2 border-slate-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition-all shadow-sm text-amber-600"
+              title={tNav('quickExpenses')}
+            >
+              <Zap className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="hidden md:inline ml-1.5 text-sm font-bold">{tNav('quickExpenses')}</span>
+            </Link>
             <button
               onClick={onAddVehicle}
               className="bg-gradient-to-r from-[#2D8B7E] to-[#248B7B] text-white px-3 py-2.5 md:px-6 md:py-3 rounded-xl hover:shadow-2xl hover:shadow-[#2D8B7E]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shadow-lg flex items-center gap-1.5 text-sm font-bold whitespace-nowrap flex-shrink-0"

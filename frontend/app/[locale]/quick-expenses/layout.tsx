@@ -8,7 +8,7 @@ import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { SidebarProvider } from './SidebarContext';
 import {
   Car, Calendar, FileText, Wrench, Users,
-  Zap, X
+  Zap, Archive, X
 } from 'lucide-react';
 
 export default function QuickExpensesLayout({
@@ -28,13 +28,8 @@ export default function QuickExpensesLayout({
         { id: 'expenses', label: t('expenses'), icon: FileText, href: '/expenses' },
         { id: 'services', label: t('services'), icon: Wrench, href: '/services' },
         { id: 'drivers', label: t('drivers'), icon: Users, href: '/drivers' },
-      ],
-    },
-    {
-      id: 'quick-access',
-      title: t('quickExpenses').toUpperCase(),
-      items: [
-        { id: 'quick-expenses', label: t('quickExpenses'), icon: Zap, href: '/quick-expenses' },
+        { id: 'quick-expenses', label: t('quickExpenses'), icon: Zap, href: '/quick-expenses', dividerBefore: true },
+        { id: 'archive', label: t('archive'), icon: Archive, href: '/vehicles/archive' },
       ],
     },
   ];

@@ -189,7 +189,6 @@ export default function VehiclesPage() {
         onDuplicateVehicle={handleDuplicateVehicle}
         onReorderVehicles={handleReorderVehicles}
         onOpenSidebar={openSidebar}
-        onGoToArchive={() => router.push('/vehicles/archive')}
       />
 
       <VehicleModal

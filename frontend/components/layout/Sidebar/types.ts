@@ -5,6 +5,7 @@ export interface NavItem {
     href: string;
     badge?: number;
     requiredPermission?: string;
+    dividerBefore?: boolean;
 }
 
 export interface NavSection {

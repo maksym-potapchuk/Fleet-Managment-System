@@ -17,7 +17,12 @@ export function SidebarSection({ section }: SidebarSectionProps) {
       
       <div className="space-y-1">
         {section.items.map((item) => (
-          <SidebarItem key={item.id} item={item} />
+          <div key={item.id}>
+            {item.dividerBefore && (
+              <div className="my-3 border-t border-slate-200" />
+            )}
+            <SidebarItem item={item} />
+          </div>
         ))}
       </div>
     </div>

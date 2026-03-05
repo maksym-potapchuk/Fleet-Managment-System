@@ -14,3 +14,6 @@ coverage/
 
 *.md
 !README.md
+
+# Trello artifacts (may end up here accidentally)
+trello_export.json

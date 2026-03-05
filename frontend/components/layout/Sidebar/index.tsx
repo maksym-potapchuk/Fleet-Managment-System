@@ -8,7 +8,7 @@ import { NavSection } from './types';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import {
   Car, Calendar, FileText, Wrench, Users,
-  Zap, Menu, X
+  Zap, Archive, Menu, X
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -24,15 +24,10 @@ export function Sidebar() {
         { id: 'expenses', label: t('expenses'), icon: FileText, href: '/expenses' },
         { id: 'services', label: t('services'), icon: Wrench, href: '/services' },
         { id: 'drivers', label: t('drivers'), icon: Users, href: '/drivers' },
+        { id: 'quick-expenses', label: t('quickExpenses'), icon: Zap, href: '/quick-expenses', dividerBefore: true },
+        { id: 'archive', label: t('archive'), icon: Archive, href: '/vehicles/archive' },
       ]
     },
-    {
-      id: 'quick-access',
-      title: t('quickExpenses').toUpperCase(),
-      items: [
-        { id: 'quick-expenses', label: t('quickExpenses'), icon: Zap, href: '/quick-expenses' },
-      ]
-    }
   ];
 
   return (

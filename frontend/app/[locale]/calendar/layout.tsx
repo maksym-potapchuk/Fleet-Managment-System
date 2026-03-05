@@ -8,7 +8,7 @@ import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { SidebarProvider } from './SidebarContext';
 import {
   Car, Calendar, FileText, Wrench, Users,
-  Zap, X,
+  Zap, Archive, X,
 } from 'lucide-react';
 
 export default function CalendarLayout({ children }: { children: React.ReactNode }) {
@@ -19,18 +19,13 @@ export default function CalendarLayout({ children }: { children: React.ReactNode
     {
       id: 'main',
       items: [
-        { id: 'fleet',     label: t('fleet'),     icon: Car,             href: '/vehicles' },
-        { id: 'calendar',  label: t('calendar'),  icon: Calendar,        href: '/calendar' },
-        { id: 'expenses',  label: t('expenses'),  icon: FileText,        href: '/expenses' },
-        { id: 'services',  label: t('services'),  icon: Wrench,          href: '/services' },
-        { id: 'drivers',   label: t('drivers'),   icon: Users,           href: '/drivers' },
-      ],
-    },
-    {
-      id: 'quick-access',
-      title: t('quickExpenses').toUpperCase(),
-      items: [
-        { id: 'quick-expenses', label: t('quickExpenses'), icon: Zap,  href: '/quick-expenses' },
+        { id: 'fleet', label: t('fleet'), icon: Car, href: '/vehicles' },
+        { id: 'calendar', label: t('calendar'), icon: Calendar, href: '/calendar' },
+        { id: 'expenses', label: t('expenses'), icon: FileText, href: '/expenses' },
+        { id: 'services', label: t('services'), icon: Wrench, href: '/services' },
+        { id: 'drivers', label: t('drivers'), icon: Users, href: '/drivers' },
+        { id: 'quick-expenses', label: t('quickExpenses'), icon: Zap, href: '/quick-expenses', dividerBefore: true },
+        { id: 'archive', label: t('archive'), icon: Archive, href: '/vehicles/archive' },
       ],
     },
   ];

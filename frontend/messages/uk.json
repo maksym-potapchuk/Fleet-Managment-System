@@ -25,6 +25,7 @@
     "services": "Сервіси",
     "drivers": "Водії",
     "quickExpenses": "Швидкі витрати",
+    "archive": "Архів",
     "notifications": "Сповіщення"
   },
   "auth": {
@@ -275,6 +276,9 @@
     "backToVehicles": "Автопарк",
     "edit": "Редагувати",
     "addPhoto": "Додати фото",
+    "archiveVehicle": "Архівувати",
+    "archiveTitle": "Архівація автомобіля",
+    "archiveMessage": "Ви впевнені, що хочете архівувати автомобіль {number}? Його можна буде відновити з архіву.",
     "driver": {
       "searchPlaceholder": "Пошук за ім'ям..."
     },

@@ -74,7 +74,7 @@ export interface Vehicle {
   vin_number: string;
   car_number: string;
   color: string;
-  fuel_type: FuelType;
+  fuel_type: FuelType | null;
   initial_km: number;
   is_selected: boolean;
   status: VehicleStatus;
@@ -132,7 +132,7 @@ export interface CreateVehicleData {
   vin_number: string;
   car_number: string;
   color: string;
-  fuel_type: FuelType;
+  fuel_type: FuelType | null;
   initial_km: number;
   status?: VehicleStatus;
 }

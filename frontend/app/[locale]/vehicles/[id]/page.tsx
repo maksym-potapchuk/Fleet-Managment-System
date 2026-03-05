@@ -30,6 +30,7 @@ import {
   Fuel,
   Search,
   ChevronDown,
+  Archive,
 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import api from '@/lib/api';
@@ -146,6 +147,8 @@ export default function VehicleWorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('service');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   // Inline photo management
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
@@ -256,6 +259,19 @@ export default function VehicleWorkspacePage() {
     }
   };
 
+  const handleArchive = async () => {
+    if (!vehicle) return;
+    setArchiving(true);
+    try {
+      await vehicleService.archiveVehicle(vehicle.id);
+      router.push('/vehicles');
+    } catch (err) {
+      console.error('Failed to archive vehicle:', err);
+      setArchiving(false);
+      setShowArchiveConfirm(false);
+    }
+  };
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !vehicle) return;
@@ -321,7 +337,7 @@ export default function VehicleWorkspacePage() {
     ? `${vehicle.driver.first_name} ${vehicle.driver.last_name}`
     : tVehicles('noDriver');
 
-  const fuelLabel = (type: FuelType) => tVehicles(`fuelTypes.${type}`);
+  const fuelLabel = (type: FuelType | null) => type ? tVehicles(`fuelTypes.${type}`) : '—';
 
   const tabs: { id: WorkspaceTab; label: string; icon: typeof Wrench; secondary?: boolean }[] = [
     { id: 'service',    label: t('tabs.service'),    icon: Wrench },
@@ -438,6 +454,13 @@ export default function VehicleWorkspacePage() {
             >
               <Edit className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{t('edit')}</span>
+            </button>
+            <button
+              onClick={() => setShowArchiveConfirm(true)}
+              className="flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-bold text-sm px-2.5 sm:px-3 py-1.5 rounded-xl transition-colors"
+            >
+              <Archive className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t('archiveVehicle')}</span>
             </button>
           </div>
         </div>
@@ -696,6 +719,18 @@ export default function VehicleWorkspacePage() {
         onClose={() => setIsEditModalOpen(false)}
         onSave={loadVehicle}
         onArchive={() => router.push('/vehicles')}
+      />
+
+      {/* Archive confirmation */}
+      <ConfirmDialog
+        isOpen={showArchiveConfirm}
+        title={t('archiveTitle')}
+        message={t('archiveMessage', { number: vehicle.car_number })}
+        confirmLabel={t('archiveVehicle')}
+        onConfirm={handleArchive}
+        onCancel={() => setShowArchiveConfirm(false)}
+        isLoading={archiving}
+        variant="warning"
       />
     </div>
   );

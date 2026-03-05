@@ -60,7 +60,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
     vin_number: '',
     car_number: '',
     color: '',
-    fuel_type: 'GASOLINE',
+    fuel_type: null,
     status: 'AUCTION',
   });
   const [kmStr, setKmStr] = useState('');
@@ -116,7 +116,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
         vin_number: vehicle.vin_number,
         car_number: vehicle.car_number,
         color: vehicle.color || '',
-        fuel_type: vehicle.fuel_type || 'GASOLINE',
+        fuel_type: vehicle.fuel_type,
         status: vehicle.status,
       });
       setKmStr(String(vehicle.initial_km));
@@ -131,7 +131,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
         vin_number: '',
         car_number: '',
         color: '',
-        fuel_type: 'GASOLINE',
+        fuel_type: null,
         status: 'AUCTION',
       });
       setKmStr('');
@@ -492,15 +492,15 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      {t('fuelType')} <span className="text-red-400">*</span>
+                      {t('fuelType')}
                     </label>
                     <div className="relative">
                       <select
-                        required
-                        value={formData.fuel_type}
-                        onChange={(e) => setFormData({ ...formData, fuel_type: e.target.value as FuelType })}
+                        value={formData.fuel_type || ''}
+                        onChange={(e) => setFormData({ ...formData, fuel_type: (e.target.value || null) as FuelType | null })}
                         className={`${inputFilled} appearance-none cursor-pointer pr-10`}
                       >
+                        <option value="">—</option>
                         {FUEL_VALUES.map(f => (
                           <option key={f} value={f}>{tFuelTypes(f)}</option>
                         ))}

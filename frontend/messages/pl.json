@@ -25,6 +25,7 @@
     "services": "Serwisy",
     "drivers": "Kierowcy",
     "quickExpenses": "Szybkie wydatki",
+    "archive": "Archiwum",
     "notifications": "Powiadomienia"
   },
   "auth": {
@@ -275,6 +276,9 @@
     "backToVehicles": "Flota",
     "edit": "Edytuj",
     "addPhoto": "Dodaj zdjęcie",
+    "archiveVehicle": "Archiwizuj",
+    "archiveTitle": "Archiwizacja pojazdu",
+    "archiveMessage": "Czy na pewno chcesz archiwizować pojazd {number}? Można go później przywrócić z archiwum.",
     "driver": {
       "searchPlaceholder": "Szukaj po imieniu..."
     },
