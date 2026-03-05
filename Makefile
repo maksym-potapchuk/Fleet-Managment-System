@@ -16,7 +16,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed db-reset dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push
+.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed db-reset dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles trello-lists lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push
 
 help:
 >@echo "Available commands:"
@@ -45,15 +45,18 @@ help:
 >@echo "  make makemigrations      - Create Django migrations"
 >@echo "  make createsuperuser     - Create Django superuser (interactive)"
 >@echo "  make createsuperuser-auto - Create Django superuser (non-interactive)"
->@echo "  make db-dump             - Export SQL dump to $(DUMP_FILE)"
->@echo "  make db-seed             - Import SQL dump from $(DUMP_FILE)"
->@echo "  make db-reset            - Drop and recreate database (full clean)"
+>@echo "  make db-dump             - Export DB as JSON fixture to backups/"
+>@echo "  make db-seed             - Load latest JSON fixture from backups/"
+>@echo "  make db-reset            - Flush database and re-apply migrations"
 >@echo "  make create-reg-schema   - Seed default vehicle regulation schema"
 >@echo "  make create-driver-vehicle - Create driver +380663234712, vehicle, assign"
 >@echo "  make create-driver-vehicle-force - Same, recreate/reassign if exists"
 >@echo "  make show-regulation CAR=AA6601BB - Show regulation plan for vehicle by car number"
 >@echo "  make assign-regulation CAR=AA6601BB - Assign (fill) default regulation for vehicle"
 >@echo "  make drop-vehicles               - Delete ALL vehicles from the database (with confirmation)"
+>@echo "  make trello-lists                - Show available Trello lists with indices"
+>@echo "  make import-trello N=0           - Import vehicles from Trello list by index"
+>@echo "  make import-trello-dry N=0       - Dry run (preview without writing)"
 >@echo ""
 >@echo "  SSL:"
 >@echo "  make ssl-init            - Obtain first Let's Encrypt certificate"
@@ -161,19 +164,17 @@ createsuperuser-auto:
 >$(COMPOSE) exec -e DJANGO_SUPERUSER_USERNAME=$(SU_USERNAME) -e DJANGO_SUPERUSER_EMAIL=$(SU_EMAIL) -e DJANGO_SUPERUSER_PASSWORD=$(SU_PASSWORD) $(BACKEND_SERVICE) python manage.py createsuperuser --noinput
 
 db-dump:
->mkdir -p backups
->$(COMPOSE) exec -T $(DB_SERVICE) pg_dump -U $(DB_USER) -d $(DB_NAME) > $(DUMP_FILE)
->@echo "Dump created: $(DUMP_FILE)"
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py db_dump
+>@echo "Dump saved to backups/"
 
 db-seed:
->$(COMPOSE) exec -T $(DB_SERVICE) psql -U $(DB_USER) -d $(DB_NAME) < $(DUMP_FILE)
->@echo "Seed loaded from: $(DUMP_FILE)"
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py db_load
+>@echo "Database loaded from latest dump"
 
 db-reset:
->$(COMPOSE) exec $(DB_SERVICE) psql -U $(DB_USER) -d postgres -c "DROP DATABASE IF EXISTS $(DB_NAME);"
->$(COMPOSE) exec $(DB_SERVICE) psql -U $(DB_USER) -d postgres -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);"
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py flush --noinput
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py migrate
->@echo "Database reset: dropped, recreated, migrations applied."
+>@echo "Database reset: flushed and migrations re-applied."
 
 dump: db-dump
 
@@ -199,6 +200,15 @@ assign-regulation:
 
 drop-vehicles:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py drop_all_vehicles --force
+
+trello-lists:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py import_trello_vehicles --show-lists
+
+import-trello:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py import_trello_vehicles --list-index $(N)
+
+import-trello-dry:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py import_trello_vehicles --list-index $(N) --dry-run
 
 # ── Lint & Test ──────────────────────────────────────────────
 

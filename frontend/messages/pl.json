@@ -553,6 +553,22 @@
       "INTERIOR": "Wewnątrz",
       "FULL": "Pełne"
     },
+    "invoice": {
+      "searchPlaceholder": "Numer faktury...",
+      "found": "Znaleziono fakturę",
+      "notFound": "Nie znaleziono — dodaj plik",
+      "searching": "Szukam...",
+      "clear": "Wyczyść",
+      "number": "Numer faktury",
+      "vendor": "Dostawca",
+      "date": "Data faktury",
+      "total": "Kwota faktury",
+      "linkedExpenses": "powiązanych wydatków",
+      "viewFile": "Otwórz fakturę",
+      "uploadFile": "Dodaj plik faktury",
+      "attachedExisting": "Faktura {invoiceNumber} — znaleziona w bazie",
+      "createdNew": "Faktura {invoiceNumber} — dodana do bazy"
+    },
     "filters": {
       "search": "Szukaj",
       "searchPlaceholder": "Numer, marka, model...",

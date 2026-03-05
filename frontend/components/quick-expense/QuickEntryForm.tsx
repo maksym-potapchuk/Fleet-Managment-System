@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { ExpenseCategory, QuickExpenseEntry, ExpensePart, ServiceItem, FuelSubEntry, FuelType, WashType, PaymentMethod, PayerType } from '@/types/expense';
+import { ExpenseCategory, QuickExpenseEntry, ExpensePart, ServiceItem, FuelSubEntry, FuelType, WashType, PaymentMethod, PayerType, InvoiceSearchResult } from '@/types/expense';
 import { Service } from '@/types/service';
 import { getAllServices } from '@/services/service';
 import { FileInput } from '@/components/common/FileInput';
+import { InvoiceInput } from '@/components/expense/InvoiceInput';
 import { ChevronDown, Plus, Check, Trash2 } from 'lucide-react';
 
 let _entryId = 0;
@@ -208,7 +209,9 @@ export function QuickEntryForm({
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>(
     editingEntry?.service_items?.length ? editingEntry.service_items : [emptyServiceItem()],
   );
-  const [invoiceFile, setInvoiceFile] = useState<File | null>(editingEntry?.invoice_files?.[0] || null);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(editingEntry?.invoice_file || null);
+  const [invoiceNumber, setInvoiceNumber] = useState(editingEntry?.invoice_number || '');
+  const [foundInvoice, setFoundInvoice] = useState<InvoiceSearchResult | null>(null);
   const [fleetServices, setFleetServices] = useState<Service[]>([]);
 
   // ── PARTS ──
@@ -250,16 +253,17 @@ export function QuickEntryForm({
   }, []);
 
   // ── Validation ──
+  const hasInvoice = !!foundInvoice || !!invoiceFile;
   const isValid = useMemo(() => {
     if (code === 'INSPECTION') return parseFloat(officialCost) > 0 && inspectionDate;
-    if (code === 'SERVICE') return serviceItems.some(i => i.name.trim() && parseFloat(i.price) > 0);
-    if (code === 'PARTS' || code === 'ACCESSORIES' || code === 'DOCUMENTS') return parts.some(p => p.name.trim() && parseFloat(p.unit_price as string) > 0);
+    if (code === 'SERVICE') return serviceItems.some(i => i.name.trim() && parseFloat(i.price) > 0) && hasInvoice;
+    if (code === 'PARTS' || code === 'ACCESSORIES' || code === 'DOCUMENTS') return parts.some(p => p.name.trim() && parseFloat(p.unit_price as string) > 0) && hasInvoice;
     if (code === 'FUEL') return fuelEntries.every(fe => parseFloat(fe.amount) > 0 && parseFloat(fe.liters) > 0 && fe.fuel_type);
     if (!amount || parseFloat(amount) <= 0) return false;
     if (code === 'WASHING' && !washType) return false;
     if (code === 'FINES' && !violationType.trim()) return false;
     return true;
-  }, [amount, code, fuelEntries, washType, violationType, officialCost, inspectionDate, serviceItems, parts]);
+  }, [amount, code, fuelEntries, washType, violationType, officialCost, inspectionDate, serviceItems, parts, hasInvoice]);
 
   if (!category) return null;
 
@@ -309,14 +313,17 @@ export function QuickEntryForm({
     } else if (code === 'SERVICE') {
       if (selectedService) entry.service = selectedService;
       entry.service_items = serviceItems.filter(i => i.name.trim());
-      if (invoiceFile) entry.invoice_files = [invoiceFile];
+      if (invoiceNumber) entry.invoice_number = invoiceNumber;
+      if (!foundInvoice && invoiceFile) entry.invoice_file = invoiceFile;
     } else if (code === 'PARTS') {
       if (sourceName.trim()) entry.source_name = sourceName.trim();
       entry.parts = parts.filter(p => p.name.trim()).map(p => ({ ...p, quantity: p.quantity || 1 }));
-      if (invoiceFile) entry.invoice_files = [invoiceFile];
+      if (invoiceNumber) entry.invoice_number = invoiceNumber;
+      if (!foundInvoice && invoiceFile) entry.invoice_file = invoiceFile;
     } else if (code === 'ACCESSORIES' || code === 'DOCUMENTS') {
       entry.parts = parts.filter(p => p.name.trim()).map(p => ({ ...p, quantity: p.quantity || 1 }));
-      if (invoiceFile) entry.invoice_files = [invoiceFile];
+      if (invoiceNumber) entry.invoice_number = invoiceNumber;
+      if (!foundInvoice && invoiceFile) entry.invoice_file = invoiceFile;
     } else if (code === 'OTHER') {
       if (expenseFor) entry.expense_for = expenseFor;
     }
@@ -630,11 +637,14 @@ export function QuickEntryForm({
                 <div className="clear-both" />
               </div>
 
-              <FileInput
-                label={tExpenses('fields.invoice')}
+              <InvoiceInput
+                invoiceNumber={invoiceNumber}
+                onNumberChange={setInvoiceNumber}
+                foundInvoice={foundInvoice}
+                onInvoiceFound={setFoundInvoice}
+                file={invoiceFile}
+                onFileChange={setInvoiceFile}
                 required
-                onChange={(f) => setInvoiceFile(f)}
-                disabled={false}
               />
             </>
           )}
@@ -723,10 +733,13 @@ export function QuickEntryForm({
                 )}
               </div>
 
-              <FileInput
-                label={tExpenses('fields.invoice')}
-                onChange={(f) => setInvoiceFile(f)}
-                disabled={false}
+              <InvoiceInput
+                invoiceNumber={invoiceNumber}
+                onNumberChange={setInvoiceNumber}
+                foundInvoice={foundInvoice}
+                onInvoiceFound={setFoundInvoice}
+                file={invoiceFile}
+                onFileChange={setInvoiceFile}
               />
             </>
           )}
@@ -804,10 +817,13 @@ export function QuickEntryForm({
                 )}
               </div>
 
-              <FileInput
-                label={tExpenses('fields.invoice')}
-                onChange={(f) => setInvoiceFile(f)}
-                disabled={false}
+              <InvoiceInput
+                invoiceNumber={invoiceNumber}
+                onNumberChange={setInvoiceNumber}
+                foundInvoice={foundInvoice}
+                onInvoiceFound={setFoundInvoice}
+                file={invoiceFile}
+                onFileChange={setInvoiceFile}
               />
             </>
           )}

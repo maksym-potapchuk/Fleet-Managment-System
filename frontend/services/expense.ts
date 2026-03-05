@@ -5,6 +5,7 @@ import {
   CreateExpenseData,
   ExpenseFilters,
   FuelSubEntry,
+  InvoiceSearchResult,
   PaginatedExpenseResponse,
   QuickExpenseEntry,
   QuickExpenseResult,
@@ -14,8 +15,6 @@ function buildFormData(data: Record<string, unknown>): FormData {
   const formData = new FormData();
   Object.entries(data).forEach(([key, value]) => {
     if (value === undefined || value === null || value === '') return;
-    // Skip invoice_files — handled separately
-    if (key === 'invoice_files') return;
     if (value instanceof File) {
       formData.append(key, value);
     } else {
@@ -23,13 +22,6 @@ function buildFormData(data: Record<string, unknown>): FormData {
     }
   });
   return formData;
-}
-
-function appendInvoiceFiles(formData: FormData, files?: File[]): void {
-  if (!files?.length) return;
-  files.forEach((file) => {
-    formData.append('invoice_files', file);
-  });
 }
 
 function buildQueryString(filters?: ExpenseFilters): string {
@@ -70,10 +62,16 @@ export const expenseService = {
     return response.data.results;
   },
 
+  async searchInvoices(query: string): Promise<InvoiceSearchResult[]> {
+    if (!query.trim()) return [];
+    const response = await api.get<InvoiceSearchResult[]>(
+      `/expense/invoices/?search=${encodeURIComponent(query)}`,
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  },
+
   async createExpense(data: CreateExpenseData): Promise<Expense> {
-    const { invoice_files, ...rest } = data;
-    const formData = buildFormData(rest as unknown as Record<string, unknown>);
-    appendInvoiceFiles(formData, invoice_files);
+    const formData = buildFormData(data as unknown as Record<string, unknown>);
     const response = await api.post<Expense>('/expense/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -84,9 +82,8 @@ export const expenseService = {
     vehicleId: string,
     data: CreateExpenseData,
   ): Promise<Expense> {
-    const { vehicle: _v, invoice_files, ...rest } = data;
+    const { vehicle: _v, ...rest } = data;
     const formData = buildFormData(rest as unknown as Record<string, unknown>);
-    appendInvoiceFiles(formData, invoice_files);
     const response = await api.post<Expense>(
       `/vehicle/${vehicleId}/expenses/`,
       formData,
@@ -99,9 +96,7 @@ export const expenseService = {
     id: string,
     data: Partial<CreateExpenseData>,
   ): Promise<Expense> {
-    const { invoice_files, ...rest } = data;
-    const formData = buildFormData(rest as unknown as Record<string, unknown>);
-    appendInvoiceFiles(formData, invoice_files);
+    const formData = buildFormData(data as unknown as Record<string, unknown>);
     const response = await api.patch<Expense>(`/expense/${id}/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -160,7 +155,8 @@ export const expenseService = {
               const valid = entry.service_items.filter(i => i.name.trim());
               if (valid.length) data.service_items_json = JSON.stringify(valid);
             }
-            if (entry.invoice_files?.length) data.invoice_files = entry.invoice_files;
+            if (entry.invoice_number) data.invoice_number = entry.invoice_number;
+            if (entry.invoice_file) data.invoice_file = entry.invoice_file;
           } else if (code === 'PARTS') {
             if (entry.source_name) data.source_name = entry.source_name;
             if (entry.supplier_type) data.supplier_type = entry.supplier_type;
@@ -168,13 +164,15 @@ export const expenseService = {
               const valid = entry.parts.filter(p => p.name.trim());
               if (valid.length) data.parts_json = JSON.stringify(valid);
             }
-            if (entry.invoice_files?.length) data.invoice_files = entry.invoice_files;
+            if (entry.invoice_number) data.invoice_number = entry.invoice_number;
+            if (entry.invoice_file) data.invoice_file = entry.invoice_file;
           } else if (code === 'ACCESSORIES' || code === 'DOCUMENTS') {
             if (entry.parts?.length) {
               const valid = entry.parts.filter(p => p.name.trim());
               if (valid.length) data.parts_json = JSON.stringify(valid);
             }
-            if (entry.invoice_files?.length) data.invoice_files = entry.invoice_files;
+            if (entry.invoice_number) data.invoice_number = entry.invoice_number;
+            if (entry.invoice_file) data.invoice_file = entry.invoice_file;
           } else if (code === 'OTHER') {
             if (entry.expense_for) data.expense_for = entry.expense_for;
           } else if (code === 'WASHING') {

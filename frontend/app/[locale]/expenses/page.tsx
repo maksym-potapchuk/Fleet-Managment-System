@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Expense, CreateExpenseData, ExpenseCategory, ExpenseFilters as ExpenseFiltersType } from '@/types/expense';
+import { ToastContainer, ToastData } from '@/components/common/Toast';
 import { Vehicle } from '@/types/vehicle';
 import { ExpenseTable } from '@/components/expense/ExpenseTable';
 import { ExpenseForm } from '@/components/expense/ExpenseForm';
@@ -31,6 +32,14 @@ export default function ExpensesPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ExpenseFiltersType>({});
+  const [toasts, setToasts] = useState<ToastData[]>([]);
+
+  const addToast = useCallback((message: string, type: ToastData['type'] = 'success') => {
+    setToasts(prev => [...prev, { id: crypto.randomUUID(), message, type }]);
+  }, []);
+  const dismissToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   const loadExpenses = useCallback(async () => {
     try {
@@ -80,6 +89,12 @@ export default function ExpensesPage() {
       setExpenses(prev => [newExpense, ...prev]);
       setShowForm(false);
       setEditingExpense(null);
+      if (newExpense.invoice_data) {
+        const msg = newExpense.invoice_existing
+          ? t('invoice.attachedExisting', { invoiceNumber: newExpense.invoice_data.number })
+          : t('invoice.createdNew', { invoiceNumber: newExpense.invoice_data.number });
+        addToast(msg, 'success');
+      }
     } catch (err: unknown) {
       console.error('Error creating expense:', err);
       throw err;
@@ -138,6 +153,7 @@ export default function ExpensesPage() {
 
   return (
     <div className="h-full overflow-y-auto">
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       {/* ── Header ── */}
       <div className="sticky top-0 z-20 bg-white border-b border-slate-200">
         <div className="px-4 py-3 sm:px-6 sm:py-4">

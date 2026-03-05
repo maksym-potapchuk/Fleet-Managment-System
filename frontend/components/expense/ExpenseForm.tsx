@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Expense, CreateExpenseData, ExpenseCategory, ExpensePart, ServiceItem, FuelType, WashType, PaymentMethod, PayerType, SupplierType } from '@/types/expense';
+import { Expense, CreateExpenseData, ExpenseCategory, ExpensePart, ServiceItem, FuelType, WashType, PaymentMethod, PayerType, SupplierType, InvoiceSearchResult } from '@/types/expense';
 import { Service } from '@/types/service';
 import { Vehicle } from '@/types/vehicle';
 import { getAllServices } from '@/services/service';
 import { VehicleAutocomplete } from '@/components/expense/VehicleAutocomplete';
 import { FileInput } from '@/components/common/FileInput';
+import { InvoiceInput } from '@/components/expense/InvoiceInput';
 import { Plus, Trash2 } from 'lucide-react';
 
 interface ExpenseFormProps {
@@ -66,6 +67,8 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
 
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoice_data?.number || '');
+  const [foundInvoice, setFoundInvoice] = useState<InvoiceSearchResult | null>(null);
   const [parts, setParts] = useState<ExpensePart[]>(initialData?.parts?.length ? initialData.parts : [emptyPart()]);
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>(initialData?.service_items?.length ? initialData.service_items : [emptyServiceItem()]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -138,14 +141,15 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
       data.fuel_type = formData.fuel_type as FuelType;
       if (receiptFile) data.receipt = receiptFile;
     } else if (categoryCode === 'SERVICE') {
-      if (!invoiceFile && !initialData) {
+      if (!foundInvoice && !invoiceFile && !initialData) {
         setErrors(prev => ({ ...prev, invoice: t('fields.invoiceRequired') }));
         return;
       }
       if (formData.service) data.service = formData.service;
       const validItems = serviceItems.filter(item => item.name.trim());
       if (validItems.length) data.service_items_json = JSON.stringify(validItems);
-      if (invoiceFile) data.invoice_files = [invoiceFile];
+      if (invoiceNumber) data.invoice_number = invoiceNumber;
+      if (!foundInvoice && invoiceFile) data.invoice_file = invoiceFile;
     } else if (categoryCode === 'WASHING') {
       data.amount = formData.amount;
       if (formData.wash_type) data.wash_type = formData.wash_type as WashType;
@@ -161,15 +165,25 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
       if (formData.additional_cost) data.additional_cost = formData.additional_cost;
       if (formData.next_inspection_date) data.next_inspection_date = formData.next_inspection_date;
     } else if (categoryCode === 'PARTS') {
+      if (!foundInvoice && !invoiceFile && !initialData) {
+        setErrors(prev => ({ ...prev, invoice: t('fields.invoiceRequired') }));
+        return;
+      }
       if (formData.source_name) data.source_name = formData.source_name;
       data.supplier_type = formData.supplier_type as SupplierType;
       const validParts = parts.filter(p => p.name.trim()).map(p => ({ ...p, quantity: p.quantity || 1 }));
       if (validParts.length) data.parts_json = JSON.stringify(validParts);
-      if (invoiceFile) data.invoice_files = [invoiceFile];
+      if (invoiceNumber) data.invoice_number = invoiceNumber;
+      if (!foundInvoice && invoiceFile) data.invoice_file = invoiceFile;
     } else if (categoryCode === 'ACCESSORIES' || categoryCode === 'DOCUMENTS') {
+      if (!foundInvoice && !invoiceFile && !initialData) {
+        setErrors(prev => ({ ...prev, invoice: t('fields.invoiceRequired') }));
+        return;
+      }
       const validParts = parts.filter(p => p.name.trim()).map(p => ({ ...p, quantity: p.quantity || 1 }));
       if (validParts.length) data.parts_json = JSON.stringify(validParts);
-      if (invoiceFile) data.invoice_files = [invoiceFile];
+      if (invoiceNumber) data.invoice_number = invoiceNumber;
+      if (!foundInvoice && invoiceFile) data.invoice_file = invoiceFile;
     } else if (categoryCode === 'OTHER') {
       data.amount = formData.amount;
       if (formData.expense_for) data.expense_for = formData.expense_for;
@@ -284,7 +298,17 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
               )}
             </div>
 
-            <FileInput label={t('fields.invoice')} required onChange={setInvoiceFile} disabled={isLoading} hasError={!!errors.invoice} />
+            <InvoiceInput
+              invoiceNumber={invoiceNumber}
+              onNumberChange={setInvoiceNumber}
+              foundInvoice={foundInvoice}
+              onInvoiceFound={setFoundInvoice}
+              file={invoiceFile}
+              onFileChange={setInvoiceFile}
+              required
+              disabled={isLoading}
+              hasError={!!errors.invoice}
+            />
             {errors.invoice && <p className="mt-1 text-xs text-red-600">{errors.invoice}</p>}
           </div>
         );
@@ -412,7 +436,15 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
               )}
             </div>
 
-            <FileInput label={t('fields.invoice')} onChange={setInvoiceFile} disabled={isLoading} />
+            <InvoiceInput
+              invoiceNumber={invoiceNumber}
+              onNumberChange={setInvoiceNumber}
+              foundInvoice={foundInvoice}
+              onInvoiceFound={setFoundInvoice}
+              file={invoiceFile}
+              onFileChange={setInvoiceFile}
+              disabled={isLoading}
+            />
           </div>
         );
 
@@ -461,7 +493,15 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
               )}
             </div>
 
-            <FileInput label={t('fields.invoice')} onChange={setInvoiceFile} disabled={isLoading} />
+            <InvoiceInput
+              invoiceNumber={invoiceNumber}
+              onNumberChange={setInvoiceNumber}
+              foundInvoice={foundInvoice}
+              onInvoiceFound={setFoundInvoice}
+              file={invoiceFile}
+              onFileChange={setInvoiceFile}
+              disabled={isLoading}
+            />
           </div>
         );
 

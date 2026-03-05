@@ -39,11 +39,24 @@ export interface ExpensePart {
   unit_price: string;
 }
 
-export interface ExpenseInvoice {
-  id?: string;
+export interface Invoice {
+  id: string;
+  number: string;
   file: string;
-  name?: string;
-  uploaded_at?: string;
+  vendor_name: string;
+  invoice_date: string | null;
+  total_amount: string | null;
+  expense_count: number;
+  created_at: string;
+}
+
+export interface InvoiceSearchResult {
+  id: string;
+  number: string;
+  vendor_name: string;
+  invoice_date: string | null;
+  total_amount: string | null;
+  expense_count: number;
 }
 
 // ── Service Items ──
@@ -98,7 +111,10 @@ export interface Expense {
   source_name: string | null;
   supplier_type: SupplierType | null;
   parts: ExpensePart[];
-  invoices: ExpenseInvoice[];
+  // Invoice
+  invoice: string | null;
+  invoice_data: Invoice | null;
+  invoice_existing?: boolean;
   // Meta
   created_by: { id: string; username: string; email: string } | null;
   created_at: string;
@@ -137,7 +153,11 @@ export interface CreateExpenseData {
   source_name?: string;
   supplier_type?: SupplierType;
   parts_json?: string;
-  invoice_files?: File[];
+  // Invoice
+  invoice_number?: string;
+  invoice_file?: File;
+  vendor_name?: string;
+  invoice_total_amount?: string;
 }
 
 export interface ExpenseFilters {
@@ -200,7 +220,9 @@ export interface QuickExpenseEntry {
   // SERVICE
   service?: string;
   service_items?: ServiceItem[];
-  invoice_files?: File[];
+  // Invoice
+  invoice_number?: string;
+  invoice_file?: File;
   // PARTS
   source_name?: string;
   supplier_type?: SupplierType;

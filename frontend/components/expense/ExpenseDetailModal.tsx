@@ -167,7 +167,7 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
       )}
 
       {/* Attachments */}
-      {(expense.receipt || (expense.invoices && expense.invoices.length > 0)) && (
+      {(expense.receipt || expense.invoice_data) && (
         <div className="mb-5">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{t('detail.attachments')}</h3>
           <div className="space-y-1.5">
@@ -183,21 +183,34 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
                 <ExternalLink className="w-3.5 h-3.5 text-slate-300 ml-auto" />
               </a>
             )}
-            {expense.invoices?.map((invoice, i) => (
-              <a
-                key={invoice.id || i}
-                href={invoice.file}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg px-3 py-2.5 transition-colors group"
-              >
-                <FileText className="w-4 h-4 text-slate-400 group-hover:text-[#2D8B7E]" />
-                <span className="text-sm text-slate-700 group-hover:text-[#2D8B7E] truncate">
-                  {invoice.name || t('detail.invoices')}
-                </span>
-                <ExternalLink className="w-3.5 h-3.5 text-slate-300 ml-auto shrink-0" />
-              </a>
-            ))}
+            {expense.invoice_data && (
+              <div className="bg-slate-50 rounded-lg px-3 py-2.5 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#2D8B7E]" />
+                  <span className="text-sm font-semibold text-slate-800">{expense.invoice_data.number}</span>
+                </div>
+                {expense.invoice_data.vendor_name && (
+                  <p className="text-xs text-slate-500">{t('invoice.vendor')}: {expense.invoice_data.vendor_name}</p>
+                )}
+                {expense.invoice_data.invoice_date && (
+                  <p className="text-xs text-slate-500">{t('invoice.date')}: {formatDate(expense.invoice_data.invoice_date, locale)}</p>
+                )}
+                {expense.invoice_data.total_amount && (
+                  <p className="text-xs text-slate-500">{t('invoice.total')}: {formatAmount(expense.invoice_data.total_amount)} PLN</p>
+                )}
+                {expense.invoice_data.expense_count > 1 && (
+                  <p className="text-xs text-teal-600 font-medium">{expense.invoice_data.expense_count} {t('invoice.linkedExpenses')}</p>
+                )}
+                <a
+                  href={expense.invoice_data.file}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-[#2D8B7E] hover:text-[#246f65] font-medium mt-1"
+                >
+                  {t('invoice.viewFile')} <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}

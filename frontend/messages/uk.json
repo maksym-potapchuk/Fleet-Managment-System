@@ -553,6 +553,22 @@
       "INTERIOR": "Всередині",
       "FULL": "Повна"
     },
+    "invoice": {
+      "searchPlaceholder": "Номер фактури...",
+      "found": "Фактуру знайдено",
+      "notFound": "Не знайдено — додайте файл",
+      "searching": "Шукаю...",
+      "clear": "Очистити",
+      "number": "Номер фактури",
+      "vendor": "Постачальник",
+      "date": "Дата фактури",
+      "total": "Сума фактури",
+      "linkedExpenses": "пов'язаних витрат",
+      "viewFile": "Відкрити фактуру",
+      "uploadFile": "Додати файл фактури",
+      "attachedExisting": "Фактура {invoiceNumber} — знайдена в базі",
+      "createdNew": "Фактура {invoiceNumber} — додана в базу"
+    },
     "filters": {
       "search": "Пошук",
       "searchPlaceholder": "Номер, марка, модель...",

@@ -50,6 +50,50 @@ describe('expenseService – getCategories', () => {
   });
 });
 
+describe('expenseService – searchInvoices', () => {
+  it('returns matching invoices from API', async () => {
+    const invoices = [
+      { id: 'inv-1', number: 'FAK-100', vendor_name: 'Auto Kraków', invoice_date: null, total_amount: null, expense_count: 1 },
+    ];
+    mockedApi.get.mockResolvedValueOnce({ data: invoices });
+    const result = await expenseService.searchInvoices('FAK-100');
+    expect(result).toEqual(invoices);
+    expect(mockedApi.get).toHaveBeenCalledWith('/expense/invoices/?search=FAK-100');
+  });
+
+  it('returns empty array for blank query without API call', async () => {
+    const result = await expenseService.searchInvoices('   ');
+    expect(result).toEqual([]);
+    expect(mockedApi.get).not.toHaveBeenCalled();
+  });
+});
+
+describe('expenseService – createExpense', () => {
+  it('returns expense with invoice_existing flag from API', async () => {
+    const mockExpense = {
+      id: 'exp-1',
+      invoice_data: { id: 'inv-1', number: 'FAK-001' },
+      invoice_existing: true,
+    };
+    mockedApi.post.mockResolvedValueOnce({ data: mockExpense });
+
+    const result = await expenseService.createExpense({
+      category: 'cat-parts',
+      expense_date: '2026-03-01',
+      amount: '100',
+      invoice_number: 'FAK-001',
+    });
+
+    expect(result.invoice_existing).toBe(true);
+    expect(result.invoice_data?.number).toBe('FAK-001');
+    expect(mockedApi.post).toHaveBeenCalledWith(
+      '/expense/',
+      expect.any(FormData),
+      expect.objectContaining({ headers: { 'Content-Type': 'multipart/form-data' } }),
+    );
+  });
+});
+
 describe('expenseService – submitQuickExpenses', () => {
   it('calls createVehicleExpense for each entry and reports progress', async () => {
     mockedApi.post.mockResolvedValue({ data: { id: 'exp-1' } });
@@ -149,6 +193,42 @@ describe('expenseService – submitQuickExpenses', () => {
     const formData = mockedApi.post.mock.calls[0][1] as FormData;
     const json = formData.get('service_items_json') as string;
     expect(JSON.parse(json)).toEqual([{ name: 'Oil change', price: '100' }]);
+  });
+
+  it('sends invoice_number in FormData for PARTS entry', async () => {
+    mockedApi.post.mockResolvedValue({ data: { id: 'exp-1' } });
+
+    const entry = makeEntry({
+      id: 'e1',
+      category_code: 'PARTS',
+      amount: '300',
+      invoice_number: 'FAK-2026/001',
+    });
+
+    await expenseService.submitQuickExpenses('v-1', [entry], () => {});
+
+    const formData = mockedApi.post.mock.calls[0][1] as FormData;
+    expect(formData.get('invoice_number')).toBe('FAK-2026/001');
+  });
+
+  it('sends invoice_file as File in FormData for ACCESSORIES entry', async () => {
+    mockedApi.post.mockResolvedValue({ data: { id: 'exp-1' } });
+
+    const file = new File(['pdf content'], 'faktura.pdf', { type: 'application/pdf' });
+    const entry = makeEntry({
+      id: 'e1',
+      category_code: 'ACCESSORIES',
+      amount: '500',
+      invoice_number: 'FAK-ACC-001',
+      invoice_file: file,
+      parts: [{ name: 'GPS mount', quantity: 1, unit_price: '500' }],
+    });
+
+    await expenseService.submitQuickExpenses('v-1', [entry], () => {});
+
+    const formData = mockedApi.post.mock.calls[0][1] as FormData;
+    expect(formData.get('invoice_number')).toBe('FAK-ACC-001');
+    expect(formData.get('invoice_file')).toBeInstanceOf(File);
   });
 
   it('continues submitting remaining entries after one fails', async () => {

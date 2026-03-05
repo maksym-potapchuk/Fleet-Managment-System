@@ -43,6 +43,7 @@ import { ExpenseForm } from '@/components/expense/ExpenseForm';
 import { ExpenseFilters } from '@/components/expense/ExpenseFilters';
 import { ExpenseDetailModal } from '@/components/expense/ExpenseDetailModal';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { ToastContainer, ToastData } from '@/components/common/Toast';
 import { useSidebar } from '../SidebarContext';
 
 const STATUS_COLORS: Record<VehicleStatus, { bg: string; text: string; border: string }> = {
@@ -2656,6 +2657,14 @@ function ExpensesTab({ vehicleId }: { vehicleId: string }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ExpenseFiltersType>({});
+  const [toasts, setToasts] = useState<ToastData[]>([]);
+
+  const addToast = useCallback((message: string, type: ToastData['type'] = 'success') => {
+    setToasts(prev => [...prev, { id: crypto.randomUUID(), message, type }]);
+  }, []);
+  const dismissToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   const loadExpenses = useCallback(async () => {
     setLoading(true);
@@ -2690,6 +2699,12 @@ function ExpensesTab({ vehicleId }: { vehicleId: string }) {
       } else {
         const created = await expenseService.createVehicleExpense(vehicleId, data);
         setExpenses(prev => [created, ...prev]);
+        if (created.invoice_data) {
+          const msg = created.invoice_existing
+            ? t('invoice.attachedExisting', { invoiceNumber: created.invoice_data.number })
+            : t('invoice.createdNew', { invoiceNumber: created.invoice_data.number });
+          addToast(msg, 'success');
+        }
       }
       setShowForm(false);
       setEditingExpense(null);
@@ -2722,6 +2737,7 @@ function ExpensesTab({ vehicleId }: { vehicleId: string }) {
 
   return (
     <div className="space-y-4">
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-base sm:text-lg font-bold text-slate-900">{t('title')}</h3>
         <button

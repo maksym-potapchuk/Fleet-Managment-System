@@ -50,11 +50,11 @@ function getDetail(entry: QuickExpenseEntry, tExpenses: (key: string) => string)
   } else if (entry.category_code === 'SERVICE') {
     const count = entry.service_items?.filter(i => i.name.trim()).length || 0;
     if (count > 0) parts.push(`${count} items`);
-    if (entry.invoice_files?.length) parts.push('+invoice');
+    if (entry.invoice_number || entry.invoice_file) parts.push('+invoice');
   } else if (entry.category_code === 'PARTS') {
     const count = entry.parts?.filter(p => p.name.trim()).length || 0;
     if (count > 0) parts.push(`${count} parts`);
-    if (entry.invoice_files?.length) parts.push('+invoice');
+    if (entry.invoice_number || entry.invoice_file) parts.push('+invoice');
   }
   return parts.join(' · ');
 }
