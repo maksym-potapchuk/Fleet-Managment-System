@@ -2242,8 +2242,8 @@ function MileageTab({ vehicleId, onMileageChange }: { vehicleId: string; onMilea
   const loadLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<MileageLog[]>(`/vehicle/${vehicleId}/mileage/`);
-      setLogs(res.data);
+      const res = await api.get<MileageLog[] | { results: MileageLog[] }>(`/vehicle/${vehicleId}/mileage/`);
+      setLogs(Array.isArray(res.data) ? res.data : res.data.results);
     } catch (err) {
       console.error(err);
     } finally {

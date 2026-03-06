@@ -1,8 +1,8 @@
 import api from '@/lib/api';
-import { Vehicle, VehiclePhoto, VehicleOwner, OwnerHistoryRecord, TechnicalInspection, CreateVehicleData, UpdateVehicleData, VehicleFilters, VehicleDeleteCheck } from '@/types/vehicle';
+import { Vehicle, VehiclePhoto, VehicleOwner, OwnerHistoryRecord, TechnicalInspection, CreateVehicleData, UpdateVehicleData, VehicleFilters, VehicleDeleteCheck, PaginatedResponse } from '@/types/vehicle';
 
 export const vehicleService = {
-  // Get all vehicles
+  // Get all vehicles (fetches all pages in parallel)
   async getVehicles(filters?: VehicleFilters): Promise<Vehicle[]> {
     const params = new URLSearchParams();
 
@@ -12,10 +12,25 @@ export const vehicleService = {
     if (filters?.search) params.append('search', filters.search);
 
     const queryString = params.toString();
-    const url = queryString ? `/vehicle/?${queryString}` : '/vehicle/';
+    const baseUrl = queryString ? `/vehicle/?${queryString}` : '/vehicle/';
 
-    const response = await api.get<Vehicle[]>(url);
-    return response.data;
+    // Fetch first page
+    const firstPage = await api.get<PaginatedResponse<Vehicle>>(baseUrl);
+    const { count, results } = firstPage.data;
+
+    if (!firstPage.data.next) return results;
+
+    // Fetch remaining pages in parallel
+    const pageSize = results.length;
+    const totalPages = Math.ceil(count / pageSize);
+    const requests = [];
+    for (let page = 2; page <= totalPages; page++) {
+      const separator = baseUrl.includes('?') ? '&' : '?';
+      requests.push(api.get<PaginatedResponse<Vehicle>>(`${baseUrl}${separator}page=${page}`));
+    }
+
+    const responses = await Promise.all(requests);
+    return [...results, ...responses.flatMap(r => r.data.results)];
   },
 
   // Get single vehicle by ID
@@ -41,10 +56,22 @@ export const vehicleService = {
     await api.delete(`/vehicle/${id}/`);
   },
 
-  // Get archived vehicles
+  // Get archived vehicles (paginated, fetches all pages)
   async getArchivedVehicles(): Promise<Vehicle[]> {
-    const response = await api.get<Vehicle[]>('/vehicle/archive/');
-    return response.data;
+    const firstPage = await api.get<PaginatedResponse<Vehicle>>('/vehicle/archive/');
+    const { count, results } = firstPage.data;
+
+    if (!firstPage.data.next) return results;
+
+    const pageSize = results.length;
+    const totalPages = Math.ceil(count / pageSize);
+    const requests = [];
+    for (let page = 2; page <= totalPages; page++) {
+      requests.push(api.get<PaginatedResponse<Vehicle>>(`/vehicle/archive/?page=${page}`));
+    }
+
+    const responses = await Promise.all(requests);
+    return [...results, ...responses.flatMap(r => r.data.results)];
   },
 
   // Restore vehicle from archive

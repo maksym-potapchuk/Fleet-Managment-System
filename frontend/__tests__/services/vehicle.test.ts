@@ -35,7 +35,7 @@ beforeEach(() => {
 
 describe('vehicleService.getVehicles', () => {
   it('calls /vehicle/ with no query string when no filters provided', async () => {
-    mockedApi.get.mockResolvedValue({ data: [] });
+    mockedApi.get.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
 
     await vehicleService.getVehicles();
 
@@ -43,7 +43,7 @@ describe('vehicleService.getVehicles', () => {
   });
 
   it('appends status filter to the URL', async () => {
-    mockedApi.get.mockResolvedValue({ data: [] });
+    mockedApi.get.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
 
     await vehicleService.getVehicles({ status: 'RENT' });
 
@@ -53,7 +53,7 @@ describe('vehicleService.getVehicles', () => {
   });
 
   it('appends manufacturer and year filters to the URL', async () => {
-    mockedApi.get.mockResolvedValue({ data: [] });
+    mockedApi.get.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
 
     await vehicleService.getVehicles({ manufacturer: 'Toyota', year: 2020 });
 
@@ -64,7 +64,7 @@ describe('vehicleService.getVehicles', () => {
   });
 
   it('appends search filter to the URL', async () => {
-    mockedApi.get.mockResolvedValue({ data: [] });
+    mockedApi.get.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
 
     await vehicleService.getVehicles({ search: 'AA1234' });
 
@@ -73,13 +73,26 @@ describe('vehicleService.getVehicles', () => {
     expect(params.get('search')).toBe('AA1234');
   });
 
-  it('returns the data from the response', async () => {
+  it('returns results from single page response', async () => {
     const vehicles = [{ id: 'v1', car_number: 'AA1234BB' }];
-    mockedApi.get.mockResolvedValue({ data: vehicles });
+    mockedApi.get.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: vehicles } });
 
     const result = await vehicleService.getVehicles();
 
     expect(result).toEqual(vehicles);
+  });
+
+  it('fetches all pages in parallel when next is present', async () => {
+    const page1 = [{ id: 'v1' }, { id: 'v2' }];
+    const page2 = [{ id: 'v3' }];
+    mockedApi.get
+      .mockResolvedValueOnce({ data: { count: 3, next: '/vehicle/?page=2', previous: null, results: page1 } })
+      .mockResolvedValueOnce({ data: { count: 3, next: null, previous: '/vehicle/', results: page2 } });
+
+    const result = await vehicleService.getVehicles();
+
+    expect(result).toEqual([...page1, ...page2]);
+    expect(mockedApi.get).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -135,8 +148,8 @@ describe('vehicleService.archiveVehicle', () => {
 // ─── getArchivedVehicles ─────────────────────────────────────────────────────
 
 describe('vehicleService.getArchivedVehicles', () => {
-  it('calls GET /vehicle/archive/', async () => {
-    mockedApi.get.mockResolvedValue({ data: [] });
+  it('calls GET /vehicle/archive/ and returns results', async () => {
+    mockedApi.get.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
 
     const result = await vehicleService.getArchivedVehicles();
 

@@ -10,6 +10,12 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     include: ['**/__tests__/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', '.next'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary'],
+      include: ['services/**', 'components/**'],
+      exclude: ['node_modules', '__tests__', '.next'],
+    },
   },
   resolve: {
     alias: {
