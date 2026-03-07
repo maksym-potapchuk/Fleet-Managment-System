@@ -3,6 +3,7 @@
 COMPOSE := docker compose
 COMPOSE_PROD := docker compose -f docker-compose.prod.yml
 COMPOSE_MON := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+COMPOSE_PROD_MON := docker compose -f docker-compose.prod.yml -f docker-compose.monitoring.yml
 BACKEND_SERVICE := backend
 FRONTEND_SERVICE := frontend
 NGINX_SERVICE := nginx
@@ -231,6 +232,15 @@ monitoring-restart:
 
 monitoring-logs:
 >$(COMPOSE_MON) logs -f prometheus grafana node-exporter redis-exporter
+
+prod-monitoring-up:
+>$(COMPOSE_PROD_MON) up -d
+
+prod-monitoring-down:
+>$(COMPOSE_PROD_MON) down
+
+prod-monitoring-logs:
+>$(COMPOSE_PROD_MON) logs -f prometheus grafana node-exporter redis-exporter
 
 # ── Lint & Test ──────────────────────────────────────────────
 
