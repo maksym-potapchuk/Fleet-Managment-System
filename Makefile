@@ -2,6 +2,7 @@
 
 COMPOSE := docker compose
 COMPOSE_PROD := docker compose -f docker-compose.prod.yml
+COMPOSE_MON := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
 BACKEND_SERVICE := backend
 FRONTEND_SERVICE := frontend
 NGINX_SERVICE := nginx
@@ -16,10 +17,17 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed db-reset dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles trello-lists lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push
+.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed db-reset dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles trello-lists lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
 
 help:
 >@echo "Available commands:"
+>@echo ""
+>@echo "  Monitoring:"
+>@echo "  make monitoring-up       - Start all services + Prometheus/Grafana monitoring"
+>@echo "  make monitoring-down     - Stop all services including monitoring"
+>@echo "  make monitoring-restart  - Restart monitoring stack"
+>@echo "  make monitoring-logs     - Show monitoring logs (prometheus, grafana, exporters)"
+>@echo ""
 >@echo "  make up                  - Start all services"
 >@echo "  make down                - Stop and remove containers"
 >@echo "  make restart             - Restart all services"
@@ -209,6 +217,20 @@ import-trello:
 
 import-trello-dry:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py import_trello_vehicles --list-index $(N) --dry-run
+
+# ── Monitoring ────────────────────────────────────────────
+
+monitoring-up:
+>$(COMPOSE_MON) up -d
+
+monitoring-down:
+>$(COMPOSE_MON) down
+
+monitoring-restart:
+>$(COMPOSE_MON) restart prometheus grafana node-exporter redis-exporter
+
+monitoring-logs:
+>$(COMPOSE_MON) logs -f prometheus grafana node-exporter redis-exporter
 
 # ── Lint & Test ──────────────────────────────────────────────
 
