@@ -14,6 +14,7 @@ Full-stack fleet management platform for vehicle tracking, driver assignment, ma
 | **Styling** | Tailwind CSS | 3.4 |
 | **i18n** | next-intl (Polish, Ukrainian) | 4.8 |
 | **Bot** | aiogram (Telegram, FSM) | 3.4 |
+| **Monitoring** | Prometheus + Grafana | 3.3 + 11.6 |
 | **CI/CD** | GitHub Actions | 5 parallel jobs |
 | **Containers** | Docker Compose | dev + prod configs |
 | **Web Server** | Nginx + Let's Encrypt | 1.27 |
@@ -319,6 +320,39 @@ make prod-build && make prod
 - Security headers: X-Frame-Options DENY, X-Content-Type-Options nosniff
 - Static files: 30-day cache; media: 7-day cache
 - `client_max_body_size 20M`
+
+## Monitoring
+
+Self-hosted Prometheus + Grafana stack, isolated from the main services via Docker Compose override file.
+
+```
+┌────────────┐     ┌──────────────┐     ┌───────────────┐
+│ Prometheus │────▶│    Grafana    │     │ Node Exporter │
+│  scrape    │     │  dashboards  │     │  (host metrics)│
+└─────┬──────┘     └──────────────┘     └───────────────┘
+      │
+      ├── backend:8000/metrics  (django-prometheus)
+      ├── node-exporter:9100    (CPU, RAM, disk)
+      └── redis-exporter:9121   (connections, memory, hits)
+```
+
+| Command | Description |
+|---------|-------------|
+| `make monitoring-up` | Start dev stack + monitoring |
+| `make monitoring-down` | Stop all including monitoring |
+| `make monitoring-logs` | Tail Prometheus & Grafana logs |
+| `make prod-monitoring-up` | Start prod stack + monitoring |
+
+**Metrics collected**: HTTP requests/latency/status codes, DB queries/duration, Python GC, Redis connections/memory/hit rate, host CPU/RAM/disk/network.
+
+**Grafana dashboards** (import by ID): Django (`17658`), Node Exporter (`1860`), Redis (`11835`).
+
+| Variable | Description |
+|----------|-------------|
+| `GRAFANA_ADMIN_USER` | Grafana admin username (default: `admin`) |
+| `GRAFANA_ADMIN_PASSWORD` | Grafana admin password (default: `admin`) |
+
+---
 
 ## Environment Variables
 
