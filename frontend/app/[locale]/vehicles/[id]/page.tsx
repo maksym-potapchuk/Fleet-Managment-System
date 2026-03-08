@@ -423,7 +423,10 @@ export default function VehicleWorkspacePage() {
         <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-wrap mb-3">
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-              {vehicle.car_number}
+              {vehicle.car_number || <span className="text-slate-400 italic">{tVehicles('noPlate')}</span>}
+              {vehicle.is_temporary_plate && vehicle.car_number && (
+                <span className="ml-2 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md align-middle">{tVehicles('temporaryPlate')}</span>
+              )}
             </h1>
             <span className="hidden sm:inline text-slate-400 font-medium">&middot;</span>
             <span className="text-sm sm:text-base md:text-lg font-semibold text-slate-600">
@@ -725,7 +728,7 @@ export default function VehicleWorkspacePage() {
       <ConfirmDialog
         isOpen={showArchiveConfirm}
         title={t('archiveTitle')}
-        message={t('archiveMessage', { number: vehicle.car_number })}
+        message={t('archiveMessage', { number: vehicle.car_number || tVehicles('noPlate') })}
         confirmLabel={t('archiveVehicle')}
         onConfirm={handleArchive}
         onCancel={() => setShowArchiveConfirm(false)}

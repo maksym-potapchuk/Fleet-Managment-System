@@ -32,7 +32,7 @@ export function VehicleAutocomplete({
   const filtered = query.trim()
     ? vehicles.filter(v => {
         return (
-          matchesWithLayout(v.car_number, query) ||
+          (v.car_number && matchesWithLayout(v.car_number, query)) ||
           matchesWithLayout(v.manufacturer, query) ||
           matchesWithLayout(v.model, query)
         );
@@ -84,7 +84,7 @@ export function VehicleAutocomplete({
             <Car className="w-3.5 h-3.5 text-teal-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <span className="font-mono font-semibold text-slate-800 tracking-wide">{selectedVehicle.car_number}</span>
+            <span className="font-mono font-semibold text-slate-800 tracking-wide">{selectedVehicle.car_number || '—'}</span>
             <span className="text-slate-400 mx-1.5">·</span>
             <span className="text-slate-600">{selectedVehicle.manufacturer} {selectedVehicle.model}</span>
           </div>
@@ -140,7 +140,7 @@ export function VehicleAutocomplete({
                   <Car className={`w-3.5 h-3.5 ${v.id === value ? 'text-teal-600' : 'text-slate-500'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="font-mono font-semibold tracking-wide">{v.car_number}</span>
+                  <span className="font-mono font-semibold tracking-wide">{v.car_number || '—'}</span>
                   <span className="text-slate-400 mx-1.5">·</span>
                   <span className="text-slate-500">{v.manufacturer} {v.model}</span>
                   <span className="text-slate-400 mx-1.5">·</span>

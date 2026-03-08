@@ -132,7 +132,7 @@ export function VehicleKanban({
       .filter(v => {
         if (searchTerm) {
           const matchesSearch = (
-            matchesWithLayout(v.car_number, searchTerm) ||
+            (v.car_number && matchesWithLayout(v.car_number, searchTerm)) ||
             matchesWithLayout(v.manufacturer, searchTerm) ||
             matchesWithLayout(v.model, searchTerm) ||
             matchesWithLayout(v.vin_number, searchTerm)
@@ -613,7 +613,7 @@ function VehicleCard({ vehicle, onSelect, onEdit, onArchive, onDuplicate, isBein
   const handleArchive = (e: React.MouseEvent) => {
     e.stopPropagation();
     setMenuOpen(false);
-    if (onArchive && confirm(t('archiveConfirm', { number: vehicle.car_number }))) {
+    if (onArchive && confirm(t('archiveConfirm', { number: vehicle.car_number || t('noPlate') }))) {
       onArchive(vehicle.id);
     }
   };
@@ -730,7 +730,7 @@ function VehicleCard({ vehicle, onSelect, onEdit, onArchive, onDuplicate, isBein
                 </span>
                 <div className="min-w-0 flex-1">
                   <span className={`text-sm font-bold truncate block ${v.id === vehicle.id ? 'text-[#2D8B7E]' : 'text-slate-700'}`}>
-                    {v.car_number}
+                    {v.car_number || t('noPlate')}
                   </span>
                   <span className="text-[10px] text-slate-400 truncate block">
                     {v.manufacturer} {v.model}
@@ -746,7 +746,7 @@ function VehicleCard({ vehicle, onSelect, onEdit, onArchive, onDuplicate, isBein
         <div className={`relative ${showArrows ? '-ml-5 -mr-10' : '-mx-5'} -mt-5 mb-3 h-36 rounded-t-2xl overflow-hidden`}>
           <img
             src={vehicle.photos[0].image}
-            alt={vehicle.car_number}
+            alt={vehicle.car_number || ''}
             className="w-full h-full object-cover"
           />
           {vehicle.photos.length > 1 && (
@@ -761,7 +761,12 @@ function VehicleCard({ vehicle, onSelect, onEdit, onArchive, onDuplicate, isBein
         {/* Title + menu */}
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
-            <h4 className="text-lg font-bold text-slate-900 tracking-tight">{vehicle.car_number}</h4>
+            <h4 className="text-lg font-bold text-slate-900 tracking-tight">
+              {vehicle.car_number || <span className="text-slate-400 italic">{t('noPlate')}</span>}
+              {vehicle.is_temporary_plate && vehicle.car_number && (
+                <span className="ml-1.5 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md align-middle">{t('temporaryPlate')}</span>
+              )}
+            </h4>
             <p className="text-sm text-slate-500 mt-0.5 font-medium truncate">
               {vehicle.manufacturer} {vehicle.model} <span className="text-slate-400">&middot;</span> {vehicle.year}
             </p>
@@ -922,7 +927,7 @@ function VehicleCardOverlay({ vehicle }: { vehicle: Vehicle }) {
         <div className="relative h-36">
           <img
             src={vehicle.photos[0].image}
-            alt={vehicle.car_number}
+            alt={vehicle.car_number || ''}
             className="w-full h-full object-cover"
           />
         </div>
@@ -930,7 +935,7 @@ function VehicleCardOverlay({ vehicle }: { vehicle: Vehicle }) {
       <div className="p-5">
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
-            <h4 className="text-lg font-bold text-slate-900 tracking-tight">{vehicle.car_number}</h4>
+            <h4 className="text-lg font-bold text-slate-900 tracking-tight">{vehicle.car_number || t('noPlate')}</h4>
             <p className="text-sm text-slate-500 mt-0.5 font-medium truncate">
               {vehicle.manufacturer} {vehicle.model} <span className="text-slate-400">&middot;</span> {vehicle.year}
             </p>
@@ -1044,7 +1049,7 @@ function MobileVehicleCard({ vehicle, columns, onSelect, onEdit, onArchive, onUp
         >
           <img
             src={vehicle.photos[0].image}
-            alt={vehicle.car_number}
+            alt={vehicle.car_number || ''}
             className="w-full h-full object-cover"
           />
           {vehicle.photos.length > 1 && (
@@ -1062,7 +1067,12 @@ function MobileVehicleCard({ vehicle, columns, onSelect, onEdit, onArchive, onUp
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h4 className="text-base font-black text-slate-900">{vehicle.car_number}</h4>
+            <h4 className="text-base font-black text-slate-900">
+              {vehicle.car_number || <span className="text-slate-400 italic font-bold">{t('noPlate')}</span>}
+              {vehicle.is_temporary_plate && vehicle.car_number && (
+                <span className="ml-1.5 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md align-middle">{t('temporaryPlate')}</span>
+              )}
+            </h4>
             <p className="text-sm text-slate-500 font-medium mt-0.5">
               {vehicle.manufacturer} {vehicle.model} · {vehicle.year}
             </p>
@@ -1227,7 +1237,7 @@ function MobileVehicleCard({ vehicle, columns, onSelect, onEdit, onArchive, onUp
                 <button
                   onClick={() => {
                     setShowMenu(false);
-                    if (confirm(t('archiveConfirm', { number: vehicle.car_number }))) {
+                    if (confirm(t('archiveConfirm', { number: vehicle.car_number || t('noPlate') }))) {
                       onArchive(vehicle.id);
                     }
                   }}
@@ -1257,7 +1267,7 @@ function MobileVehicleCard({ vehicle, columns, onSelect, onEdit, onArchive, onUp
             {/* Sheet header */}
             <div className="px-5 pt-2 pb-4">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-                {vehicle.car_number}
+                {vehicle.car_number || t('noPlate')}
               </p>
               <p className="text-sm font-bold text-slate-700">Оберіть новий статус</p>
             </div>
@@ -1296,7 +1306,7 @@ function MobileVehicleCard({ vehicle, columns, onSelect, onEdit, onArchive, onUp
             </div>
             <div className="px-5 pt-2 pb-3">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-                {vehicle.car_number}
+                {vehicle.car_number || t('noPlate')}
               </p>
               <p className="text-sm font-bold text-slate-700">{t('moveToPosition')}</p>
             </div>
@@ -1320,7 +1330,7 @@ function MobileVehicleCard({ vehicle, columns, onSelect, onEdit, onArchive, onUp
                   </span>
                   <div className="min-w-0 flex-1">
                     <span className={`text-sm font-bold truncate block ${v.id === vehicle.id ? 'text-[#2D8B7E]' : 'text-slate-700'}`}>
-                      {v.car_number}
+                      {v.car_number || t('noPlate')}
                     </span>
                     <span className="text-xs text-slate-400 truncate block">
                       {v.manufacturer} {v.model}

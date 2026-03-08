@@ -72,7 +72,8 @@ export interface Vehicle {
   year: number;
   cost: string; // Decimal as string
   vin_number: string;
-  car_number: string;
+  car_number: string | null;
+  is_temporary_plate: boolean;
   color: string;
   fuel_type: FuelType | null;
   initial_km: number;
@@ -130,7 +131,8 @@ export interface CreateVehicleData {
   year: number;
   cost: string | number;
   vin_number: string;
-  car_number: string;
+  car_number?: string;
+  is_temporary_plate?: boolean;
   color: string;
   fuel_type: FuelType | null;
   initial_km: number;
