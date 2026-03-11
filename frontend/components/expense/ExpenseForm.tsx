@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Expense, CreateExpenseData, ExpenseCategory, ExpensePart, ServiceItem, FuelType, WashType, PaymentMethod, PayerType, SupplierType, InvoiceSearchResult } from '@/types/expense';
 import { Service } from '@/types/service';
 import { Vehicle } from '@/types/vehicle';
+import { Driver } from '@/types/driver';
 import { getAllServices } from '@/services/service';
+import { getAllDrivers } from '@/services/driver';
 import { VehicleAutocomplete } from '@/components/expense/VehicleAutocomplete';
 import { FileInput } from '@/components/common/FileInput';
 import { InvoiceInput } from '@/components/expense/InvoiceInput';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Check, AlertCircle } from 'lucide-react';
 
 interface ExpenseFormProps {
   onSubmit: (data: CreateExpenseData) => Promise<void>;
@@ -73,16 +75,25 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>(initialData?.service_items?.length ? initialData.service_items : [emptyServiceItem()]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [fleetServices, setFleetServices] = useState<Service[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [clientDriver, setClientDriver] = useState(initialData?.client_driver || '');
+  const [splitMode, setSplitMode] = useState<'PLN' | '%'>('PLN');
+  const [companyAmount, setCompanyAmount] = useState(initialData?.company_amount || '');
+  const [clientAmount, setClientAmount] = useState(initialData?.client_amount || '');
+  const [clientPercent, setClientPercent] = useState('');
 
   const selectedCategory = categories.find(c => c.id === formData.category);
   const categoryCode = selectedCategory?.code || null;
   const isAutoAmountCategory = categoryCode === 'SERVICE' || categoryCode === 'PARTS' || categoryCode === 'INSPECTION' || categoryCode === 'ACCESSORIES' || categoryCode === 'DOCUMENTS';
 
-  // Load fleet services once on mount
+  // Load fleet services and drivers once on mount
   useEffect(() => {
     let ignore = false;
     getAllServices()
       .then(services => { if (!ignore) setFleetServices(services); })
+      .catch(() => {});
+    getAllDrivers()
+      .then(d => { if (!ignore) setDrivers(d); })
       .catch(() => {});
     return () => { ignore = true; };
   }, []);
@@ -122,6 +133,49 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
   const serviceTotal = serviceItems.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
   const partsTotal = parts.reduce((sum, p) => sum + (parseFloat(p.unit_price as string) || 0) * (p.quantity || 1), 0);
   const inspectionTotal = (parseFloat(formData.official_cost) || 0) + (parseFloat(formData.additional_cost) || 0);
+
+  // Total amount for split validation
+  const totalAmount = useMemo(() => {
+    if (categoryCode === 'SERVICE') return serviceTotal;
+    if (categoryCode === 'PARTS' || categoryCode === 'ACCESSORIES' || categoryCode === 'DOCUMENTS') return partsTotal;
+    if (categoryCode === 'INSPECTION') return inspectionTotal;
+    return parseFloat(formData.amount) || 0;
+  }, [categoryCode, serviceTotal, partsTotal, inspectionTotal, formData.amount]);
+
+  const isClientPayer = formData.payer_type === 'CLIENT';
+
+  // Split amounts validation
+  const splitSum = (parseFloat(companyAmount) || 0) + (parseFloat(clientAmount) || 0);
+  const splitValid = !isClientPayer || (totalAmount > 0 && Math.abs(splitSum - totalAmount) < 0.01);
+
+  // Handle % → PLN conversion
+  const handlePercentChange = (pct: string) => {
+    setClientPercent(pct);
+    const pctNum = parseFloat(pct);
+    if (!isNaN(pctNum) && totalAmount > 0) {
+      const clientAmt = Math.ceil(totalAmount * pctNum) / 100;
+      const companyAmt = Math.round((totalAmount - clientAmt) * 100) / 100;
+      setClientAmount(clientAmt.toFixed(2));
+      setCompanyAmount(companyAmt.toFixed(2));
+    }
+  };
+
+  // Handle PLN input change — auto-compute the other field
+  const handleSplitChange = (field: 'company' | 'client', value: string) => {
+    if (field === 'company') {
+      setCompanyAmount(value);
+      const v = parseFloat(value);
+      if (!isNaN(v) && totalAmount > 0) {
+        setClientAmount(Math.max(0, Math.round((totalAmount - v) * 100) / 100).toFixed(2));
+      }
+    } else {
+      setClientAmount(value);
+      const v = parseFloat(value);
+      if (!isNaN(v) && totalAmount > 0) {
+        setCompanyAmount(Math.max(0, Math.round((totalAmount - v) * 100) / 100).toFixed(2));
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,6 +243,13 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
       if (formData.expense_for) data.expense_for = formData.expense_for;
     } else {
       data.amount = formData.amount;
+    }
+
+    // Cost splitting
+    if (formData.payer_type === 'CLIENT') {
+      data.company_amount = companyAmount;
+      data.client_amount = clientAmount;
+      if (clientDriver) data.client_driver = clientDriver;
     }
 
     try {
@@ -582,6 +643,113 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
           </select>
         </div>
       </div>
+
+      {/* Cost splitting (CLIENT payer_type) */}
+      {isClientPayer && (
+        <div className="p-4 bg-amber-50/60 border border-amber-200 rounded-xl space-y-4">
+          <p className="text-sm font-semibold text-amber-800">{t('fields.costSplitting')}</p>
+
+          {/* Driver selector */}
+          <div>
+            <label className={labelClasses}>{t('fields.clientDriver')}</label>
+            <select value={clientDriver} onChange={(e) => setClientDriver(e.target.value)} disabled={isLoading} className={inputClasses('client_driver')}>
+              <option value="">—</option>
+              {drivers.map(d => (
+                <option key={d.id} value={d.id}>{d.first_name} {d.last_name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Split mode toggle */}
+          <div className="flex gap-1 p-1 bg-white rounded-lg border border-amber-200 w-fit">
+            {(['PLN', '%'] as const).map(mode => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setSplitMode(mode)}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  splitMode === mode
+                    ? 'bg-amber-500 text-white shadow-sm'
+                    : 'text-amber-700 hover:bg-amber-100'
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+
+          {/* Split amount fields */}
+          {splitMode === '%' ? (
+            <div>
+              <label className={labelClasses}>{t('fields.clientPercent')}</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={clientPercent}
+                  onChange={(e) => handlePercentChange(e.target.value)}
+                  onWheel={noWheel}
+                  disabled={isLoading || totalAmount <= 0}
+                  className={`${inputClasses('client_percent')} max-w-[120px]`}
+                  placeholder="0"
+                />
+                <span className="text-sm text-amber-700">%</span>
+                {totalAmount > 0 && clientPercent && (
+                  <span className="text-xs text-amber-600">
+                    = {clientAmount} PLN
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelClasses}>{t('fields.companyAmount')}</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={companyAmount}
+                  onChange={(e) => handleSplitChange('company', e.target.value)}
+                  onWheel={noWheel}
+                  disabled={isLoading}
+                  className={inputClasses('company_amount')}
+                />
+                {renderError('company_amount')}
+              </div>
+              <div>
+                <label className={labelClasses}>{t('fields.clientAmount')}</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={clientAmount}
+                  onChange={(e) => handleSplitChange('client', e.target.value)}
+                  onWheel={noWheel}
+                  disabled={isLoading}
+                  className={inputClasses('client_amount')}
+                />
+                {renderError('client_amount')}
+              </div>
+            </div>
+          )}
+
+          {/* Split validation indicator */}
+          {totalAmount > 0 && (companyAmount || clientAmount) && (
+            <div className={`flex items-center gap-2 text-sm ${splitValid ? 'text-green-600' : 'text-red-600'}`}>
+              {splitValid ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+              <span>
+                {splitValid
+                  ? `${t('fields.companyAmount')}: ${companyAmount} + ${t('fields.clientAmount')}: ${clientAmount} = ${totalAmount.toFixed(2)} PLN`
+                  : `${t('fields.splitMismatch')}: ${splitSum.toFixed(2)} ≠ ${totalAmount.toFixed(2)}`
+                }
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {renderTypeSpecificFields()}
 

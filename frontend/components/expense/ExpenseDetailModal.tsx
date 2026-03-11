@@ -2,7 +2,7 @@
 
 import { createElement } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { Expense } from '@/types/expense';
+import { Expense, ApprovalStatus } from '@/types/expense';
 import { X, Pencil, ExternalLink, FileText, Paperclip } from 'lucide-react';
 import { getCategoryIcon, getCategoryStyle, getCategoryLabel, formatDate, formatAmount } from './expense-utils';
 
@@ -21,6 +21,13 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
     </div>
   );
 }
+
+const APPROVAL_BADGE_STYLES: Record<ApprovalStatus, string> = {
+  DRAFT: 'bg-slate-100 text-slate-600',
+  SENT: 'bg-blue-100 text-blue-700',
+  REVIEW: 'bg-amber-100 text-amber-700',
+  APPROVED: 'bg-green-100 text-green-700',
+};
 
 function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose: () => void; onEdit?: (expense: Expense) => void }) {
   const t = useTranslations('expenses');
@@ -79,6 +86,26 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
         )}
         <DetailRow label={t('fields.paymentMethod')} value={t(`paymentMethods.${expense.payment_method}`)} />
         <DetailRow label={t('fields.payerType')} value={t(`payerTypes.${expense.payer_type}`)} />
+        {expense.payer_type === 'CLIENT' && (
+          <>
+            {expense.client_driver_name && (
+              <DetailRow label={t('fields.clientDriver')} value={expense.client_driver_name} />
+            )}
+            {expense.company_amount && (
+              <DetailRow label={t('fields.companyAmount')} value={`${formatAmount(expense.company_amount)} PLN`} />
+            )}
+            {expense.client_amount && (
+              <DetailRow label={t('fields.clientAmount')} value={`${formatAmount(expense.client_amount)} PLN`} />
+            )}
+            {expense.approval_status && (
+              <DetailRow label={t('fields.approvalStatus')} value={
+                <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-md ${APPROVAL_BADGE_STYLES[expense.approval_status]}`}>
+                  {t(`approvalStatuses.${expense.approval_status}`)}
+                </span>
+              } />
+            )}
+          </>
+        )}
         {expense.expense_for && (
           <DetailRow label={t('detail.description')} value={expense.expense_for} />
         )}

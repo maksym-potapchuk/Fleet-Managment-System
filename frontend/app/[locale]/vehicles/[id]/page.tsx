@@ -31,6 +31,7 @@ import {
   Search,
   ChevronDown,
   Archive,
+  Languages,
 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import api from '@/lib/api';
@@ -68,6 +69,7 @@ interface RegulationItem {
   title: string;
   title_pl: string;
   title_uk: string;
+  title_en: string;
   every_km: number;
   notify_before_km: number;
 }
@@ -77,6 +79,7 @@ interface RegulationSchema {
   title: string;
   title_pl: string;
   title_uk: string;
+  title_en: string;
   items: RegulationItem[];
   is_default: boolean;
   created_by: number;
@@ -97,7 +100,7 @@ interface RegulationPlanEntry {
 interface RegulationPlan {
   assigned: true;
   id: number;
-  schema: { id: number; title: string; title_pl: string; title_uk: string };
+  schema: { id: number; title: string; title_pl: string; title_uk: string; title_en: string };
   assigned_at: string;
   entries: RegulationPlanEntry[];
 }
@@ -131,6 +134,7 @@ interface RegulationHistoryEntry {
   item_title: string;
   item_title_pl: string;
   item_title_uk: string;
+  item_title_en: string;
   event_type: 'performed' | 'km_updated' | 'notified';
   km_at_event: number;
   km_remaining: number;
@@ -1391,11 +1395,12 @@ function EquipmentTab({ vehicleId }: { vehicleId: string }) {
 // Helper: pick the right locale title or fall back to default
 // ─────────────────────────────────────────────
 function localTitle(
-  item: { title: string; title_pl: string; title_uk: string },
+  item: { title: string; title_pl: string; title_uk: string; title_en?: string },
   locale: string,
 ): string {
   if (locale === 'pl' && item.title_pl) return item.title_pl;
   if (locale === 'uk' && item.title_uk) return item.title_uk;
+  if (locale === 'en' && item.title_en) return item.title_en;
   return item.title;
 }
 
@@ -1418,8 +1423,9 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
 
   // Add entry form state
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState({ title: '', title_pl: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+  const [addForm, setAddForm] = useState({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
   const [addLoading, setAddLoading] = useState(false);
+  const [addTranslating, setAddTranslating] = useState(false);
 
   // Delete entry state
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -1429,10 +1435,11 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
   const [excludedItemIds, setExcludedItemIds] = useState<Set<number>>(new Set());
 
   // Custom items added during initial assignment
-  interface CustomEntry { id: number; title: string; title_pl: string; every_km: string; notify_before_km: string; last_done_km: string }
+  interface CustomEntry { id: number; title: string; title_pl: string; title_uk: string; title_en: string; every_km: string; notify_before_km: string; last_done_km: string }
   const [customEntries, setCustomEntries] = useState<CustomEntry[]>([]);
   const [showCustomForm, setShowCustomForm] = useState(false);
-  const [customForm, setCustomForm] = useState({ title: '', title_pl: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+  const [customForm, setCustomForm] = useState({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+  const [customTranslating, setCustomTranslating] = useState(false);
   const customIdRef = useRef(0);
 
   const loadRegulation = useCallback(async () => {
@@ -1465,6 +1472,23 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
     loadRegulation();
   }, [loadRegulation]);
 
+  const autoTranslate = async (
+    text: string,
+    setter: React.Dispatch<React.SetStateAction<typeof addForm>>,
+    setTranslating: React.Dispatch<React.SetStateAction<boolean>>,
+  ) => {
+    if (!text.trim()) return;
+    setTranslating(true);
+    try {
+      const res = await api.post<Record<string, string>>('/fleet/translate/', { text: text.trim(), source: locale });
+      setter(prev => ({ ...prev, title_pl: res.data.pl ?? prev.title_pl, title_uk: res.data.uk ?? prev.title_uk, title_en: res.data.en ?? prev.title_en }));
+    } catch (err) {
+      console.error('Translation failed:', err);
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   const handleAssign = async () => {
     if (!defaultSchema) return;
     setSaving(true);
@@ -1481,9 +1505,10 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
       // Create custom entries after assignment
       for (const ce of customEntries) {
         await api.post(`/fleet/vehicles/${vehicleId}/regulation/entries/`, {
-          title: ce.title,
+          title: ce.title_uk || ce.title,
           title_pl: ce.title_pl,
-          title_uk: ce.title,
+          title_uk: ce.title_uk || ce.title,
+          title_en: ce.title_en,
           every_km: parseInt(ce.every_km, 10),
           notify_before_km: parseInt(ce.notify_before_km || '500', 10),
           last_done_km: parseInt(ce.last_done_km || '0', 10),
@@ -1527,9 +1552,10 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
       const res = await api.post<RegulationPlanEntry>(
         `/fleet/vehicles/${vehicleId}/regulation/entries/`,
         {
-          title: addForm.title,
+          title: addForm.title_uk || addForm.title,
           title_pl: addForm.title_pl,
-          title_uk: addForm.title,
+          title_uk: addForm.title_uk || addForm.title,
+          title_en: addForm.title_en,
           every_km: parseInt(addForm.every_km, 10),
           notify_before_km: parseInt(addForm.notify_before_km || '500', 10),
           last_done_km: parseInt(addForm.last_done_km || '0', 10),
@@ -1537,7 +1563,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
       );
       setPlan(prev => prev ? { ...prev, entries: [...prev.entries, res.data] } : prev);
       setShowAddForm(false);
-      setAddForm({ title: '', title_pl: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+      setAddForm({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
     } catch (err) {
       console.error(err);
     } finally {
@@ -1622,25 +1648,37 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
               <div className="bg-white border-2 border-dashed border-[#2D8B7E]/30 rounded-2xl px-3 sm:px-5 py-4 shadow-sm">
                 <p className="text-sm font-bold text-slate-800 mb-3">{t('addEntryTitle')}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryName')}</label>
-                    <input
-                      autoFocus
-                      type="text"
-                      value={addForm.title}
-                      onChange={e => setAddForm(prev => ({ ...prev, title: e.target.value }))}
-                      onKeyDown={e => { if (e.key === 'Escape') setShowAddForm(false); }}
-                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E]"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNamePl')}</label>
-                    <input
-                      type="text"
-                      value={addForm.title_pl}
-                      onChange={e => setAddForm(prev => ({ ...prev, title_pl: e.target.value }))}
-                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E]"
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={addForm.title}
+                        onChange={e => setAddForm(prev => ({ ...prev, title: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Escape') setShowAddForm(false); }}
+                        className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => autoTranslate(addForm.title, setAddForm, setAddTranslating)}
+                        disabled={addTranslating || !addForm.title.trim()}
+                        className="flex items-center gap-1.5 text-xs font-bold text-[#2D8B7E] bg-[#2D8B7E]/10 hover:bg-[#2D8B7E]/20 rounded-xl px-3 py-2 transition-colors disabled:opacity-40 whitespace-nowrap"
+                        title={t('autoTranslate')}
+                      >
+                        {addTranslating
+                          ? <div className="w-3.5 h-3.5 border-2 border-[#2D8B7E] border-t-transparent rounded-full animate-spin" />
+                          : <Languages className="w-3.5 h-3.5" />}
+                        {t('translate')}
+                      </button>
+                    </div>
+                    {(addForm.title_pl || addForm.title_uk || addForm.title_en) && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {locale !== 'uk' && addForm.title_uk && <span className="text-[10px] bg-blue-50 text-blue-600 rounded-lg px-2 py-0.5">🇺🇦 {addForm.title_uk}</span>}
+                        {locale !== 'pl' && addForm.title_pl && <span className="text-[10px] bg-red-50 text-red-600 rounded-lg px-2 py-0.5">🇵🇱 {addForm.title_pl}</span>}
+                        {locale !== 'en' && addForm.title_en && <span className="text-[10px] bg-slate-50 text-slate-600 rounded-lg px-2 py-0.5">🇬🇧 {addForm.title_en}</span>}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryInterval')}</label>
@@ -1685,7 +1723,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                     {t('save')}
                   </button>
                   <button
-                    onClick={() => { setShowAddForm(false); setAddForm({ title: '', title_pl: '', every_km: '', notify_before_km: '500', last_done_km: '0' }); }}
+                    onClick={() => { setShowAddForm(false); setAddForm({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', notify_before_km: '500', last_done_km: '0' }); }}
                     className="text-xs font-bold text-slate-500 hover:text-slate-700 px-3 py-2 transition-colors"
                   >
                     {t('cancel')}
@@ -1991,25 +2029,37 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
         <div className="bg-white border-2 border-dashed border-[#2D8B7E]/30 rounded-2xl px-3 sm:px-5 py-4 shadow-sm mb-4">
           <p className="text-sm font-bold text-slate-800 mb-3">{t('addEntryTitle')}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-            <div>
+            <div className="sm:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryName')}</label>
-              <input
-                autoFocus
-                type="text"
-                value={customForm.title}
-                onChange={e => setCustomForm(prev => ({ ...prev, title: e.target.value }))}
-                onKeyDown={e => { if (e.key === 'Escape') setShowCustomForm(false); }}
-                className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E]"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNamePl')}</label>
-              <input
-                type="text"
-                value={customForm.title_pl}
-                onChange={e => setCustomForm(prev => ({ ...prev, title_pl: e.target.value }))}
-                className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E]"
-              />
+              <div className="flex gap-2">
+                <input
+                  autoFocus
+                  type="text"
+                  value={customForm.title}
+                  onChange={e => setCustomForm(prev => ({ ...prev, title: e.target.value }))}
+                  onKeyDown={e => { if (e.key === 'Escape') setShowCustomForm(false); }}
+                  className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E]"
+                />
+                <button
+                  type="button"
+                  onClick={() => autoTranslate(customForm.title, setCustomForm as React.Dispatch<React.SetStateAction<typeof addForm>>, setCustomTranslating)}
+                  disabled={customTranslating || !customForm.title.trim()}
+                  className="flex items-center gap-1.5 text-xs font-bold text-[#2D8B7E] bg-[#2D8B7E]/10 hover:bg-[#2D8B7E]/20 rounded-xl px-3 py-2 transition-colors disabled:opacity-40 whitespace-nowrap"
+                  title={t('autoTranslate')}
+                >
+                  {customTranslating
+                    ? <div className="w-3.5 h-3.5 border-2 border-[#2D8B7E] border-t-transparent rounded-full animate-spin" />
+                    : <Languages className="w-3.5 h-3.5" />}
+                  {t('translate')}
+                </button>
+              </div>
+              {(customForm.title_pl || customForm.title_uk || customForm.title_en) && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {locale !== 'uk' && customForm.title_uk && <span className="text-[10px] bg-blue-50 text-blue-600 rounded-lg px-2 py-0.5">🇺🇦 {customForm.title_uk}</span>}
+                  {locale !== 'pl' && customForm.title_pl && <span className="text-[10px] bg-red-50 text-red-600 rounded-lg px-2 py-0.5">🇵🇱 {customForm.title_pl}</span>}
+                  {locale !== 'en' && customForm.title_en && <span className="text-[10px] bg-slate-50 text-slate-600 rounded-lg px-2 py-0.5">🇬🇧 {customForm.title_en}</span>}
+                </div>
+              )}
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryInterval')}</label>
@@ -2039,7 +2089,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                 customIdRef.current -= 1;
                 setCustomEntries(prev => [...prev, { id: customIdRef.current, ...customForm }]);
                 setShowCustomForm(false);
-                setCustomForm({ title: '', title_pl: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+                setCustomForm({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
               }}
               disabled={!customForm.title || !customForm.every_km}
               className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#2D8B7E] hover:bg-[#246f65] rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
@@ -2048,7 +2098,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
               {t('save')}
             </button>
             <button
-              onClick={() => { setShowCustomForm(false); setCustomForm({ title: '', title_pl: '', every_km: '', notify_before_km: '500', last_done_km: '0' }); }}
+              onClick={() => { setShowCustomForm(false); setCustomForm({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', notify_before_km: '500', last_done_km: '0' }); }}
               className="text-xs font-bold text-slate-500 hover:text-slate-700 px-3 py-2 transition-colors"
             >
               {t('cancel')}
@@ -2147,6 +2197,7 @@ function RegulationHistoryPanel({ vehicleId }: { vehicleId: string }) {
   const itemTitle = (entry: RegulationHistoryEntry) => {
     if (locale === 'pl' && entry.item_title_pl) return entry.item_title_pl;
     if (locale === 'uk' && entry.item_title_uk) return entry.item_title_uk;
+    if (locale === 'en' && entry.item_title_en) return entry.item_title_en;
     return entry.item_title;
   };
 
@@ -2157,7 +2208,7 @@ function RegulationHistoryPanel({ vehicleId }: { vehicleId: string }) {
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (!acc[key]) {
         acc[key] = {
-          label: d.toLocaleString(locale === 'uk' ? 'uk-UA' : 'pl-PL', { month: 'long', year: 'numeric' }),
+          label: d.toLocaleString(locale === 'uk' ? 'uk-UA' : locale === 'en' ? 'en-GB' : 'pl-PL', { month: 'long', year: 'numeric' }),
           entries: [],
         };
       }

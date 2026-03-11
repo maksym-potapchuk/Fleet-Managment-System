@@ -132,6 +132,16 @@ export const expenseService = {
             if (entry.payment_method) data.payment_method = entry.payment_method;
             if (entry.payer_type) data.payer_type = entry.payer_type;
             if (fe.receipt) data.receipt = fe.receipt;
+            // Cost splitting for FUEL sub-entries: compute per-entry from ratio
+            if (entry.payer_type === 'CLIENT' && entry.company_amount && entry.client_amount) {
+              const entryTotal = parseFloat(fe.amount) || 0;
+              const overallTotal = parseFloat(entry.amount) || 1;
+              const ratio = entryTotal / overallTotal;
+              const clientAmt = Math.ceil(parseFloat(entry.client_amount) * ratio * 100) / 100;
+              data.client_amount = clientAmt;
+              data.company_amount = Math.round((entryTotal - clientAmt) * 100) / 100;
+              if (entry.client_driver) data.client_driver = entry.client_driver;
+            }
             await this.createVehicleExpense(vehicleId, data);
           }
         } else {
@@ -143,6 +153,13 @@ export const expenseService = {
 
           if (entry.payment_method) data.payment_method = entry.payment_method;
           if (entry.payer_type) data.payer_type = entry.payer_type;
+
+          // Cost splitting
+          if (entry.payer_type === 'CLIENT') {
+            if (entry.company_amount) data.company_amount = entry.company_amount;
+            if (entry.client_amount) data.client_amount = entry.client_amount;
+            if (entry.client_driver) data.client_driver = entry.client_driver;
+          }
 
           if (code === 'INSPECTION') {
             data.official_cost = entry.official_cost;

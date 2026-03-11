@@ -29,6 +29,7 @@ export type WashType = 'EXTERIOR' | 'INTERIOR' | 'FULL';
 export type PaymentMethod = 'CASH' | 'CASHLESS';
 export type PayerType = 'COMPANY' | 'CLIENT';
 export type SupplierType = 'DISASSEMBLY' | 'INDIVIDUAL';
+export type ApprovalStatus = 'DRAFT' | 'SENT' | 'REVIEW' | 'APPROVED';
 
 // ── Parts & Invoices ──
 
@@ -88,6 +89,12 @@ export interface Expense {
   payment_method: PaymentMethod;
   payer_type: PayerType;
   expense_for: string;
+  // Cost splitting
+  company_amount: string | null;
+  client_amount: string | null;
+  client_driver: string | null;
+  client_driver_name: string | null;
+  approval_status: ApprovalStatus | null;
   // FUEL
   liters: string | null;
   fuel_type: FuelType | '';
@@ -131,6 +138,10 @@ export interface CreateExpenseData {
   payment_method?: PaymentMethod;
   payer_type?: PayerType;
   expense_for?: string;
+  // Cost splitting
+  company_amount?: string | number;
+  client_amount?: string | number;
+  client_driver?: string;
   // FUEL
   liters?: string | number;
   fuel_type?: FuelType;
@@ -169,6 +180,7 @@ export interface ExpenseFilters {
   max_amount?: number;
   payment_method?: string;
   payer_type?: string;
+  approval_status?: string;
   search?: string;
 }
 
@@ -201,6 +213,10 @@ export interface QuickExpenseEntry {
   payment_method?: PaymentMethod;
   payer_type?: PayerType;
   expense_for?: string;
+  // Cost splitting
+  company_amount?: string;
+  client_amount?: string;
+  client_driver?: string;
   // FUEL
   liters?: string;
   fuel_type?: FuelType;

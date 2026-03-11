@@ -32,7 +32,7 @@ export function LanguageSwitcher() {
 
   const switchLanguage = (newLocale: string) => {
     persistLocale(newLocale);
-    const currentPath = pathname.replace(/^\/(uk|pl)/, '') || '/';
+    const currentPath = pathname.replace(/^\/(uk|pl|en)/, '') || '/';
     router.push(currentPath, { locale: newLocale });
     setIsOpen(false);
   };
@@ -40,6 +40,7 @@ export function LanguageSwitcher() {
   const languages = [
     { code: 'pl', name: t('polish'), flag: '🇵🇱', nativeName: 'Polski' },
     { code: 'uk', name: t('ukrainian'), flag: '🇺🇦', nativeName: 'Українська' },
+    { code: 'en', name: t('english'), flag: '🇬🇧', nativeName: 'English' },
   ];
 
   const currentLanguage = languages.find(lang => lang.code === locale);

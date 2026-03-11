@@ -13,7 +13,8 @@ import { ExpenseEntryList } from './ExpenseEntryList';
 import { ReviewStep } from './ReviewStep';
 import { SubmissionProgress } from './SubmissionProgress';
 import { useSidebar } from '@/app/[locale]/quick-expenses/SidebarContext';
-import { Menu, ChevronLeft, Zap } from 'lucide-react';
+import { useRouter } from '@/src/i18n/routing';
+import { Menu, ChevronLeft, ArrowLeft, Zap } from 'lucide-react';
 
 // ── State ──
 
@@ -152,6 +153,7 @@ export function QuickExpenseWizard() {
   const t = useTranslations('quickExpenses');
   const tExpenses = useTranslations('expenses');
   const { openSidebar } = useSidebar();
+  const router = useRouter();
   const [state, dispatch] = useReducer(wizardReducer, initialState);
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -205,9 +207,13 @@ export function QuickExpenseWizard() {
             <button onClick={openSidebar} className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 active:scale-95">
               <Menu className="h-5 w-5" />
             </button>
-            {canGoBack && (
+            {canGoBack ? (
               <button onClick={handleBack} className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 active:scale-95">
                 <ChevronLeft className="h-5 w-5" />
+              </button>
+            ) : (
+              <button onClick={() => router.push('/dashboard')} className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 active:scale-95">
+                <ArrowLeft className="h-5 w-5" />
               </button>
             )}
           </div>

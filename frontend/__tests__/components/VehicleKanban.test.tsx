@@ -28,6 +28,34 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
+// ─── i18n routing mock (avoids next/navigation ESM resolution in jsdom) ──────
+vi.mock('@/src/i18n/routing', () => ({
+  Link: ({ children, ...props }: { children: React.ReactNode; href: string }) => <a {...props}>{children}</a>,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/',
+  redirect: vi.fn(),
+}));
+
+// ─── @tanstack/react-virtual mock (jsdom has no layout, virtualizer returns 0 items) ──
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: ({ count }: { count: number }) => ({
+    getVirtualItems: () =>
+      Array.from({ length: count }, (_, i) => ({
+        index: i,
+        start: i * 220,
+        size: 220,
+        key: String(i),
+      })),
+    getTotalSize: () => count * 220,
+    measureElement: vi.fn(),
+  }),
+}));
+
+// ─── useDebounce mock (return value instantly, no 300ms delay) ───────────────
+vi.mock('@/hooks/useDebounce', () => ({
+  useDebounce: (value: string) => value,
+}));
+
 // ─── @dnd-kit/core mock ───────────────────────────────────────────────────────
 // We capture onDragEnd from DndContext so we can fire drag events programmatically.
 const dndHandlers = vi.hoisted(() => ({

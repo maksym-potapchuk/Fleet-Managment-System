@@ -142,6 +142,7 @@
   "language": {
     "polish": "Polski",
     "ukrainian": "Українська",
+    "english": "English",
     "switchLanguage": "Zmień język"
   },
   "vehicles": {
@@ -361,6 +362,8 @@
       "addEntryTitle": "Nowa pozycja regulaminu",
       "entryName": "Nazwa",
       "entryNamePl": "Nazwa (PL)",
+      "translate": "Tłumacz",
+      "autoTranslate": "Automatyczne tłumaczenie na inne języki",
       "entryInterval": "Interwał (km)",
       "entryNotifyBefore": "Przypomnienie za (km)",
       "entryLastDone": "Ostatnio (km)",
@@ -521,7 +524,14 @@
       "itemName": "Nazwa",
       "addItem": "Dodaj pozycję",
       "expenseName": "Nazwa wydatku",
-      "expenseNamePlaceholder": "np. Parking, Mycie ręczne"
+      "expenseNamePlaceholder": "np. Parking, Mycie ręczne",
+      "costSplitting": "Podział kosztów",
+      "companyAmount": "Kwota firmy",
+      "clientAmount": "Kwota klienta",
+      "clientDriver": "Kierowca (klient)",
+      "clientPercent": "Procent klienta",
+      "approvalStatus": "Status zatwierdzenia",
+      "splitMismatch": "Suma nie zgadza się"
     },
     "detail": {
       "title": "Szczegóły wydatku",
@@ -551,6 +561,12 @@
       "createdBy": "Dodał",
       "createdAt": "Utworzono",
       "updatedAt": "Zaktualizowano"
+    },
+    "approvalStatuses": {
+      "DRAFT": "Szkic",
+      "SENT": "Wysłano",
+      "REVIEW": "W trakcie",
+      "APPROVED": "Zatwierdzono"
     },
     "paymentMethods": {
       "CASH": "Gotówka",

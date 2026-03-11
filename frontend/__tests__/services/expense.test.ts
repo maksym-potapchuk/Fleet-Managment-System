@@ -231,6 +231,83 @@ describe('expenseService – submitQuickExpenses', () => {
     expect(formData.get('invoice_file')).toBeInstanceOf(File);
   });
 
+  it('sends wash_type for WASHING category', async () => {
+    mockedApi.post.mockResolvedValue({ data: { id: 'exp-1' } });
+
+    const entry = makeEntry({
+      id: 'e1',
+      category_code: 'WASHING',
+      amount: '50',
+      wash_type: 'FULL',
+    });
+
+    await expenseService.submitQuickExpenses('v-1', [entry], () => {});
+
+    const formData = mockedApi.post.mock.calls[0][1] as FormData;
+    expect(formData.get('wash_type')).toBe('FULL');
+  });
+
+  it('sends violation_type and fine_number for FINES category', async () => {
+    mockedApi.post.mockResolvedValue({ data: { id: 'exp-1' } });
+
+    const entry = makeEntry({
+      id: 'e1',
+      category_code: 'FINES',
+      amount: '300',
+      violation_type: 'SPEEDING',
+      fine_number: 'FINE-001',
+      fine_date: '2026-03-05',
+    });
+
+    await expenseService.submitQuickExpenses('v-1', [entry], () => {});
+
+    const formData = mockedApi.post.mock.calls[0][1] as FormData;
+    expect(formData.get('violation_type')).toBe('SPEEDING');
+    expect(formData.get('fine_number')).toBe('FINE-001');
+    expect(formData.get('fine_date')).toBe('2026-03-05');
+  });
+
+  it('sends cost splitting fields for CLIENT payer fuel sub-entries', async () => {
+    mockedApi.post.mockResolvedValue({ data: { id: 'exp-1' } });
+
+    const entry = makeEntry({
+      id: 'e1',
+      category_code: 'FUEL',
+      amount: '200',
+      payer_type: 'CLIENT',
+      company_amount: '120',
+      client_amount: '80',
+      client_driver: 'driver-1',
+      fuel_entries: [
+        { amount: '200', liters: '80', fuel_type: 'DIESEL' },
+      ],
+    });
+
+    await expenseService.submitQuickExpenses('v-1', [entry], () => {});
+
+    const formData = mockedApi.post.mock.calls[0][1] as FormData;
+    expect(formData.get('payer_type')).toBe('CLIENT');
+    expect(formData.get('client_driver')).toBe('driver-1');
+    expect(formData.get('company_amount')).toBeTruthy();
+    expect(formData.get('client_amount')).toBeTruthy();
+  });
+
+  it('sends expense_for for OTHER category', async () => {
+    mockedApi.post.mockResolvedValue({ data: { id: 'exp-1' } });
+
+    const entry = makeEntry({
+      id: 'e1',
+      category_code: 'OTHER',
+      amount: '75',
+      expense_for: 'Parking fees',
+    });
+
+    await expenseService.submitQuickExpenses('v-1', [entry], () => {});
+
+    const formData = mockedApi.post.mock.calls[0][1] as FormData;
+    expect(formData.get('expense_for')).toBe('Parking fees');
+  });
+
   it('continues submitting remaining entries after one fails', async () => {
     mockedApi.post
       .mockRejectedValueOnce(new Error('Network error'))

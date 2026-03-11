@@ -142,6 +142,7 @@
   "language": {
     "polish": "Polski",
     "ukrainian": "Українська",
+    "english": "English",
     "switchLanguage": "Змінити мову"
   },
   "vehicles": {
@@ -361,6 +362,8 @@
       "addEntryTitle": "Новий пункт регламенту",
       "entryName": "Назва",
       "entryNamePl": "Назва (PL)",
+      "translate": "Перекласти",
+      "autoTranslate": "Автоматичний переклад на інші мови",
       "entryInterval": "Інтервал (км)",
       "entryNotifyBefore": "Нагадування за (км)",
       "entryLastDone": "Останній раз (км)",
@@ -521,7 +524,20 @@
       "itemName": "Назва",
       "addItem": "Додати позицію",
       "expenseName": "Назва витрати",
-      "expenseNamePlaceholder": "напр. Паркування, Мийка руками"
+      "expenseNamePlaceholder": "напр. Паркування, Мийка руками",
+      "costSplitting": "Розподіл витрат",
+      "companyAmount": "Сума компанії",
+      "clientAmount": "Сума клієнта",
+      "clientDriver": "Водій (клієнт)",
+      "clientPercent": "Відсоток клієнта",
+      "approvalStatus": "Статус",
+      "splitMismatch": "Сума не збігається"
+    },
+    "approvalStatuses": {
+      "DRAFT": "Чернетка",
+      "SENT": "Надіслано",
+      "REVIEW": "На розгляді",
+      "APPROVED": "Затверджено"
     },
     "paymentMethods": {
       "CASH": "Готівка",

@@ -3,10 +3,12 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { ExpenseCategory, QuickExpenseEntry, ExpensePart, ServiceItem, FuelSubEntry, FuelType, WashType, PaymentMethod, PayerType, InvoiceSearchResult } from '@/types/expense';
 import { Service } from '@/types/service';
+import { Driver } from '@/types/driver';
 import { getAllServices } from '@/services/service';
+import { getAllDrivers } from '@/services/driver';
 import { FileInput } from '@/components/common/FileInput';
 import { InvoiceInput } from '@/components/expense/InvoiceInput';
-import { ChevronDown, Plus, Check, Trash2 } from 'lucide-react';
+import { ChevronDown, Plus, Check, Trash2, AlertCircle } from 'lucide-react';
 
 let _entryId = 0;
 
@@ -159,6 +161,14 @@ export function QuickEntryForm({
   const [payerType, setPayerType] = useState<PayerType>(editingEntry?.payer_type || 'COMPANY');
   const [expenseFor, setExpenseFor] = useState(editingEntry?.expense_for || '');
 
+  // ── Cost splitting ──
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [clientDriver, setClientDriver] = useState(editingEntry?.client_driver || '');
+  const [splitMode, setSplitMode] = useState<'PLN' | '%'>('PLN');
+  const [companyAmount, setCompanyAmount] = useState(editingEntry?.company_amount || '');
+  const [clientAmount, setClientAmount] = useState(editingEntry?.client_amount || '');
+  const [clientPercent, setClientPercent] = useState('');
+
   // ── PARTS detail ──
   const [sourceName, setSourceName] = useState(editingEntry?.source_name || '');
 
@@ -229,6 +239,16 @@ export function QuickEntryForm({
     return () => { ignore = true; };
   }, [code]);
 
+  // Load drivers when payer type is CLIENT
+  useEffect(() => {
+    if (payerType !== 'CLIENT' || drivers.length > 0) return;
+    let ignore = false;
+    getAllDrivers()
+      .then(d => { if (!ignore) setDrivers(d); })
+      .catch(() => {});
+    return () => { ignore = true; };
+  }, [payerType, drivers.length]);
+
   // ── Computed totals ──
   const serviceTotal = serviceItems.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
   const partsTotal = parts.reduce((sum, p) => sum + (parseFloat(p.unit_price as string) || 0) * (p.quantity || 1), 0);
@@ -251,6 +271,46 @@ export function QuickEntryForm({
   const removePart = useCallback((idx: number) => {
     setParts(prev => prev.filter((_, i) => i !== idx));
   }, []);
+
+  // ── Total amount (for split validation) ──
+  const totalAmount = useMemo(() => {
+    if (code === 'FUEL') return fuelTotal;
+    if (code === 'SERVICE') return serviceTotal;
+    if (code === 'PARTS' || code === 'ACCESSORIES' || code === 'DOCUMENTS') return partsTotal;
+    if (code === 'INSPECTION') return inspectionTotal;
+    return parseFloat(amount) || 0;
+  }, [code, fuelTotal, serviceTotal, partsTotal, inspectionTotal, amount]);
+
+  const isClientPayer = payerType === 'CLIENT';
+  const splitSum = (parseFloat(companyAmount) || 0) + (parseFloat(clientAmount) || 0);
+  const splitValid = !isClientPayer || (totalAmount > 0 && Math.abs(splitSum - totalAmount) < 0.01);
+
+  const handlePercentChange = useCallback((pct: string) => {
+    setClientPercent(pct);
+    const pctNum = parseFloat(pct);
+    if (!isNaN(pctNum) && totalAmount > 0) {
+      const clientAmt = Math.ceil(totalAmount * pctNum) / 100;
+      const companyAmt = Math.round((totalAmount - clientAmt) * 100) / 100;
+      setClientAmount(clientAmt.toFixed(2));
+      setCompanyAmount(companyAmt.toFixed(2));
+    }
+  }, [totalAmount]);
+
+  const handleSplitChange = useCallback((field: 'company' | 'client', value: string) => {
+    if (field === 'company') {
+      setCompanyAmount(value);
+      const v = parseFloat(value);
+      if (!isNaN(v) && totalAmount > 0) {
+        setClientAmount(Math.max(0, Math.round((totalAmount - v) * 100) / 100).toFixed(2));
+      }
+    } else {
+      setClientAmount(value);
+      const v = parseFloat(value);
+      if (!isNaN(v) && totalAmount > 0) {
+        setCompanyAmount(Math.max(0, Math.round((totalAmount - v) * 100) / 100).toFixed(2));
+      }
+    }
+  }, [totalAmount]);
 
   // ── Validation ──
   const hasInvoice = !!foundInvoice || !!invoiceFile;
@@ -328,6 +388,13 @@ export function QuickEntryForm({
       if (expenseFor) entry.expense_for = expenseFor;
     }
 
+    // Cost splitting
+    if (payerType === 'CLIENT') {
+      entry.company_amount = companyAmount;
+      entry.client_amount = clientAmount;
+      if (clientDriver) entry.client_driver = clientDriver;
+    }
+
     onAdd(entry);
   };
 
@@ -391,6 +458,94 @@ export function QuickEntryForm({
               </div>
             </div>
           </div>
+
+          {/* ── Cost splitting (CLIENT) ── */}
+          {isClientPayer && (
+            <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-xl space-y-3">
+              <p className="text-xs font-semibold text-amber-800">{tExpenses('fields.costSplitting')}</p>
+
+              {/* Driver selector */}
+              <div className="relative">
+                <label className={labelClasses}>{tExpenses('fields.clientDriver')}</label>
+                <select
+                  value={clientDriver}
+                  onChange={(e) => setClientDriver(e.target.value)}
+                  className={`${inputClasses} appearance-none pr-9`}
+                >
+                  <option value="">—</option>
+                  {drivers.map(d => (
+                    <option key={d.id} value={d.id}>{d.first_name} {d.last_name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 bottom-3 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
+
+              {/* Split mode toggle */}
+              <div className="flex gap-1 p-1 bg-white rounded-lg border border-amber-200 w-fit">
+                {(['PLN', '%'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setSplitMode(mode)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
+                      splitMode === mode
+                        ? 'bg-amber-500 text-white shadow-sm'
+                        : 'text-amber-700 hover:bg-amber-100'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+
+              {/* Split fields */}
+              {splitMode === '%' ? (
+                <div className="flex items-center gap-2">
+                  <NumericInput
+                    value={clientPercent}
+                    onChange={handlePercentChange}
+                    placeholder="0"
+                    label={tExpenses('fields.clientPercent')}
+                    className={`${inputClasses} max-w-[100px]`}
+                  />
+                  <span className="text-xs text-amber-700 mt-5">%</span>
+                  {totalAmount > 0 && clientPercent && (
+                    <span className="text-xs text-amber-600 mt-5">= {clientAmount} PLN</span>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <NumericInput
+                    value={companyAmount}
+                    onChange={(val) => handleSplitChange('company', val)}
+                    placeholder="0.00"
+                    label={tExpenses('fields.companyAmount')}
+                    className={inputClasses}
+                  />
+                  <NumericInput
+                    value={clientAmount}
+                    onChange={(val) => handleSplitChange('client', val)}
+                    placeholder="0.00"
+                    label={tExpenses('fields.clientAmount')}
+                    className={inputClasses}
+                  />
+                </div>
+              )}
+
+              {/* Validation */}
+              {totalAmount > 0 && (companyAmount || clientAmount) && (
+                <div className={`flex items-center gap-1.5 text-xs ${splitValid ? 'text-green-600' : 'text-red-600'}`}>
+                  {splitValid ? <Check className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                  <span>
+                    {splitValid
+                      ? `${companyAmount} + ${clientAmount} = ${totalAmount.toFixed(2)} PLN`
+                      : `${splitSum.toFixed(2)} ≠ ${totalAmount.toFixed(2)}`
+                    }
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── FUEL (multi-entry) ── */}
           {code === 'FUEL' && (

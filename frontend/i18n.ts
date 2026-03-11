@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 
 // Supported locales
-export const locales = ['pl', 'uk'] as const;
+export const locales = ['pl', 'uk', 'en'] as const;
 export type Locale = (typeof locales)[number];
 
 // Default locale
