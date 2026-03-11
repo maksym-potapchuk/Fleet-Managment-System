@@ -18,7 +18,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto delete-superuser db-dump db-seed db-reset dump seed seed-defaults create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-reg-schema drop-vehicles trello-lists import-trello import-trello-dry import-trello-all import-trello-all-dry import-trello-reposition lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
+.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto delete-superuser db-dump db-seed db-reset dump seed seed-defaults seed-categories create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-reg-schema drop-vehicles trello-lists import-trello import-trello-dry import-trello-all import-trello-all-dry import-trello-reposition lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
 
 help:
 >@echo "Available commands:"
@@ -57,7 +57,8 @@ help:
 >@echo "  make db-dump             - Export DB as JSON fixture to backups/"
 >@echo "  make db-seed             - Load latest JSON fixture from backups/"
 >@echo "  make db-reset            - Flush database and re-apply migrations"
->@echo "  make seed-defaults       - Seed regulation schema + equipment (idempotent)"
+>@echo "  make seed-defaults       - Seed all defaults (categories, regulation schema, equipment)"
+>@echo "  make seed-categories     - Seed expense categories only (idempotent)"
 >@echo "  make create-reg-schema   - Seed default vehicle regulation schema"
 >@echo "  make create-driver-vehicle - Create driver +380663234712, vehicle, assign"
 >@echo "  make create-driver-vehicle-force - Same, recreate/reassign if exists"
@@ -196,8 +197,12 @@ dump: db-dump
 seed: db-seed
 
 seed-defaults:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py seed_expense_categories
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py create_vehicle_reg_basic_schema
->@echo "Default regulation schema and equipment seeded."
+>@echo "Default data seeded (expense categories, regulation schema, equipment)."
+
+seed-categories:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py seed_expense_categories
 
 create-reg-schema: seed-defaults
 
