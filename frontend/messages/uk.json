@@ -157,6 +157,7 @@
     "allYears": "Всі роки",
     "empty": "Порожньо",
     "dropHere": "✨ Відпустіть тут",
+    "dragColumn": "Перемістити колонку",
     "year": "рік",
     "assignedDriver": "Призначений водій",
     "noDriver": "Не призначено",
@@ -284,6 +285,9 @@
     "driver": {
       "searchPlaceholder": "Пошук за ім'ям..."
     },
+    "fuel": {
+      "none": "Немає"
+    },
     "tabs": {
       "service": "Сервіс",
       "equipment": "Обладнання",
@@ -353,6 +357,18 @@
       "assignSubtitle": "Схема: {schema} · вкажіть пробіг останнього виконання для кожного пункту",
       "saveRegulation": "Зберегти регламент",
       "saveError": "Помилка при збереженні",
+      "addEntry": "Додати пункт",
+      "addEntryTitle": "Новий пункт регламенту",
+      "entryName": "Назва",
+      "entryNamePl": "Назва (PL)",
+      "entryInterval": "Інтервал (км)",
+      "entryNotifyBefore": "Нагадування за (км)",
+      "entryLastDone": "Останній раз (км)",
+      "save": "Зберегти",
+      "cancel": "Скасувати",
+      "deleteEntry": "Видалити пункт",
+      "deleteConfirm": "Видалити цей пункт регламенту?",
+      "removeFromList": "Прибрати",
       "planView": "План",
       "historyView": "Історія",
       "history": {
@@ -618,10 +634,8 @@
     "creating": "Створення...",
     "createAndAssign": "Створити та призначити",
     "vehiclePhotos": "Фото автомобіля",
-    "photosHint": "Додайте до 10 фото",
+    "photosHint": "Додайте фото транспорту",
     "addPhoto": "Додати фото",
-    "morePhotos": "ще {count}",
-    "photoLimit": "Досягнуто ліміт 10 фото",
     "new": "НОВЕ",
     "archive": "Архівувати",
     "archiveConfirm": "Архівувати цей автомобіль?",

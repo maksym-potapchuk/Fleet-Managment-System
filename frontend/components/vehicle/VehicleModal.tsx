@@ -16,7 +16,7 @@ interface VehicleModalProps {
   onArchive?: () => void;
 }
 
-const MANUFACTURERS: ManufacturerChoice[] = ['Toyota', 'Ford', 'Honda', 'Chevrolet', 'BMW', 'Lexus', 'Audi'];
+const MANUFACTURERS: ManufacturerChoice[] = ['Toyota', 'Ford', 'Honda', 'Chevrolet', 'BMW', 'Lexus', 'Audi', 'Tesla'];
 
 const STATUS_VALUES: VehicleStatus[] = [
   'AUCTION', 'FOCUS', 'GAS_INSTALL', 'SERVICE', 'CLEANING',
@@ -169,13 +169,11 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
   }, []);
 
   const totalPhotos = existingPhotos.length + stagedFiles.length;
-  const canAddMore = totalPhotos < 10;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const slots = 10 - totalPhotos;
-    const toAdd = files.slice(0, slots);
+    const toAdd = files;
     const newUrls = toAdd.map(f => URL.createObjectURL(f));
     setStagedFiles(prev => [...prev, ...toAdd]);
     setStagedPreviews(prev => [...prev, ...newUrls]);
@@ -233,6 +231,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
       const { is_temporary_plate, ...rest } = formData;
       const vehicleData: CreateVehicleData = {
         ...rest,
+        year: rest.year || null,
         car_number: rest.car_number?.trim() || undefined,
         is_temporary_plate,
         initial_km: kmNum,
@@ -432,15 +431,14 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      {t('year')} <span className="text-red-400">*</span>
+                      {t('year')}
                     </label>
                     <input
                       type="number"
-                      required
                       min="1900"
                       max={new Date().getFullYear() + 1}
-                      value={formData.year}
-                      onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                      value={formData.year ?? ''}
+                      onChange={(e) => setFormData({ ...formData, year: e.target.value ? parseInt(e.target.value) : null })}
                       className={inputFilled}
                     />
                   </div>
@@ -693,9 +691,11 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                       </label>
                       <p className="text-[11px] text-slate-400">{t('photosHint')}</p>
                     </div>
-                    <span className="text-xs text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
-                      {totalPhotos}/10
-                    </span>
+                    {totalPhotos > 0 && (
+                      <span className="text-xs text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
+                        {totalPhotos}
+                      </span>
+                    )}
                   </div>
 
                   {totalPhotos > 0 && (
@@ -740,31 +740,22 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                     </div>
                   )}
 
-                  {canAddMore ? (
-                    <>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handleFileSelect}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full py-4 border-2 border-dashed border-slate-200 hover:border-[#2D8B7E] hover:bg-[#2D8B7E]/5 rounded-xl text-sm font-medium text-slate-400 hover:text-[#2D8B7E] transition-all flex items-center justify-center gap-2"
-                      >
-                        <Upload className="w-4 h-4" />
-                        {t('addPhoto')}
-                        {totalPhotos > 0 && (
-                          <span className="text-xs font-normal">({t('morePhotos', { count: 10 - totalPhotos })})</span>
-                        )}
-                      </button>
-                    </>
-                  ) : (
-                    <p className="text-xs text-slate-400 text-center py-2">{t('photoLimit')}</p>
-                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-4 border-2 border-dashed border-slate-200 hover:border-[#2D8B7E] hover:bg-[#2D8B7E]/5 rounded-xl text-sm font-medium text-slate-400 hover:text-[#2D8B7E] transition-all flex items-center justify-center gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {t('addPhoto')}
+                  </button>
                 </div>
               </div>
             )}

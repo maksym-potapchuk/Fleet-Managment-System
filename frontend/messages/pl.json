@@ -157,6 +157,7 @@
     "allYears": "Wszystkie lata",
     "empty": "Puste",
     "dropHere": "✨ Upuść tutaj",
+    "dragColumn": "Przeciągnij kolumnę",
     "year": "rok",
     "assignedDriver": "Przypisany kierowca",
     "noDriver": "Brak kierowcy",
@@ -284,6 +285,9 @@
     "driver": {
       "searchPlaceholder": "Szukaj po imieniu..."
     },
+    "fuel": {
+      "none": "Brak"
+    },
     "tabs": {
       "service": "Serwis",
       "equipment": "Wyposażenie",
@@ -353,6 +357,18 @@
       "assignSubtitle": "Schemat: {schema} · podaj przebieg ostatniego wykonania dla każdego elementu",
       "saveRegulation": "Zapisz regulamin",
       "saveError": "Błąd podczas zapisywania",
+      "addEntry": "Dodaj pozycję",
+      "addEntryTitle": "Nowa pozycja regulaminu",
+      "entryName": "Nazwa",
+      "entryNamePl": "Nazwa (PL)",
+      "entryInterval": "Interwał (km)",
+      "entryNotifyBefore": "Przypomnienie za (km)",
+      "entryLastDone": "Ostatnio (km)",
+      "save": "Zapisz",
+      "cancel": "Anuluj",
+      "deleteEntry": "Usuń pozycję",
+      "deleteConfirm": "Usunąć tę pozycję regulaminu?",
+      "removeFromList": "Usuń",
       "planView": "Plan",
       "historyView": "Historia",
       "history": {
@@ -618,10 +634,8 @@
     "creating": "Tworzenie...",
     "createAndAssign": "Utwórz i przypisz",
     "vehiclePhotos": "Zdjęcia pojazdu",
-    "photosHint": "Dodaj do 10 zdjęć",
+    "photosHint": "Dodaj zdjęcia pojazdu",
     "addPhoto": "Dodaj zdjęcie",
-    "morePhotos": "jeszcze {count}",
-    "photoLimit": "Osiągnięto limit 10 zdjęć",
     "new": "NOWE",
     "archive": "Archiwizuj",
     "archiveConfirm": "Archiwizować ten pojazd?",

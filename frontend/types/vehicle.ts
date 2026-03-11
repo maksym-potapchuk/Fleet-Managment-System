@@ -61,7 +61,8 @@ export type ManufacturerChoice =
   | 'Chevrolet'
   | 'BMW'
   | 'Lexus'
-  | 'Audi';
+  | 'Audi'
+  | 'Tesla';
 
 export type FuelType = 'GASOLINE' | 'DIESEL' | 'LPG' | 'LPG_GASOLINE' | 'ELECTRIC' | 'HYBRID';
 
@@ -69,7 +70,7 @@ export interface Vehicle {
   id: string; // UUID
   model: string;
   manufacturer: ManufacturerChoice;
-  year: number;
+  year: number | null;
   cost: string; // Decimal as string
   vin_number: string;
   car_number: string | null;
@@ -128,7 +129,7 @@ export interface MileageLog {
 export interface CreateVehicleData {
   model: string;
   manufacturer: ManufacturerChoice;
-  year: number;
+  year: number | null;
   cost: string | number;
   vin_number: string;
   car_number?: string;

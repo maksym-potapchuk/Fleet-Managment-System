@@ -20,7 +20,6 @@ const makeDriver = (overrides: Partial<Driver> = {}): Driver => ({
   first_name: 'Jan',
   last_name: 'Kowalski',
   phone_number: '48123456789',
-  email: 'jan@example.com',
   has_vehicle: false,
   is_active_driver: true,
   last_active_at: '2025-01-15T10:00:00Z',
