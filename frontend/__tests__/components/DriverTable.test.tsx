@@ -74,8 +74,8 @@ describe('DriverTable – driver display', () => {
 });
 
 describe('DriverTable – actions', () => {
-  let onEdit: ReturnType<typeof vi.fn>;
-  let onDelete: ReturnType<typeof vi.fn>;
+  let onEdit: ReturnType<typeof vi.fn<(driver: Driver) => void>>;
+  let onDelete: ReturnType<typeof vi.fn<(driver: Driver) => void>>;
   let driver: Driver;
 
   beforeEach(() => {

@@ -116,21 +116,22 @@ export function ExpenseFilters({ filters, onChange, showVehicleFilter = false, s
         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
       </div>
 
-      {/* Date from */}
-      <input
-        type="date"
-        value={filters.date_from || ''}
-        onChange={(e) => onChange({ ...filters, date_from: e.target.value || undefined })}
-        className={dateClass}
-      />
-
-      {/* Date to */}
-      <input
-        type="date"
-        value={filters.date_to || ''}
-        onChange={(e) => onChange({ ...filters, date_to: e.target.value || undefined })}
-        className={dateClass}
-      />
+      {/* Date range */}
+      <div className="flex items-center gap-1.5 w-full sm:w-auto">
+        <input
+          type="date"
+          value={filters.date_from || ''}
+          onChange={(e) => onChange({ ...filters, date_from: e.target.value || undefined })}
+          className={`${dateClass} w-full sm:w-auto min-w-[130px]`}
+        />
+        <span className="text-slate-400 text-xs shrink-0">–</span>
+        <input
+          type="date"
+          value={filters.date_to || ''}
+          onChange={(e) => onChange({ ...filters, date_to: e.target.value || undefined })}
+          className={`${dateClass} w-full sm:w-auto min-w-[130px]`}
+        />
+      </div>
 
       {/* Clear */}
       {hasActiveFilters && (

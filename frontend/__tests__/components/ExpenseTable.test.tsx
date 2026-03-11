@@ -95,8 +95,8 @@ describe('ExpenseTable – expense display', () => {
 });
 
 describe('ExpenseTable – actions', () => {
-  let onEdit: ReturnType<typeof vi.fn>;
-  let onDelete: ReturnType<typeof vi.fn>;
+  let onEdit: ReturnType<typeof vi.fn<(expense: Expense) => void>>;
+  let onDelete: ReturnType<typeof vi.fn<(expense: Expense) => void>>;
   let expense: Expense;
 
   beforeEach(() => {
