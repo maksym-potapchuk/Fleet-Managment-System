@@ -1646,16 +1646,29 @@ const MobileVehicleCard = memo(function MobileVehicleCard({ vehicle, columns, on
             onClick={() => setShowStatusPicker(false)}
           />
           <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl animate-slide-up">
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="w-8 h-1 rounded-full bg-slate-300" />
-            </div>
+            {/* Drag handle — tap to close */}
+            <button
+              onClick={() => setShowStatusPicker(false)}
+              className="w-full flex justify-center pt-3 pb-1 cursor-pointer"
+              aria-label="Close"
+            >
+              <div className="w-10 h-1.5 rounded-full bg-slate-300" />
+            </button>
             {/* Sheet header */}
-            <div className="px-5 pt-2 pb-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-                {vehicle.car_number || t('noPlate')}
-              </p>
-              <p className="text-sm font-bold text-slate-700">Оберіть новий статус</p>
+            <div className="flex items-center justify-between px-5 pt-2 pb-4">
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                  {vehicle.car_number || t('noPlate')}
+                </p>
+                <p className="text-sm font-bold text-slate-700">Оберіть новий статус</p>
+              </div>
+              <button
+                onClick={() => setShowStatusPicker(false)}
+                className="p-2 -mr-2 rounded-xl active:bg-slate-100 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
             </div>
             {/* Status grid 2-column */}
             <div className="grid grid-cols-2 gap-2.5 px-4 pb-8">
