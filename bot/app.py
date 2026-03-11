@@ -50,11 +50,14 @@ def _escape_html(text: str) -> str:
     )
 
 
+CAR_NUM_PREFIX = "🚗 "
+
+
 @router.message(F.text == MAIN_MENU_BUTTON)
 async def back_to_main_menu(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer(
-        "Оберіть дію:",
+        "Головне меню 👇",
         reply_markup=get_main_menu_keyboard(),
     )
 
@@ -71,21 +74,26 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     )
     if driver_any:
         if driver_any.is_active_driver:
+            name = driver_any.first_name or ""
+            greeting = f"Привіт, {name}! 👋" if name else "Привіт! 👋"
             await message.answer(
-                "Привіт! 👋 Оберіть дію:",
+                f"{greeting}\nОберіть, що потрібно зробити:",
                 reply_markup=get_main_menu_keyboard(),
             )
         else:
             await message.answer(
-                "Ваш акаунт водія деактивовано. Зверніться до диспетчера.",
+                "⛔ Ваш акаунт деактивовано.\n"
+                "Зверніться до диспетчера, щоб відновити доступ.",
                 reply_markup=ReplyKeyboardRemove(),
             )
         return
 
     await message.answer(
-        "Привіт! 👋\n"
-        "Щоб активувати свій акаунт водія, поділіться, будь ласка, "
-        "своїм номером телефону.",
+        "Привіт! 👋\n\n"
+        "Я — бот Fleet Manager. Допомагаю водіям відстежувати "
+        "пробіг, сервіс та регламент авто.\n\n"
+        "Для початку — поділіться номером телефону, "
+        "щоб я міг вас ідентифікувати.",
         reply_markup=get_share_phone_keyboard(),
     )
 
@@ -98,7 +106,8 @@ async def handle_contact(message: Message) -> None:
 
     if contact.user_id and message.from_user and contact.user_id != message.from_user.id:
         await message.answer(
-            "Будь ласка, поділіться саме своїм номером телефону.",
+            "Потрібен саме ваш номер телефону.\n"
+            "Натисніть кнопку нижче ⬇️",
             reply_markup=get_share_phone_keyboard(),
         )
         return
@@ -107,7 +116,7 @@ async def handle_contact(message: Message) -> None:
     telegram_id = message.from_user.id if message.from_user else None
     if telegram_id is None:
         await message.answer(
-            "Не вдалося отримати ваш Telegram ID. Спробуйте ще раз пізніше.",
+            "Не вдалося отримати Telegram ID. Спробуйте пізніше або напишіть /start.",
             reply_markup=ReplyKeyboardRemove(),
         )
         return
@@ -119,20 +128,25 @@ async def handle_contact(message: Message) -> None:
     )
     if driver is None:
         await message.answer(
-            "Користувача з таким номером телефону не знайдено.\n"
-            "Будь ласка, зверніться до диспетчера або адміністратора.",
+            "Номер не знайдено в системі 😕\n\n"
+            "Переконайтесь, що диспетчер додав вас у Fleet Manager "
+            "із цим номером телефону.\n\n"
+            "Після додавання — натисніть /start ще раз.",
             reply_markup=ReplyKeyboardRemove(),
         )
         return
 
+    name = driver.first_name or ""
+    greeting = f"{name}, в" if name else "В"
     await message.answer(
-        "Вас успішно активовано як водія ✅\n"
-        "Тепер ви можете користуватися ботом.",
+        f"✅ {greeting}ас успішно активовано!\n\n"
+        "Тепер ви можете оновлювати пробіг, переглядати регламент "
+        "та повідомляти про сервіс.",
         reply_markup=get_main_menu_keyboard(),
     )
 
 
-@router.message(F.text == "Повідоміти пробіг")
+@router.message(F.text == "📍 Пробіг")
 async def start_mileage_report(message: Message, state: FSMContext) -> None:
     if not message.from_user:
         return
@@ -142,7 +156,7 @@ async def start_mileage_report(message: Message, state: FSMContext) -> None:
     )
     if not driver:
         await message.answer(
-            "Спочатку активуйте акаунт через /start.",
+            "Спочатку активуйте акаунт — натисніть /start",
             reply_markup=ReplyKeyboardRemove(),
         )
         return
@@ -152,7 +166,8 @@ async def start_mileage_report(message: Message, state: FSMContext) -> None:
     )
     if not vehicles:
         await message.answer(
-            "У вас немає призначених авто. Зверніться до диспетчера.",
+            "У вас поки немає призначених авто.\n"
+            "Зверніться до диспетчера.",
             reply_markup=get_main_menu_keyboard(),
         )
         return
@@ -164,8 +179,10 @@ async def start_mileage_report(message: Message, state: FSMContext) -> None:
         mileage_vehicles_by_car={v.car_number: str(v.id) for v in vehicles},
     )
     await message.answer(
+        "📍 <b>Оновлення пробігу</b>\n\n"
         "Оберіть авто:",
         reply_markup=get_vehicles_keyboard(car_numbers),
+        parse_mode="HTML",
     )
 
 
@@ -174,33 +191,35 @@ async def mileage_vehicle_chosen(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     car_numbers = data.get("mileage_vehicle_car_numbers") or []
     vehicles_by_car = data.get("mileage_vehicles_by_car") or {}
-    if message.text not in car_numbers:
-        return  # Головне меню або інше — обробить back_to_main_menu або ігноруємо
-    vehicle_id = vehicles_by_car.get(message.text)
+    car_number = (message.text or "").removeprefix(CAR_NUM_PREFIX)
+    if car_number not in car_numbers:
+        return
+    vehicle_id = vehicles_by_car.get(car_number)
     if not vehicle_id:
-        await message.answer("Помилка: авто не знайдено.")
+        await message.answer("Авто не знайдено. Спробуйте ще раз.")
         return
     await state.update_data(
         mileage_vehicle_id=vehicle_id,
-        mileage_car_number=message.text,
+        mileage_car_number=car_number,
     )
     await state.set_state(MileageReportStates.choosing_unit)
     await message.answer(
-        "Оберіть одиницю пробігу:",
+        "В яких одиницях вводитимете пробіг?",
         reply_markup=get_mileage_unit_keyboard(),
     )
 
 
-@router.message(MileageReportStates.choosing_unit, F.text.in_(["Кілометри", "Милі"]))
+@router.message(MileageReportStates.choosing_unit, F.text.in_(["🔢 Кілометри", "🔢 Милі"]))
 async def mileage_unit_chosen(message: Message, state: FSMContext) -> None:
     from uuid import UUID
 
-    unit = message.text  # "Кілометри" або "Милі"
+    unit = (message.text or "").removeprefix("🔢 ")
     await state.update_data(mileage_unit=unit)
     await state.set_state(MileageReportStates.entering_value)
 
     data = await state.get_data()
     vehicle_id = data.get("mileage_vehicle_id")
+    car_number = data.get("mileage_car_number", "")
     current_km = 0
     if vehicle_id:
         current_km = await asyncio.to_thread(
@@ -209,18 +228,17 @@ async def mileage_unit_chosen(message: Message, state: FSMContext) -> None:
 
     await state.update_data(mileage_current_km=current_km)
 
-    if unit == "Кілометри":
-        await message.answer(
-            f"Поточний пробіг на авто: {current_km} км.\n"
-            f"Введіть новий пробіг у кілометрах (число не менше {current_km}), наприклад: 45000",
-            reply_markup=ReplyKeyboardRemove(),
-        )
-    else:
-        await message.answer(
-            f"Поточний пробіг на авто: {current_km} км.\n"
-            f"Введіть новий пробіг у милях (число, не менше ніж відповідає {current_km} км), наприклад: 28000",
-            reply_markup=ReplyKeyboardRemove(),
-        )
+    def _fmt(km: int) -> str:
+        return f"{km:,}".replace(",", " ")
+
+    unit_label = "км" if unit == "Кілометри" else "миль"
+    await message.answer(
+        f"🚗 <b>{_escape_html(car_number)}</b>\n"
+        f"Поточний пробіг: <b>{_fmt(current_km)} км</b>\n\n"
+        f"Введіть новий пробіг ({unit_label}):",
+        reply_markup=ReplyKeyboardRemove(),
+        parse_mode="HTML",
+    )
 
 
 @router.message(MileageReportStates.entering_value, F.text)
@@ -244,11 +262,12 @@ async def mileage_value_entered(message: Message, state: FSMContext) -> None:
         value = float(raw)
     except ValueError:
         await message.answer(
-            "Введіть одне число (наприклад 45000 або 28000.5). Без тексту."
+            "Введіть число, наприклад: <b>45000</b> або <b>28000.5</b>",
+            parse_mode="HTML",
         )
         return
     if value < 0:
-        await message.answer("Пробіг не може бути від'ємним. Введіть число ≥ 0.")
+        await message.answer("Пробіг не може бути від'ємним. Введіть додатне число.")
         return
 
     if unit == "Милі":
@@ -256,25 +275,31 @@ async def mileage_value_entered(message: Message, state: FSMContext) -> None:
     else:
         value_km = int(round(value))
 
+    def _fmt(km: int) -> str:
+        return f"{km:,}".replace(",", " ")
+
     if value_km < current_km:
         await message.answer(
-            f"Валідація: пробіг не може бути меншим за поточний на авто.\n"
-            f"Поточний пробіг: {current_km} км. Ви ввели: {value_km} км.\n"
-            f"Введіть число не менше {current_km} (у кілометрах) або відповідне значення в милях.",
-            reply_markup=get_main_menu_keyboard(),
+            f"Новий пробіг не може бути менше поточного.\n\n"
+            f"Зараз на авто: <b>{_fmt(current_km)} км</b>\n"
+            f"Ви ввели: <b>{_fmt(value_km)} км</b>\n\n"
+            f"Спробуйте ще раз.",
+            parse_mode="HTML",
         )
         return
 
     await state.clear()
-    unit_note = " (введено в милях)" if unit == "Милі" else ""
+    unit_note = f" ({_fmt(int(round(value)))} миль)" if unit == "Милі" else ""
     await message.answer(
-        f"Дякуємо, дані прийнято.\n"
-        f"Авто: {car_number}, пробіг: {value_km} км{unit_note}.\n",
+        f"✅ <b>Пробіг оновлено</b>\n\n"
+        f"🚗 Авто: <b>{_escape_html(car_number)}</b>\n"
+        f"📍 Новий пробіг: <b>{_fmt(value_km)} км</b>{unit_note}",
         reply_markup=get_main_menu_keyboard(),
+        parse_mode="HTML",
     )
 
 
-@router.message(F.text == "Регламент")
+@router.message(F.text == "📋 Регламент")
 async def start_regulation(message: Message, state: FSMContext) -> None:
     if not message.from_user:
         return
@@ -284,7 +309,7 @@ async def start_regulation(message: Message, state: FSMContext) -> None:
     )
     if not driver:
         await message.answer(
-            "Спочатку активуйте акаунт через /start.",
+            "Спочатку активуйте акаунт — натисніть /start",
             reply_markup=ReplyKeyboardRemove(),
         )
         return
@@ -294,7 +319,8 @@ async def start_regulation(message: Message, state: FSMContext) -> None:
     )
     if not vehicles:
         await message.answer(
-            "У вас немає призначених авто. Зверніться до диспетчера.",
+            "У вас поки немає призначених авто.\n"
+            "Зверніться до диспетчера.",
             reply_markup=get_main_menu_keyboard(),
         )
         return
@@ -306,16 +332,20 @@ async def start_regulation(message: Message, state: FSMContext) -> None:
         regulation_vehicles_by_car={v.car_number: str(v.id) for v in vehicles},
     )
     await message.answer(
-        "Оберіть авто для перегляду регламенту:",
+        "📋 <b>Регламент обслуговування</b>\n\n"
+        "Оберіть авто:",
         reply_markup=get_vehicles_keyboard(car_numbers),
+        parse_mode="HTML",
     )
 
 
-@router.message(F.text == "Допомога/FAQ")
+@router.message(F.text == "❓ Допомога")
 async def menu_help_faq(message: Message) -> None:
     await message.answer(
-        "Допомога для Fleet Manager. Оберіть питання:",
+        "❓ <b>Часті питання</b>\n\n"
+        "Оберіть тему:",
         reply_markup=get_faq_keyboard(),
+        parse_mode="HTML",
     )
 
 
@@ -328,15 +358,16 @@ async def regulation_vehicle_chosen(
     data = await state.get_data()
     car_numbers = data.get("regulation_vehicle_car_numbers") or []
     vehicles_by_car = data.get("regulation_vehicles_by_car") or {}
-    if message.text not in car_numbers:
+    car_number = (message.text or "").removeprefix(CAR_NUM_PREFIX)
+    if car_number not in car_numbers:
         await message.answer(
-            "Оберіть авто з кнопок вище або натисніть /start для скасування."
+            "Оберіть авто з кнопок нижче або натисніть /start для скасування."
         )
         return
 
-    vehicle_id = vehicles_by_car.get(message.text)
+    vehicle_id = vehicles_by_car.get(car_number)
     if not vehicle_id:
-        await message.answer("Помилка: авто не знайдено. Спробуйте /start.")
+        await message.answer("Авто не знайдено. Спробуйте /start")
         return
 
     plan = await asyncio.to_thread(
@@ -345,7 +376,8 @@ async def regulation_vehicle_chosen(
     if not plan:
         await state.clear()
         await message.answer(
-            "Для цього авто немає даних регламенту. Зверніться до диспетчера.",
+            "Для цього авто ще немає регламенту.\n"
+            "Зверніться до диспетчера для налаштування.",
             reply_markup=get_main_menu_keyboard(),
         )
         return
@@ -353,8 +385,6 @@ async def regulation_vehicle_chosen(
     current_km = await asyncio.to_thread(get_vehicle_current_km, UUID(vehicle_id))
     if current_km is None:
         current_km = 0
-
-    car_number = message.text
     await state.set_state(RegulationStates.showing_plan)
     await state.update_data(
         regulation_plan=plan,
@@ -367,13 +397,12 @@ async def regulation_vehicle_chosen(
         return f"{km:,}".replace(",", " ")
 
     lines = [
-        "🛠️ <b>Регламент обслуговування</b>",
+        "📋 <b>Регламент обслуговування</b>",
         "",
-        "🚗 Авто: <b>{}</b>".format(_escape_html(car_number)),
-        "📏 Поточний пробіг: <b>{} км</b>".format(_fmt_km(current_km)),
+        f"🚗 Авто: <b>{_escape_html(car_number)}</b>",
+        f"📏 Пробіг: <b>{_fmt_km(current_km)} км</b>",
         "",
         "─────────────────────",
-        "",
     ]
     for row in plan:
         title = _escape_html((row.get("title") or "").strip() or "—")
@@ -385,25 +414,25 @@ async def regulation_vehicle_chosen(
             remaining = next_km - current_km
             if remaining <= 0:
                 status = "🔴"
-                status_text = "Потрібна заміна"
+                status_text = "Терміново"
             elif remaining <= notify_km:
                 status = "🟡"
                 status_text = "Скоро"
             else:
                 status = "🟢"
-                status_text = "За планом"
+                status_text = "Ок"
             next_str = _fmt_km(next_km)
             rem_str = _fmt_km(max(0, remaining))
-            detail = f"Наступна заміна: {next_str} км · Залишилось: {rem_str} км ({status_text})"
+            detail = f"   → {next_str} км · ще {rem_str} км ({status_text})"
         else:
             status = "⚪"
-            detail = "Даних ще немає — зверніться до диспетчера"
+            detail = "   Немає даних"
 
+        lines.append("")
         lines.append(f"{status} <b>{title}</b>")
         if last_km is not None:
-            lines.append(f"   Остання заміна: {_fmt_km(last_km)} км")
-        lines.append(f"   {detail}")
-        lines.append("")
+            lines.append(f"   Востаннє: {_fmt_km(last_km)} км")
+        lines.append(detail)
 
     text = "\n".join(lines).strip()
 
@@ -440,29 +469,50 @@ async def regulation_send_pdf(callback: CallbackQuery, state: FSMContext) -> Non
 
 FAQ_ANSWERS = {
     "faq_what": (
-        "Fleet Manager — це система керування автопарком: водії, авто, регламенти обслуговування. "
-        "Диспетчер (Fleet Manager) додає водіїв, призначає їм авто та заповнює регламент через веб-додаток або команди make."
+        "🤔 <b>Що таке Fleet Manager?</b>\n\n"
+        "Це система для управління автопарком. Через бота ви можете:\n\n"
+        "• 📍 Оновлювати пробіг свого авто\n"
+        "• 🔧 Повідомляти про пройдений сервіс\n"
+        "• 📋 Переглядати регламент обслуговування\n\n"
+        "Диспетчер призначає вам авто та налаштовує регламент через веб-додаток."
     ),
-    "faq_add_driver": (
-        "Водія додають у веб-додатку (розділ Водії) або через Django admin. "
-        "Потрібні: ПІБ, номер телефону. Після цього водій може активуватися в боті, натиснувши /start і поділившись номером."
+    "faq_mileage": (
+        "📍 <b>Як оновити пробіг?</b>\n\n"
+        "1. Натисніть «📍 Пробіг» в меню\n"
+        "2. Оберіть авто\n"
+        "3. Оберіть одиниці (км або милі)\n"
+        "4. Введіть поточне значення з одометра\n\n"
+        "Пробіг не може бути менше попереднього значення."
     ),
-    "faq_assign_vehicle": (
-        "У веб-додатку: розділ Авто → обрати авто → призначити водія (поле driver). "
-        "Або створити водія та авто одразу: make create-driver-vehicle (тестовий водій +380663234712 та авто AA6601BB)."
-    ),
-    "faq_regulation": (
-        "Спочатку створіть дефолтну схему регламенту: make create-reg-schema. "
-        "Потім призначте регламент авто за номером: make assign-regulation CAR=AA6601BB "
-        "(замість AA6601BB — номер потрібного авто). Регламент заповниться пунктами з дефолтної схеми."
+    "faq_service": (
+        "🔧 <b>Як повідомити про сервіс?</b>\n\n"
+        "1. Натисніть «🔧 Сервіс» в меню\n"
+        "2. Оберіть авто\n"
+        "3. Відмітьте виконані роботи (можна кілька)\n"
+        "4. Надішліть фото підтвердження (до 10 шт.)\n"
+        "5. Натисніть «✅ Завершити»"
     ),
     "faq_view_reg": (
-        "Водій у боті натискає «Регламент» → обирає своє авто → бачить план обслуговування та може завантажити PDF. "
-        "Дані беруться з регламенту, призначеного авто (через make assign-regulation або API)."
+        "📋 <b>Як переглянути регламент?</b>\n\n"
+        "1. Натисніть «📋 Регламент» в меню\n"
+        "2. Оберіть авто\n"
+        "3. Побачите план обслуговування зі статусами:\n\n"
+        "🟢 Ок — заміна не скоро\n"
+        "🟡 Скоро — наближається термін\n"
+        "🔴 Терміново — потрібна заміна\n\n"
+        "Також можна завантажити PDF."
+    ),
+    "faq_no_vehicle": (
+        "🚗 <b>Не бачу своє авто</b>\n\n"
+        "Авто призначає диспетчер через веб-додаток. "
+        "Якщо ви не бачите свого авто в списку — зверніться до диспетчера, "
+        "щоб він призначив його вам."
     ),
     "faq_contacts": (
-        "Контакти підтримки уточнюйте у вашого адміністратора системи. "
-        "Технічні питання — через розробника або внутрішню документацію проекту."
+        "📞 <b>Контакти підтримки</b>\n\n"
+        "З питань роботи бота або системи — зверніться до вашого диспетчера.\n\n"
+        "Він допоможе з призначенням авто, налаштуванням регламенту "
+        "та іншими організаційними питаннями."
     ),
 }
 
@@ -473,10 +523,12 @@ async def faq_answer(callback: CallbackQuery) -> None:
         return
     text = FAQ_ANSWERS.get(callback.data)
     if text:
-        await callback.message.answer(text, reply_markup=get_main_menu_keyboard())
+        await callback.message.answer(
+            text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML"
+        )
     await callback.answer()
 
-@router.message(F.text == "Повідомити про Сервіс")
+@router.message(F.text == "🔧 Сервіс")
 async def start_service_report(message: Message, state: FSMContext) -> None:
     if not message.from_user:
         return
@@ -486,7 +538,7 @@ async def start_service_report(message: Message, state: FSMContext) -> None:
     )
     if not driver:
         await message.answer(
-            "Спочатку активуйте акаунт через /start.",
+            "Спочатку активуйте акаунт — натисніть /start",
             reply_markup=ReplyKeyboardRemove(),
         )
         return
@@ -496,7 +548,8 @@ async def start_service_report(message: Message, state: FSMContext) -> None:
     )
     if not vehicles:
         await message.answer(
-            "У вас немає призначених авто. Зверніться до диспетчера.",
+            "У вас поки немає призначених авто.\n"
+            "Зверніться до диспетчера.",
             reply_markup=get_main_menu_keyboard(),
         )
         return
@@ -505,8 +558,10 @@ async def start_service_report(message: Message, state: FSMContext) -> None:
     await state.set_state(ServiceReportStates.choosing_vehicle)
     await state.update_data(vehicle_car_numbers=car_numbers)
     await message.answer(
-        "Оберіть авто (номер):",
+        "🔧 <b>Звіт про сервіс</b>\n\n"
+        "Оберіть авто:",
         reply_markup=get_vehicles_keyboard(car_numbers),
+        parse_mode="HTML",
     )
 
 
@@ -516,19 +571,21 @@ async def service_report_vehicle_chosen(
 ) -> None:
     data = await state.get_data()
     car_numbers = data.get("vehicle_car_numbers") or []
-    if message.text not in car_numbers:
+    car_number = (message.text or "").removeprefix(CAR_NUM_PREFIX)
+    if car_number not in car_numbers:
         await message.answer(
-            "Оберіть авто з кнопок вище або натисніть /start для скасування."
+            "Оберіть авто з кнопок нижче або натисніть /start для скасування."
         )
         return
 
     await state.update_data(
-        vehicle_car_number=message.text,
+        vehicle_car_number=car_number,
         selected_service_indices=[],
     )
     await state.set_state(ServiceReportStates.choosing_service_type)
     await message.answer(
-        "Оберіть тип сервісу (можна кілька):",
+        "Які роботи було виконано?\n"
+        "Оберіть один або кілька пунктів:",
         reply_markup=get_service_types_keyboard([]),
     )
 
@@ -546,7 +603,7 @@ async def service_report_types_confirm(
     selected_indices = data.get("selected_service_indices") or []
 
     if not selected_indices:
-        await callback.answer("Оберіть хоча б один тип сервісу.")
+        await callback.answer("Оберіть хоча б одну роботу")
         return
 
     service_names = [SERVICE_TYPES[i] for i in selected_indices if 0 <= i < len(SERVICE_TYPES)]
@@ -557,12 +614,11 @@ async def service_report_types_confirm(
     )
     await state.set_state(ServiceReportStates.waiting_photo)
 
-    services_text = "\n".join(f"• {name}" for name in service_names)
+    services_text = "\n".join(f"  • {name}" for name in service_names)
     await callback.message.edit_text(
-        "Ви обрали такі типи сервісу:\n"
-        f"{services_text}\n\n"
-        "Надішліть до 10 фото підтвердження.\n"
-        "Коли закінчите, натисніть «Завершити відправку фото».",
+        f"Обрані роботи:\n{services_text}\n\n"
+        "📸 Тепер надішліть фото підтвердження (до 10 шт.)\n\n"
+        "Коли закінчите — натисніть «✅ Завершити»",
     )
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.answer()
@@ -612,8 +668,8 @@ async def service_report_photo_received(
 
     if len(photos) >= 10:
         await message.answer(
-            "Ви вже надіслали максимально допустиму кількість фото (10).\n"
-            "Натисніть «Завершити відправку фото», щоб завершити.",
+            "Досягнуто ліміт — 10 фото.\n"
+            "Натисніть «✅ Завершити» для відправки.",
             reply_markup=get_finish_photos_keyboard(),
         )
         return
@@ -622,14 +678,16 @@ async def service_report_photo_received(
     photos.append(file_id)
     await state.update_data(photo_file_ids=photos)
 
+    remaining = 10 - len(photos)
+    hint = f"Можна ще {remaining}" if remaining > 0 else ""
     await message.answer(
-        f"Фото збережено ({len(photos)} з 10).\n"
-        "Можете надіслати ще або натисніть «Завершити відправку фото».",
+        f"📸 Фото {len(photos)}/10 збережено. {hint}\n\n"
+        "Надішліть ще або натисніть «✅ Завершити».",
         reply_markup=get_finish_photos_keyboard(),
     )
 
 
-@router.message(ServiceReportStates.waiting_photo, F.text == "Завершити відправку фото")
+@router.message(ServiceReportStates.waiting_photo, F.text == "✅ Завершити")
 async def service_report_finish_photos(
     message: Message, state: FSMContext
 ) -> None:
@@ -640,28 +698,31 @@ async def service_report_finish_photos(
         or data.get("selected_service_indices")
         or []
     )
+    car_number = data.get("vehicle_car_number", "")
 
     services = [
         SERVICE_TYPES[i] for i in selected_indices if 0 <= i < len(SERVICE_TYPES)
     ]
 
     count_photos = len(photos)
-    count_services = len(services)
+    services_text = "\n".join(f"  • {s}" for s in services)
 
     await state.clear()
     await message.answer(
-        "Дякуємо! Повідомлення прийнято. ✅\n"
-        f"Кількість типів сервісу: {count_services}\n"
-        f"Кількість фото: {count_photos}",
+        f"✅ <b>Звіт про сервіс прийнято!</b>\n\n"
+        f"🚗 Авто: <b>{_escape_html(car_number)}</b>\n"
+        f"🔧 Роботи:\n{services_text}\n"
+        f"📸 Фото: {count_photos}",
         reply_markup=get_main_menu_keyboard(),
+        parse_mode="HTML",
     )
 
 
 @router.message(ServiceReportStates.waiting_photo)
 async def service_report_waiting_photo_other(message: Message) -> None:
     await message.answer(
-        "Надішліть фото (можна кілька до 10) або натисніть "
-        "«Завершити відправку фото»."
+        "Надішліть фото або натисніть «✅ Завершити».",
+        reply_markup=get_finish_photos_keyboard(),
     )
 
 

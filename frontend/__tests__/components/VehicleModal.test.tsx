@@ -43,6 +43,7 @@ vi.mock('@/services/driver', () => ({
 const mockVehicle: Vehicle = {
   id: 'v1',
   car_number: 'AA1234BB',
+  is_temporary_plate: false,
   manufacturer: 'Toyota',
   model: 'Corolla',
   year: 2020,
@@ -205,6 +206,57 @@ describe('VehicleModal – form submission', () => {
 
     await waitFor(() =>
       expect(screen.getByText('vehicleModal.errorSaveVehicle')).toBeInTheDocument()
+    );
+  });
+});
+
+describe('VehicleModal – optional car_number & temporary plate', () => {
+  it('allows proceeding to step 2 without car_number', async () => {
+    const user = userEvent.setup();
+    render(<VehicleModal {...baseProps} vehicle={null} />);
+
+    // Fill all required fields EXCEPT car_number
+    await user.type(screen.getByPlaceholderText('1HGBH41JXMN109186'), 'WVWZZZ3CZWE123456');
+    await user.type(screen.getByPlaceholderText('Corolla'), 'Camry');
+    const yearInput = screen.getByDisplayValue(String(new Date().getFullYear()));
+    await user.clear(yearInput);
+    await user.type(yearInput, '2022');
+    await user.click(screen.getByText('vehicleModal.selectColor'));
+    await user.click(screen.getByText('vehicleModal.colors.white'));
+    await user.type(screen.getByPlaceholderText('50 000.00'), '30000');
+    await user.type(screen.getByPlaceholderText('0'), '10000');
+
+    const nextBtn = screen.getByRole('button', { name: /vehicleModal\.next/ });
+    expect(nextBtn).not.toBeDisabled();
+  });
+
+  it('renders is_temporary_plate checkbox unchecked by default', () => {
+    render(<VehicleModal {...baseProps} vehicle={null} />);
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).not.toBeChecked();
+  });
+
+  it('populates is_temporary_plate checkbox from existing vehicle', () => {
+    const vehicleWithTempPlate = { ...mockVehicle, is_temporary_plate: true };
+    render(<VehicleModal {...baseProps} vehicle={vehicleWithTempPlate} />);
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).toBeChecked();
+  });
+
+  it('sends is_temporary_plate when creating vehicle', async () => {
+    const user = userEvent.setup();
+    vi.mocked(vehicleService.createVehicle).mockResolvedValue({ ...mockVehicle, id: 'new-id' });
+    render(<VehicleModal {...baseProps} vehicle={null} />);
+
+    await fillStep1(user);
+    // Check the temporary plate checkbox
+    await user.click(screen.getByRole('checkbox'));
+    await goToStep2(user);
+    await user.click(screen.getByRole('button', { name: /vehicleModal\.save/ }));
+
+    await waitFor(() => expect(vehicleService.createVehicle).toHaveBeenCalledOnce());
+    expect(vehicleService.createVehicle).toHaveBeenCalledWith(
+      expect.objectContaining({ is_temporary_plate: true })
     );
   });
 });

@@ -63,6 +63,7 @@ vi.mock('@dnd-kit/core', () => ({
 const makeVehicle = (overrides: Partial<Vehicle>): Vehicle => ({
   id: 'v-default',
   car_number: 'ZZ0000ZZ',
+  is_temporary_plate: false,
   manufacturer: 'Toyota',
   model: 'Corolla',
   year: 2020,

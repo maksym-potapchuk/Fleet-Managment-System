@@ -171,6 +171,11 @@ export default function VehicleWorkspacePage() {
   const driverPickerRef = useRef<HTMLDivElement>(null);
   const driverSearchRef = useRef<HTMLInputElement>(null);
 
+  // Inline fuel type picker
+  const [showFuelPicker, setShowFuelPicker] = useState(false);
+  const [savingFuel, setSavingFuel] = useState(false);
+  const fuelPickerRef = useRef<HTMLDivElement>(null);
+
   const loadVehicle = useCallback(async () => {
     try {
       setLoading(true);
@@ -240,6 +245,18 @@ export default function VehicleWorkspacePage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [showDriverPicker]);
 
+  // Close fuel picker on outside click
+  useEffect(() => {
+    if (!showFuelPicker) return;
+    const handler = (e: MouseEvent) => {
+      if (fuelPickerRef.current && !fuelPickerRef.current.contains(e.target as Node)) {
+        setShowFuelPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showFuelPicker]);
+
   const handleDriverAssign = async (driverId: string | null) => {
     if (!vehicle) return;
     setSavingDriver(true);
@@ -256,6 +273,23 @@ export default function VehicleWorkspacePage() {
       console.error(err);
     } finally {
       setSavingDriver(false);
+    }
+  };
+
+  const handleFuelChange = async (fuelType: FuelType | null) => {
+    if (!vehicle || vehicle.fuel_type === fuelType) {
+      setShowFuelPicker(false);
+      return;
+    }
+    setSavingFuel(true);
+    try {
+      await vehicleService.updateVehicle(vehicle.id, { fuel_type: fuelType });
+      await loadVehicle();
+      setShowFuelPicker(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingFuel(false);
     }
   };
 
@@ -401,7 +435,7 @@ export default function VehicleWorkspacePage() {
                       </button>
                     </div>
                   ))}
-                  {photos.length < 10 && (
+                  {(
                     <button
                       onClick={() => photoInputRef.current?.click()}
                       disabled={uploadingPhoto}
@@ -421,19 +455,29 @@ export default function VehicleWorkspacePage() {
 
         {/* ── Title row ── */}
         <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-wrap mb-3">
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-              {vehicle.car_number}
-            </h1>
-            <span className="hidden sm:inline text-slate-400 font-medium">&middot;</span>
-            <span className="text-sm sm:text-base md:text-lg font-semibold text-slate-600">
-              {vehicle.manufacturer} {vehicle.model}
-            </span>
-            <span className="hidden sm:inline text-slate-400 font-medium">&middot;</span>
-            <span className="text-sm sm:text-base md:text-lg font-bold text-slate-800">{vehicle.year}</span>
-            <span className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded-lg text-[11px] sm:text-xs font-bold border ${statusColors.bg} ${statusColors.text} ${statusColors.border}`}>
-              {vehicle.status}
-            </span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                {vehicle.car_number || <span className="text-slate-400 italic">{tVehicles('noPlate')}</span>}
+                {vehicle.is_temporary_plate && vehicle.car_number && (
+                  <span className="ml-2 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md align-middle">{tVehicles('temporaryPlate')}</span>
+                )}
+              </h1>
+              <span className="hidden sm:inline text-slate-400 font-medium">&middot;</span>
+              <span className="text-sm sm:text-base md:text-lg font-semibold text-slate-600">
+                {vehicle.manufacturer} {vehicle.model}
+              </span>
+              {vehicle.year && (
+                <>
+                  <span className="hidden sm:inline text-slate-400 font-medium">&middot;</span>
+                  <span className="text-sm sm:text-base md:text-lg font-bold text-slate-800">{vehicle.year}</span>
+                </>
+              )}
+              <span className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded-lg text-[11px] sm:text-xs font-bold border ${statusColors.bg} ${statusColors.text} ${statusColors.border}`}>
+                {vehicle.status}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 font-mono tracking-wide mt-0.5">{vehicle.vin_number}</p>
           </div>
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             {(vehicle.photos ?? []).length === 0 && (
@@ -473,11 +517,39 @@ export default function VehicleWorkspacePage() {
               {parseFloat(vehicle.cost).toLocaleString()} PLN
             </span>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-3 py-2 min-w-0">
-            <Fuel className="w-4 h-4 text-amber-500 flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-bold text-slate-700 truncate">
-              {fuelLabel(vehicle.fuel_type)}
-            </span>
+          <div className="relative" ref={fuelPickerRef}>
+            <button
+              onClick={() => setShowFuelPicker(v => !v)}
+              disabled={savingFuel}
+              className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-3 py-2 hover:border-amber-400/50 hover:bg-amber-50/50 transition-all group cursor-pointer text-left w-full disabled:opacity-60 min-w-0"
+            >
+              {savingFuel ? (
+                <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+              ) : (
+                <Fuel className="w-4 h-4 text-amber-500 group-hover:text-amber-600 transition-colors flex-shrink-0" />
+              )}
+              <span className={`text-xs sm:text-sm font-bold truncate ${vehicle.fuel_type ? 'text-slate-700 group-hover:text-amber-600' : 'text-slate-400 italic'} transition-colors`}>
+                {fuelLabel(vehicle.fuel_type)}
+              </span>
+              <Pencil className="w-3 h-3 text-slate-300 group-hover:text-amber-500 transition-colors ml-auto" />
+            </button>
+            {showFuelPicker && (
+              <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden sm:min-w-[180px]">
+                <div className="max-h-48 overflow-y-auto">
+                  {([null, 'GASOLINE', 'DIESEL', 'LPG', 'LPG_GASOLINE', 'ELECTRIC', 'HYBRID'] as (FuelType | null)[]).map(ft => (
+                    <button
+                      key={ft ?? 'none'}
+                      onClick={() => handleFuelChange(ft)}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                        vehicle.fuel_type === ft ? 'bg-amber-50 text-amber-600 font-semibold' : ft === null ? 'text-slate-400 italic' : 'text-slate-700'
+                      }`}
+                    >
+                      {ft === null ? `— ${t('fuel.none')} —` : tVehicles(`fuelTypes.${ft}`)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <div className="relative" ref={driverPickerRef}>
             <button
@@ -725,7 +797,7 @@ export default function VehicleWorkspacePage() {
       <ConfirmDialog
         isOpen={showArchiveConfirm}
         title={t('archiveTitle')}
-        message={t('archiveMessage', { number: vehicle.car_number })}
+        message={t('archiveMessage', { number: vehicle.car_number || tVehicles('noPlate') })}
         confirmLabel={t('archiveVehicle')}
         onConfirm={handleArchive}
         onCancel={() => setShowArchiveConfirm(false)}
@@ -1340,6 +1412,25 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
   const [markKm, setMarkKm] = useState('');
   const [markLoading, setMarkLoading] = useState(false);
 
+  // Add entry form state
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState({ title: '', title_pl: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+  const [addLoading, setAddLoading] = useState(false);
+
+  // Delete entry state
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Excluded items for unassigned view
+  const [excludedItemIds, setExcludedItemIds] = useState<Set<number>>(new Set());
+
+  // Custom items added during initial assignment
+  interface CustomEntry { id: number; title: string; title_pl: string; every_km: string; notify_before_km: string; last_done_km: string }
+  const [customEntries, setCustomEntries] = useState<CustomEntry[]>([]);
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customForm, setCustomForm] = useState({ title: '', title_pl: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+  const customIdRef = useRef(0);
+
   const loadRegulation = useCallback(async () => {
     setStatus('loading');
     try {
@@ -1357,6 +1448,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
           ? schemaRes.data
           : schemaRes.data.results ?? [];
         setDefaultSchema(schemas[0] ?? null);
+        setExcludedItemIds(new Set());
         setStatus('unassigned');
       }
     } catch (err) {
@@ -1374,13 +1466,25 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
     setSaving(true);
     setError(null);
     try {
+      const filteredItems = defaultSchema.items.filter(item => !excludedItemIds.has(item.id));
       await api.post(`/fleet/regulation/${vehicleId}/assign/`, {
         schema_id: defaultSchema.id,
-        entries: defaultSchema.items.map(item => ({
+        entries: filteredItems.map(item => ({
           item_id: item.id,
           last_done_km: parseInt(kmInputs[item.id] ?? '0', 10),
         })),
       });
+      // Create custom entries after assignment
+      for (const ce of customEntries) {
+        await api.post(`/fleet/vehicles/${vehicleId}/regulation/entries/`, {
+          title: ce.title,
+          title_pl: ce.title_pl,
+          title_uk: ce.title,
+          every_km: parseInt(ce.every_km, 10),
+          notify_before_km: parseInt(ce.notify_before_km || '500', 10),
+          last_done_km: parseInt(ce.last_done_km || '0', 10),
+        });
+      }
       await loadRegulation();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
@@ -1412,6 +1516,44 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
     }
   };
 
+  const handleAddEntry = async () => {
+    if (!addForm.title || !addForm.every_km) return;
+    setAddLoading(true);
+    try {
+      const res = await api.post<RegulationPlanEntry>(
+        `/fleet/vehicles/${vehicleId}/regulation/entries/`,
+        {
+          title: addForm.title,
+          title_pl: addForm.title_pl,
+          title_uk: addForm.title,
+          every_km: parseInt(addForm.every_km, 10),
+          notify_before_km: parseInt(addForm.notify_before_km || '500', 10),
+          last_done_km: parseInt(addForm.last_done_km || '0', 10),
+        },
+      );
+      setPlan(prev => prev ? { ...prev, entries: [...prev.entries, res.data] } : prev);
+      setShowAddForm(false);
+      setAddForm({ title: '', title_pl: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const handleDeleteEntry = async (entryId: number) => {
+    setDeleteLoading(true);
+    try {
+      await api.delete(`/fleet/vehicles/${vehicleId}/regulation/entries/${entryId}/delete/`);
+      setPlan(prev => prev ? { ...prev, entries: prev.entries.filter(e => e.id !== entryId) } : prev);
+      setDeletingId(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   if (status === 'loading') {
     return (
       <div className="flex items-center justify-center py-24">
@@ -1432,38 +1574,127 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
               {localTitle(plan.schema, locale)} · {t('assignedOn')} {new Date(plan.assigned_at).toLocaleDateString()}
             </p>
           </div>
-          <div className="flex bg-slate-100 rounded-xl p-1 gap-1 flex-shrink-0 w-fit">
-            <button
-              onClick={() => setActiveView('plan')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeView === 'plan'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <ScrollText className="w-3.5 h-3.5" />
-              {t('planView')}
-            </button>
-            <button
-              onClick={() => setActiveView('history')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeView === 'history'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <History className="w-3.5 h-3.5" />
-              {t('historyView')}
-            </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex bg-slate-100 rounded-xl p-1 gap-1 w-fit">
+              <button
+                onClick={() => setActiveView('plan')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeView === 'plan'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <ScrollText className="w-3.5 h-3.5" />
+                {t('planView')}
+              </button>
+              <button
+                onClick={() => setActiveView('history')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeView === 'history'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <History className="w-3.5 h-3.5" />
+                {t('historyView')}
+              </button>
+            </div>
+            {activeView === 'plan' && (
+              <button
+                onClick={() => setShowAddForm(prev => !prev)}
+                className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#2D8B7E] hover:bg-[#246f65] rounded-xl px-3 py-2 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" strokeWidth={3} />
+                <span className="hidden sm:inline">{t('addEntry')}</span>
+              </button>
+            )}
           </div>
         </div>
 
         {activeView === 'plan' ? (
           <div className="space-y-2">
+            {/* Add entry form */}
+            {showAddForm && (
+              <div className="bg-white border-2 border-dashed border-[#2D8B7E]/30 rounded-2xl px-3 sm:px-5 py-4 shadow-sm">
+                <p className="text-sm font-bold text-slate-800 mb-3">{t('addEntryTitle')}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryName')}</label>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={addForm.title}
+                      onChange={e => setAddForm(prev => ({ ...prev, title: e.target.value }))}
+                      onKeyDown={e => { if (e.key === 'Escape') setShowAddForm(false); }}
+                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNamePl')}</label>
+                    <input
+                      type="text"
+                      value={addForm.title_pl}
+                      onChange={e => setAddForm(prev => ({ ...prev, title_pl: e.target.value }))}
+                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryInterval')}</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={addForm.every_km}
+                      onChange={e => setAddForm(prev => ({ ...prev, every_km: e.target.value }))}
+                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNotifyBefore')}</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={addForm.notify_before_km}
+                      onChange={e => setAddForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
+                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryLastDone')}</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={addForm.last_done_km}
+                      onChange={e => setAddForm(prev => ({ ...prev, last_done_km: e.target.value }))}
+                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleAddEntry}
+                    disabled={addLoading || !addForm.title || !addForm.every_km}
+                    className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#2D8B7E] hover:bg-[#246f65] rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
+                  >
+                    {addLoading
+                      ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      : <Plus className="w-3.5 h-3.5" strokeWidth={3} />}
+                    {t('save')}
+                  </button>
+                  <button
+                    onClick={() => { setShowAddForm(false); setAddForm({ title: '', title_pl: '', every_km: '', notify_before_km: '500', last_done_km: '0' }); }}
+                    className="text-xs font-bold text-slate-500 hover:text-slate-700 px-3 py-2 transition-colors"
+                  >
+                    {t('cancel')}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {plan.entries.map(entry => {
               const isOverdue = initialKm >= entry.next_due_km;
               const isDueSoon = !isOverdue && initialKm >= entry.next_due_km - entry.item.notify_before_km;
               const isMarking = markingId === entry.id;
+              const isDeleting = deletingId === entry.id;
 
               return (
                 <div
@@ -1485,7 +1716,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                       </p>
                     </div>
 
-                    {/* Desktop: km blocks + mark done inline */}
+                    {/* Desktop: km blocks + mark done + delete inline */}
                     <div className="hidden md:flex items-center gap-2 flex-shrink-0 text-right">
                       <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('done')}</p>
@@ -1512,15 +1743,29 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         {t('markDone')}
                       </button>
+                      <button
+                        onClick={() => setDeletingId(entry.id)}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-xl transition-all"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
 
-                    {/* Mobile: mark done icon button */}
-                    <button
-                      onClick={() => { setMarkingId(entry.id); setMarkKm(String(initialKm)); }}
-                      className="flex md:hidden items-center text-xs font-bold text-slate-500 hover:text-[#2D8B7E] bg-slate-50 hover:bg-[#2D8B7E]/5 border border-slate-200 hover:border-[#2D8B7E]/30 rounded-xl p-2 transition-all flex-shrink-0"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                    </button>
+                    {/* Mobile: action buttons */}
+                    <div className="flex md:hidden items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => { setMarkingId(entry.id); setMarkKm(String(initialKm)); }}
+                        className="items-center text-xs font-bold text-slate-500 hover:text-[#2D8B7E] bg-slate-50 hover:bg-[#2D8B7E]/5 border border-slate-200 hover:border-[#2D8B7E]/30 rounded-xl p-2 transition-all"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeletingId(entry.id)}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-xl transition-all"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Mobile: km blocks below title */}
@@ -1545,6 +1790,28 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                     </div>
                   </div>
 
+                  {/* Delete confirmation */}
+                  {isDeleting && (
+                    <div className="mt-3 flex items-center gap-2 pt-3 border-t border-slate-100">
+                      <span className="text-xs text-red-600 font-medium">{t('deleteConfirm')}</span>
+                      <button
+                        onClick={() => handleDeleteEntry(entry.id)}
+                        disabled={deleteLoading}
+                        className="flex items-center gap-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+                      >
+                        {deleteLoading
+                          ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          : <Trash2 className="w-3 h-3" />}
+                      </button>
+                      <button
+                        onClick={() => setDeletingId(null)}
+                        className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
                   {/* Inline mark-done form */}
                   {isMarking && (
                     <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
@@ -1568,7 +1835,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                         {markLoading
                           ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
                           : <CheckCircle2 className="w-3.5 h-3.5" />}
-                        Зберегти
+                        {t('save')}
                       </button>
                       <button
                         onClick={() => { setMarkingId(null); setMarkKm(''); }}
@@ -1602,6 +1869,8 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
     );
   }
 
+  const visibleItems = defaultSchema.items.filter(item => !excludedItemIds.has(item.id));
+
   return (
     <div>
       <div className="mb-4">
@@ -1613,7 +1882,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
 
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-4">
         <div className="divide-y divide-slate-100">
-          {defaultSchema.items.map((item, idx) => {
+          {visibleItems.map((item, idx) => {
             const lastDone = parseInt(kmInputs[item.id] ?? '0', 10) || 0;
             const nextDue = lastDone + item.every_km;
             return (
@@ -1630,7 +1899,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                 <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 w-full md:w-auto ml-9 md:ml-0">
                   <div className="text-right flex-1 md:flex-initial">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
-                      Останній раз
+                      {t('entryLastDone')}
                     </p>
                     <input
                       type="number"
@@ -1650,6 +1919,13 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                       {nextDue.toLocaleString()} {t('km')}
                     </p>
                   </div>
+                  <button
+                    onClick={() => setExcludedItemIds(prev => new Set([...prev, item.id]))}
+                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-xl transition-all flex-shrink-0"
+                    title={t('removeFromList')}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             );
@@ -1657,13 +1933,150 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
         </div>
       </div>
 
+      {/* Custom entries added by user */}
+      {customEntries.length > 0 && (
+        <div className="bg-white border border-dashed border-[#2D8B7E]/30 rounded-2xl shadow-sm overflow-hidden mb-4">
+          <div className="divide-y divide-slate-100">
+            {customEntries.map((ce, idx) => {
+              const lastDone = parseInt(ce.last_done_km || '0', 10) || 0;
+              const nextDue = lastDone + (parseInt(ce.every_km || '0', 10) || 0);
+              return (
+                <div key={ce.id} className="flex flex-wrap md:flex-nowrap items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-4">
+                  <span className="w-6 h-6 rounded-full bg-[#2D8B7E]/10 text-[#2D8B7E] text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    +{idx + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800">{ce.title}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {t('everyKm', { km: parseInt(ce.every_km || '0', 10).toLocaleString() })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 w-full md:w-auto ml-9 md:ml-0">
+                    <div className="text-right flex-1 md:flex-initial">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('entryLastDone')}</p>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={ce.last_done_km}
+                        onChange={e => setCustomEntries(prev => prev.map(c => c.id === ce.id ? { ...c, last_done_km: e.target.value } : c))}
+                        className="w-full md:w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                    <div className="w-4 h-px bg-slate-200 flex-shrink-0 hidden sm:block" />
+                    <div className="bg-[#2D8B7E]/5 border border-[#2D8B7E]/20 rounded-xl px-3 py-2 text-right min-w-[90px]">
+                      <p className="text-[10px] font-bold text-[#2D8B7E]/70 uppercase tracking-widest mb-0.5">{t('next')}</p>
+                      <p className="text-sm font-bold text-[#2D8B7E]">{nextDue.toLocaleString()} {t('km')}</p>
+                    </div>
+                    <button
+                      onClick={() => setCustomEntries(prev => prev.filter(c => c.id !== ce.id))}
+                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-xl transition-all flex-shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Add custom entry form */}
+      {showCustomForm ? (
+        <div className="bg-white border-2 border-dashed border-[#2D8B7E]/30 rounded-2xl px-3 sm:px-5 py-4 shadow-sm mb-4">
+          <p className="text-sm font-bold text-slate-800 mb-3">{t('addEntryTitle')}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryName')}</label>
+              <input
+                autoFocus
+                type="text"
+                value={customForm.title}
+                onChange={e => setCustomForm(prev => ({ ...prev, title: e.target.value }))}
+                onKeyDown={e => { if (e.key === 'Escape') setShowCustomForm(false); }}
+                className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E]"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNamePl')}</label>
+              <input
+                type="text"
+                value={customForm.title_pl}
+                onChange={e => setCustomForm(prev => ({ ...prev, title_pl: e.target.value }))}
+                className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E]"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryInterval')}</label>
+              <input
+                type="number"
+                min="1"
+                value={customForm.every_km}
+                onChange={e => setCustomForm(prev => ({ ...prev, every_km: e.target.value }))}
+                className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNotifyBefore')}</label>
+              <input
+                type="number"
+                min="0"
+                value={customForm.notify_before_km}
+                onChange={e => setCustomForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
+                className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (!customForm.title || !customForm.every_km) return;
+                customIdRef.current -= 1;
+                setCustomEntries(prev => [...prev, { id: customIdRef.current, ...customForm }]);
+                setShowCustomForm(false);
+                setCustomForm({ title: '', title_pl: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+              }}
+              disabled={!customForm.title || !customForm.every_km}
+              className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#2D8B7E] hover:bg-[#246f65] rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
+            >
+              <Plus className="w-3.5 h-3.5" strokeWidth={3} />
+              {t('save')}
+            </button>
+            <button
+              onClick={() => { setShowCustomForm(false); setCustomForm({ title: '', title_pl: '', every_km: '', notify_before_km: '500', last_done_km: '0' }); }}
+              className="text-xs font-bold text-slate-500 hover:text-slate-700 px-3 py-2 transition-colors"
+            >
+              {t('cancel')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowCustomForm(true)}
+          className="flex items-center gap-1.5 text-xs font-bold text-[#2D8B7E] hover:text-[#246f65] bg-[#2D8B7E]/5 hover:bg-[#2D8B7E]/10 border border-dashed border-[#2D8B7E]/30 hover:border-[#2D8B7E]/50 rounded-xl px-4 py-2.5 transition-all mb-4"
+        >
+          <Plus className="w-3.5 h-3.5" strokeWidth={3} />
+          {t('addEntry')}
+        </button>
+      )}
+
+      {excludedItemIds.size > 0 && (
+        <button
+          onClick={() => setExcludedItemIds(new Set())}
+          className="text-xs font-medium text-slate-500 hover:text-slate-700 mb-4 underline underline-offset-2 transition-colors"
+        >
+          {t('history.clearFilters')} ({excludedItemIds.size})
+        </button>
+      )}
+
       {error && (
         <p className="text-sm text-red-600 font-medium mb-4">{error}</p>
       )}
 
       <button
         onClick={handleAssign}
-        disabled={saving}
+        disabled={saving || visibleItems.length === 0}
         className="bg-gradient-to-r from-[#2D8B7E] to-[#248B7B] text-white px-6 py-2.5 rounded-xl hover:shadow-xl hover:shadow-[#2D8B7E]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shadow-lg flex items-center gap-2 text-sm font-bold disabled:opacity-60 disabled:pointer-events-none"
       >
         {saving ? (

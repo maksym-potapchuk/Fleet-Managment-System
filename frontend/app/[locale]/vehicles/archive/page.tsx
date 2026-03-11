@@ -142,7 +142,7 @@ export default function VehicleArchivePage() {
                   <div className="relative -mx-5 -mt-5 mb-4 h-32 rounded-t-2xl overflow-hidden">
                     <img
                       src={vehicle.photos[0].image}
-                      alt={vehicle.car_number}
+                      alt={vehicle.car_number || ''}
                       className="w-full h-full object-cover opacity-75"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
@@ -151,7 +151,7 @@ export default function VehicleArchivePage() {
 
                 {/* Info */}
                 <div className="mb-4">
-                  <h3 className="text-lg font-bold text-slate-900">{vehicle.car_number}</h3>
+                  <h3 className="text-lg font-bold text-slate-900">{vehicle.car_number || t('noPlate')}</h3>
                   <p className="text-sm text-slate-500 font-medium">
                     {vehicle.manufacturer} {vehicle.model} · {vehicle.year}
                   </p>
@@ -200,7 +200,7 @@ export default function VehicleArchivePage() {
                   {t('permanentDelete')}
                 </h3>
                 <p className="text-sm text-slate-500 mt-0.5">
-                  {deleteModal.vehicle.car_number} — {deleteModal.vehicle.manufacturer} {deleteModal.vehicle.model}
+                  {deleteModal.vehicle.car_number || t('noPlate')} — {deleteModal.vehicle.manufacturer} {deleteModal.vehicle.model}
                 </p>
               </div>
               <button

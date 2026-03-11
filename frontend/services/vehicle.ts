@@ -2,7 +2,7 @@ import api from '@/lib/api';
 import { Vehicle, VehiclePhoto, VehicleOwner, OwnerHistoryRecord, TechnicalInspection, CreateVehicleData, UpdateVehicleData, VehicleFilters, VehicleDeleteCheck, PaginatedResponse } from '@/types/vehicle';
 
 export const vehicleService = {
-  // Get all vehicles (fetches all pages in parallel)
+  // Get all vehicles (fetches pages with concurrency limit)
   async getVehicles(filters?: VehicleFilters): Promise<Vehicle[]> {
     const params = new URLSearchParams();
 
@@ -20,17 +20,24 @@ export const vehicleService = {
 
     if (!firstPage.data.next) return results;
 
-    // Fetch remaining pages in parallel
+    // Fetch remaining pages with concurrency limit
     const pageSize = results.length;
     const totalPages = Math.ceil(count / pageSize);
-    const requests = [];
-    for (let page = 2; page <= totalPages; page++) {
-      const separator = baseUrl.includes('?') ? '&' : '?';
-      requests.push(api.get<PaginatedResponse<Vehicle>>(`${baseUrl}${separator}page=${page}`));
+    const MAX_CONCURRENT = 5;
+    const allResults = [...results];
+
+    for (let batch = 2; batch <= totalPages; batch += MAX_CONCURRENT) {
+      const end = Math.min(batch + MAX_CONCURRENT, totalPages + 1);
+      const requests = [];
+      for (let page = batch; page < end; page++) {
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        requests.push(api.get<PaginatedResponse<Vehicle>>(`${baseUrl}${separator}page=${page}`));
+      }
+      const responses = await Promise.all(requests);
+      allResults.push(...responses.flatMap(r => r.data.results));
     }
 
-    const responses = await Promise.all(requests);
-    return [...results, ...responses.flatMap(r => r.data.results)];
+    return allResults;
   },
 
   // Get single vehicle by ID

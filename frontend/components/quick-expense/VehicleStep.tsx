@@ -40,7 +40,7 @@ export function VehicleStep({ vehicles, onSelect }: VehicleStepProps) {
     const q = query.toLowerCase();
     return vehicles.filter(
       v =>
-        v.car_number.toLowerCase().includes(q) ||
+        (v.car_number || '').toLowerCase().includes(q) ||
         v.manufacturer.toLowerCase().includes(q) ||
         v.model.toLowerCase().includes(q),
     );
@@ -53,7 +53,7 @@ export function VehicleStep({ vehicles, onSelect }: VehicleStepProps) {
 
   const handleSelect = (vehicle: Vehicle) => {
     saveRecentVehicleId(vehicle.id);
-    onSelect(vehicle.id, `${vehicle.car_number} · ${vehicle.manufacturer} ${vehicle.model}`);
+    onSelect(vehicle.id, `${vehicle.car_number || '—'} · ${vehicle.manufacturer} ${vehicle.model}`);
   };
 
   const displayList = query.trim() ? filtered : recentVehicles;
@@ -97,7 +97,7 @@ export function VehicleStep({ vehicles, onSelect }: VehicleStepProps) {
               <Car className="h-5 w-5 text-teal-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-mono font-bold text-sm text-slate-900 tracking-wide">{vehicle.car_number}</div>
+              <div className="font-mono font-bold text-sm text-slate-900 tracking-wide">{vehicle.car_number || '—'}</div>
               <div className="text-xs text-slate-500 truncate">{vehicle.manufacturer} {vehicle.model} · {vehicle.year}</div>
             </div>
           </button>

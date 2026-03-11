@@ -18,7 +18,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto db-dump db-seed db-reset dump seed create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles trello-lists lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
+.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto delete-superuser db-dump db-seed db-reset dump seed seed-defaults create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-vehicles trello-lists import-trello import-trello-dry import-trello-all import-trello-all-dry import-trello-reposition lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
 
 help:
 >@echo "Available commands:"
@@ -57,15 +57,20 @@ help:
 >@echo "  make db-dump             - Export DB as JSON fixture to backups/"
 >@echo "  make db-seed             - Load latest JSON fixture from backups/"
 >@echo "  make db-reset            - Flush database and re-apply migrations"
+>@echo "  make seed-defaults       - Seed regulation schema + equipment (idempotent)"
 >@echo "  make create-reg-schema   - Seed default vehicle regulation schema"
 >@echo "  make create-driver-vehicle - Create driver +380663234712, vehicle, assign"
 >@echo "  make create-driver-vehicle-force - Same, recreate/reassign if exists"
 >@echo "  make show-regulation CAR=AA6601BB - Show regulation plan for vehicle by car number"
 >@echo "  make assign-regulation CAR=AA6601BB - Assign (fill) default regulation for vehicle"
 >@echo "  make drop-vehicles               - Delete ALL vehicles from the database (with confirmation)"
+>@echo "  make delete-superuser EMAIL=x    - Delete superuser by email"
 >@echo "  make trello-lists                - Show available Trello lists with indices"
 >@echo "  make import-trello N=0           - Import vehicles from Trello list by index"
 >@echo "  make import-trello-dry N=0       - Dry run (preview without writing)"
+>@echo "  make import-trello-all           - Import ALL Trello lists with status mapping"
+>@echo "  make import-trello-all-dry       - Dry run for all lists"
+>@echo "  make import-trello-reposition    - Reorder vehicles to match Trello card order"
 >@echo ""
 >@echo "  SSL:"
 >@echo "  make ssl-init            - Obtain first Let's Encrypt certificate"
@@ -189,8 +194,11 @@ dump: db-dump
 
 seed: db-seed
 
-create-reg-schema:
+seed-defaults:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py create_vehicle_reg_basic_schema
+>@echo "Default regulation schema and equipment seeded."
+
+create-reg-schema: seed-defaults
 
 force-reg-schema:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py create_vehicle_reg_basic_schema --force
@@ -210,6 +218,9 @@ assign-regulation:
 drop-vehicles:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py drop_all_vehicles --force
 
+delete-superuser:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py shell -c "from account.models import User; u = User.objects.filter(email='$(EMAIL)', is_superuser=True); print(f'Deleted {u.count()} superuser(s)') if u.exists() else print('No superuser found with that email'); u.delete()"
+
 trello-lists:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py import_trello_vehicles --show-lists
 
@@ -218,6 +229,21 @@ import-trello:
 
 import-trello-dry:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py import_trello_vehicles --list-index $(N) --dry-run
+
+import-trello-all:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py import_trello_vehicles --all
+
+import-trello-all-dry:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py import_trello_vehicles --all --dry-run
+
+import-trello-reposition:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py import_trello_vehicles --reposition
+
+import-trello-retry:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py import_trello_vehicles --retry-skipped
+
+import-trello-retry-dry:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py import_trello_vehicles --retry-skipped --dry-run
 
 # ── Monitoring ────────────────────────────────────────────
 

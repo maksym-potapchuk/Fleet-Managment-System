@@ -81,7 +81,7 @@ export function ExpenseFilters({ filters, onChange, showVehicleFilter = false, s
           >
             <option value="">{t('filters.allVehicles')}</option>
             {vehicles.map(v => (
-              <option key={v.id} value={v.id}>{v.car_number} · {v.manufacturer} {v.model}</option>
+              <option key={v.id} value={v.id}>{v.car_number || '—'} · {v.manufacturer} {v.model}</option>
             ))}
           </select>
           <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />

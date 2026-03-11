@@ -16,7 +16,7 @@ interface VehicleModalProps {
   onArchive?: () => void;
 }
 
-const MANUFACTURERS: ManufacturerChoice[] = ['Toyota', 'Ford', 'Honda', 'Chevrolet', 'BMW', 'Lexus', 'Audi'];
+const MANUFACTURERS: ManufacturerChoice[] = ['Toyota', 'Ford', 'Honda', 'Chevrolet', 'BMW', 'Lexus', 'Audi', 'Tesla'];
 
 const STATUS_VALUES: VehicleStatus[] = [
   'AUCTION', 'FOCUS', 'GAS_INSTALL', 'SERVICE', 'CLEANING',
@@ -44,7 +44,7 @@ const inputBase = 'w-full px-4 py-2.5 border rounded-xl focus:outline-none focus
 const inputEmpty = `${inputBase} bg-slate-50 border-slate-200 text-slate-400`;
 const inputFilled = `${inputBase} bg-white border-slate-300 text-slate-800`;
 
-type FormData = Omit<CreateVehicleData, 'initial_km' | 'driver'>;
+type FormData = Omit<CreateVehicleData, 'initial_km' | 'driver'> & { is_temporary_plate: boolean };
 
 export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: VehicleModalProps) {
   const t = useTranslations('vehicleModal');
@@ -59,6 +59,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
     cost: '',
     vin_number: '',
     car_number: '',
+    is_temporary_plate: false,
     color: '',
     fuel_type: null,
     status: 'AUCTION',
@@ -114,7 +115,8 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
         year: vehicle.year,
         cost: vehicle.cost,
         vin_number: vehicle.vin_number,
-        car_number: vehicle.car_number,
+        car_number: vehicle.car_number || '',
+        is_temporary_plate: vehicle.is_temporary_plate,
         color: vehicle.color || '',
         fuel_type: vehicle.fuel_type,
         status: vehicle.status,
@@ -130,6 +132,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
         cost: '',
         vin_number: '',
         car_number: '',
+        is_temporary_plate: false,
         color: '',
         fuel_type: null,
         status: 'AUCTION',
@@ -166,13 +169,11 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
   }, []);
 
   const totalPhotos = existingPhotos.length + stagedFiles.length;
-  const canAddMore = totalPhotos < 10;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const slots = 10 - totalPhotos;
-    const toAdd = files.slice(0, slots);
+    const toAdd = files;
     const newUrls = toAdd.map(f => URL.createObjectURL(f));
     setStagedFiles(prev => [...prev, ...toAdd]);
     setStagedPreviews(prev => [...prev, ...newUrls]);
@@ -227,8 +228,12 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
 
     try {
       let vehicleId: string;
+      const { is_temporary_plate, ...rest } = formData;
       const vehicleData: CreateVehicleData = {
-        ...formData,
+        ...rest,
+        year: rest.year || null,
+        car_number: rest.car_number?.trim() || undefined,
+        is_temporary_plate,
         initial_km: kmNum,
       };
 
@@ -300,7 +305,6 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
   };
 
   const isStep1Valid =
-    formData.car_number.trim() !== '' &&
     formData.model.trim() !== '' &&
     formData.vin_number.trim() !== '' &&
     formData.color.trim() !== '' &&
@@ -357,16 +361,24 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      {t('carNumber')} <span className="text-red-400">*</span>
+                      {t('carNumber')}
                     </label>
                     <input
                       type="text"
-                      required
                       value={formData.car_number}
                       onChange={(e) => setFormData({ ...formData, car_number: e.target.value.toUpperCase() })}
                       className={`${formData.car_number ? inputFilled : inputEmpty} font-mono tracking-wider`}
                       placeholder="AA1234BB"
                     />
+                    <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={formData.is_temporary_plate}
+                        onChange={(e) => setFormData({ ...formData, is_temporary_plate: e.target.checked })}
+                        className="w-4 h-4 rounded border-slate-300 text-[#2D8B7E] focus:ring-[#2D8B7E]/30 cursor-pointer"
+                      />
+                      <span className="text-xs text-slate-500">{t('isTemporaryPlate')}</span>
+                    </label>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
@@ -419,15 +431,14 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
-                      {t('year')} <span className="text-red-400">*</span>
+                      {t('year')}
                     </label>
                     <input
                       type="number"
-                      required
                       min="1900"
                       max={new Date().getFullYear() + 1}
-                      value={formData.year}
-                      onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                      value={formData.year ?? ''}
+                      onChange={(e) => setFormData({ ...formData, year: e.target.value ? parseInt(e.target.value) : null })}
                       className={inputFilled}
                     />
                   </div>
@@ -680,9 +691,11 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                       </label>
                       <p className="text-[11px] text-slate-400">{t('photosHint')}</p>
                     </div>
-                    <span className="text-xs text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
-                      {totalPhotos}/10
-                    </span>
+                    {totalPhotos > 0 && (
+                      <span className="text-xs text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
+                        {totalPhotos}
+                      </span>
+                    )}
                   </div>
 
                   {totalPhotos > 0 && (
@@ -727,31 +740,22 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                     </div>
                   )}
 
-                  {canAddMore ? (
-                    <>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handleFileSelect}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full py-4 border-2 border-dashed border-slate-200 hover:border-[#2D8B7E] hover:bg-[#2D8B7E]/5 rounded-xl text-sm font-medium text-slate-400 hover:text-[#2D8B7E] transition-all flex items-center justify-center gap-2"
-                      >
-                        <Upload className="w-4 h-4" />
-                        {t('addPhoto')}
-                        {totalPhotos > 0 && (
-                          <span className="text-xs font-normal">({t('morePhotos', { count: 10 - totalPhotos })})</span>
-                        )}
-                      </button>
-                    </>
-                  ) : (
-                    <p className="text-xs text-slate-400 text-center py-2">{t('photoLimit')}</p>
-                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-4 border-2 border-dashed border-slate-200 hover:border-[#2D8B7E] hover:bg-[#2D8B7E]/5 rounded-xl text-sm font-medium text-slate-400 hover:text-[#2D8B7E] transition-all flex items-center justify-center gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {t('addPhoto')}
+                  </button>
                 </div>
               </div>
             )}
