@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useDebounce } from '@/hooks/useDebounce';
+import { getPreferences, updatePreferences } from '@/services/auth';
 import {
   DndContext,
   DragEndEvent,
@@ -202,25 +203,46 @@ export function VehicleKanban({
 
   const COLUMN_ORDER_KEY = 'kanban-column-order';
 
+  const parseColumnOrder = useCallback((saved: VehicleStatus[]): VehicleStatus[] => {
+    const allIds = new Set(ALL_COLUMNS.map(c => c.id));
+    const validSaved = saved.filter(id => allIds.has(id));
+    const missing = ALL_COLUMNS.map(c => c.id).filter(id => !validSaved.includes(id));
+    return [...validSaved, ...missing];
+  }, [ALL_COLUMNS]);
+
   const [columnOrder, setColumnOrder] = useState<VehicleStatus[]>(() => {
     if (typeof window === 'undefined') return ALL_COLUMNS.map(c => c.id);
     try {
       const saved = localStorage.getItem(COLUMN_ORDER_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as VehicleStatus[];
-        const allIds = new Set(ALL_COLUMNS.map(c => c.id));
-        const validSaved = parsed.filter(id => allIds.has(id));
-        const missing = ALL_COLUMNS.map(c => c.id).filter(id => !validSaved.includes(id));
-        return [...validSaved, ...missing];
-      }
+      if (saved) return parseColumnOrder(JSON.parse(saved) as VehicleStatus[]);
     } catch { /* ignore */ }
     return ALL_COLUMNS.map(c => c.id);
   });
 
+  // Load column order from API on mount (overrides localStorage)
+  useEffect(() => {
+    getPreferences()
+      .then(({ data }) => {
+        if (data.kanban_column_order?.length) {
+          setColumnOrder(parseColumnOrder(data.kanban_column_order as VehicleStatus[]));
+        }
+      })
+      .catch(() => { /* fallback to localStorage value */ });
+  }, [parseColumnOrder]);
+
+  // Save column order to localStorage + API on change
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => {
     try {
       localStorage.setItem(COLUMN_ORDER_KEY, JSON.stringify(columnOrder));
     } catch { /* ignore */ }
+
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      updatePreferences({ kanban_column_order: columnOrder }).catch(() => {});
+    }, 500);
+
+    return () => clearTimeout(saveTimerRef.current);
   }, [columnOrder]);
 
   const KANBAN_COLUMNS = useMemo(() => {

@@ -12,3 +12,16 @@ export function logoutRequest() {
 export function getMeRequest() {
   return api.get<User>('/auth/me/');
 }
+
+export interface UserPreferences {
+  kanban_column_order: string[];
+  updated_at: string;
+}
+
+export function getPreferences() {
+  return api.get<UserPreferences>('/auth/preferences/');
+}
+
+export function updatePreferences(data: Partial<Pick<UserPreferences, 'kanban_column_order'>>) {
+  return api.patch<UserPreferences>('/auth/preferences/', data);
+}

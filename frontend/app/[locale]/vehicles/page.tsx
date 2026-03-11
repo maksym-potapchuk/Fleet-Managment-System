@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/src/i18n/routing';
 import { VehicleKanban } from '@/components/vehicle/VehicleKanban';
@@ -18,6 +18,8 @@ export default function VehiclesPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const vehiclesRef = useRef(vehicles);
+  vehiclesRef.current = vehicles;
 
   const loadVehicles = useCallback(async () => {
     try {
@@ -38,38 +40,33 @@ export default function VehiclesPage() {
     loadVehicles();
   }, [loadVehicles]);
 
-  const handleUpdateStatus = async (vehicleId: string, newStatus: VehicleStatus) => {
-    // Store previous state for rollback
-    const previousVehicles = [...vehicles];
+  const handleUpdateStatus = useCallback(async (vehicleId: string, newStatus: VehicleStatus) => {
+    const previousVehicles = vehiclesRef.current;
 
     try {
-      // Optimistic update
       setVehicles(prev =>
         prev.map(v => (v.id === vehicleId ? { ...v, status: newStatus, updated_at: new Date().toISOString() } : v))
       );
 
-      // API call
       await vehicleService.updateVehicleStatus(vehicleId, newStatus);
     } catch (err: unknown) {
       console.error('❌ Failed to update vehicle status:', err);
 
-      // Revert on error
       setVehicles(previousVehicles);
 
-      // Show user-friendly error
       const data = err && typeof err === 'object' && 'response' in err
         ? (err as { response?: { data?: { message?: string } } }).response?.data
         : undefined;
       const errorMessage = data?.message ?? 'Не вдалося оновити статус';
       alert(`Помилка: ${errorMessage}`);
     }
-  };
+  }, []);
 
-  const handleSelectVehicle = (id: string) => {
+  const handleSelectVehicle = useCallback((id: string) => {
     router.push(`/vehicles/${id}`);
-  };
+  }, [router]);
 
-  const handleEditVehicle = async (id: string) => {
+  const handleEditVehicle = useCallback(async (id: string) => {
     try {
       const vehicle = await vehicleService.getVehicle(id);
       setSelectedVehicle(vehicle);
@@ -77,24 +74,24 @@ export default function VehiclesPage() {
     } catch (err) {
       console.error('Failed to load vehicle:', err);
     }
-  };
+  }, []);
 
-  const handleAddVehicle = () => {
+  const handleAddVehicle = useCallback(() => {
     setSelectedVehicle(null);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedVehicle(null);
-  };
+  }, []);
 
-  const handleSaveVehicle = () => {
+  const handleSaveVehicle = useCallback(() => {
     loadVehicles();
-  };
+  }, [loadVehicles]);
 
-  const handleReorderVehicles = async (items: { id: string; status_position: number }[]) => {
-    const previousVehicles = [...vehicles];
+  const handleReorderVehicles = useCallback(async (items: { id: string; status_position: number }[]) => {
+    const previousVehicles = vehiclesRef.current;
     try {
       const posMap = new Map(items.map(i => [i.id, i.status_position]));
       setVehicles(prev =>
@@ -108,9 +105,9 @@ export default function VehiclesPage() {
       console.error('Failed to reorder vehicles:', err);
       setVehicles(previousVehicles);
     }
-  };
+  }, []);
 
-  const handleArchiveVehicle = async (id: string) => {
+  const handleArchiveVehicle = useCallback(async (id: string) => {
     try {
       await vehicleService.archiveVehicle(id);
       loadVehicles();
@@ -118,13 +115,12 @@ export default function VehiclesPage() {
       console.error('Failed to archive vehicle:', err);
       alert(t('archiveError'));
     }
-  };
+  }, [loadVehicles, t]);
 
-  const handleDuplicateVehicle = async (id: string) => {
+  const handleDuplicateVehicle = useCallback(async (id: string) => {
     try {
       const vehicle = await vehicleService.getVehicle(id);
 
-      // Create a copy with modified car_number and vin_number (respecting field length limits)
       const duplicateData = {
         model: vehicle.model,
         manufacturer: vehicle.manufacturer,
@@ -145,7 +141,7 @@ export default function VehiclesPage() {
       console.error('Failed to duplicate vehicle:', err);
       alert('Не вдалося дублювати автомобіль');
     }
-  };
+  }, [loadVehicles]);
 
   if (loading) {
     return (
