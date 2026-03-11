@@ -86,6 +86,10 @@ interface RegulationPlanEntry {
   id: number;
   item: RegulationItem;
   last_done_km: number;
+  every_km: number | null;
+  notify_before_km: number | null;
+  effective_every_km: number;
+  effective_notify_before_km: number;
   next_due_km: number;
   updated_at: string;
 }
@@ -1692,7 +1696,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
 
             {plan.entries.map(entry => {
               const isOverdue = initialKm >= entry.next_due_km;
-              const isDueSoon = !isOverdue && initialKm >= entry.next_due_km - entry.item.notify_before_km;
+              const isDueSoon = !isOverdue && initialKm >= entry.next_due_km - entry.effective_notify_before_km;
               const isMarking = markingId === entry.id;
               const isDeleting = deletingId === entry.id;
 
@@ -1712,7 +1716,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-slate-900 truncate">{localTitle(entry.item, locale)}</p>
                       <p className="text-xs text-slate-400 font-medium mt-0.5">
-                        {t('everyKm', { km: entry.item.every_km.toLocaleString() })}
+                        {t('everyKm', { km: entry.effective_every_km.toLocaleString() })}
                       </p>
                     </div>
 
