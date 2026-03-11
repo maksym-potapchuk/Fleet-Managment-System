@@ -6,5 +6,5 @@ export const defaultLocale: Locale = 'pl';
 export const i18nConfig = {
   locales,
   defaultLocale,
-  localePrefix: 'always' as const
+  localePrefix: 'as-needed' as const
 };

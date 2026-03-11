@@ -4,7 +4,7 @@ import { createNavigation } from 'next-intl/navigation';
 export const routing = defineRouting({
   locales: ['pl', 'uk', 'en'],
   defaultLocale: 'pl',
-  localePrefix: 'always',
+  localePrefix: 'as-needed',
   localeDetection: true,
   localeCookie: {
     name: 'NEXT_LOCALE',

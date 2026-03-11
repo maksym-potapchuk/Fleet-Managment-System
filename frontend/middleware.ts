@@ -45,6 +45,7 @@ function getCanonicalPath(pathname: string): string {
 }
 
 function buildLocalizedPath(locale: string, path: string): string {
+  if (locale === routing.defaultLocale) return path;
   return `/${locale}${path}`;
 }
 
