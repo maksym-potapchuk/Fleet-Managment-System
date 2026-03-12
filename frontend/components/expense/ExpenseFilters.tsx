@@ -122,14 +122,14 @@ export function ExpenseFilters({ filters, onChange, showVehicleFilter = false, s
           type="date"
           value={filters.date_from || ''}
           onChange={(e) => onChange({ ...filters, date_from: e.target.value || undefined })}
-          className={`${dateClass} w-full sm:w-auto min-w-[130px]`}
+          className={`${dateClass} w-full sm:w-auto min-w-[130px]${!filters.date_from ? ' date-empty' : ''}`}
         />
         <span className="text-slate-400 text-xs shrink-0">–</span>
         <input
           type="date"
           value={filters.date_to || ''}
           onChange={(e) => onChange({ ...filters, date_to: e.target.value || undefined })}
-          className={`${dateClass} w-full sm:w-auto min-w-[130px]`}
+          className={`${dateClass} w-full sm:w-auto min-w-[130px]${!filters.date_to ? ' date-empty' : ''}`}
         />
       </div>
 
