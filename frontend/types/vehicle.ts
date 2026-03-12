@@ -78,6 +78,7 @@ export interface Vehicle {
   color: string;
   fuel_type: FuelType | null;
   initial_km: number;
+  distance_unit: 'km' | 'mi';
   is_selected: boolean;
   status: VehicleStatus;
   status_position: number;
@@ -137,6 +138,7 @@ export interface CreateVehicleData {
   color: string;
   fuel_type: FuelType | null;
   initial_km: number;
+  distance_unit?: 'km' | 'mi';
   status?: VehicleStatus;
 }
 

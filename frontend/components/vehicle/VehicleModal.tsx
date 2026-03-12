@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, Save, Archive, Car, Upload, Plus, UserPlus, ChevronDown } from 'lucide-react';
 import { Vehicle, CreateVehicleData, ManufacturerChoice, VehicleStatus, FuelType, VehiclePhoto } from '@/types/vehicle';
+import { toDisplayUnit, toKm, type DistanceUnit } from '@/lib/distance';
 import { Driver } from '@/types/driver';
 import { vehicleService } from '@/services/vehicle';
 import { getAllDrivers, createDriver } from '@/services/driver';
@@ -65,6 +66,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
     status: 'AUCTION',
   });
   const [kmStr, setKmStr] = useState('');
+  const [distUnit, setDistUnit] = useState<DistanceUnit>('km');
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
 
   // Driver state
@@ -121,7 +123,9 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
         fuel_type: vehicle.fuel_type,
         status: vehicle.status,
       });
-      setKmStr(String(vehicle.initial_km));
+      const unit = vehicle.distance_unit ?? 'km';
+      setDistUnit(unit);
+      setKmStr(String(toDisplayUnit(vehicle.initial_km, unit)));
       setSelectedDriverId(vehicle.driver?.id || null);
       setExistingPhotos(vehicle.photos || []);
     } else {
@@ -137,6 +141,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
         fuel_type: null,
         status: 'AUCTION',
       });
+      setDistUnit('km');
       setKmStr('');
       setSelectedDriverId(null);
       setExistingPhotos([]);
@@ -234,7 +239,8 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
         year: rest.year || null,
         car_number: rest.car_number?.trim() || undefined,
         is_temporary_plate,
-        initial_km: kmNum,
+        initial_km: toKm(kmNum, distUnit),
+        distance_unit: distUnit,
       };
 
       if (vehicle) {
@@ -558,15 +564,53 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   <label className="block text-sm font-medium text-slate-600 mb-1.5">
                     {t('mileage')} <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={kmStr}
-                    onChange={(e) => setKmStr(e.target.value)}
-                    className={kmStr ? inputFilled : inputEmpty}
-                    placeholder="0"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={kmStr}
+                      onChange={(e) => setKmStr(e.target.value)}
+                      className={`flex-1 ${kmStr ? inputFilled : inputEmpty}`}
+                      placeholder="0"
+                    />
+                    <div className="flex rounded-xl border border-slate-200 overflow-hidden flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (distUnit === 'mi') {
+                            const val = parseInt(kmStr, 10);
+                            if (!isNaN(val) && val > 0) setKmStr(String(toKm(val, 'mi')));
+                            setDistUnit('km');
+                          }
+                        }}
+                        className={`px-3 py-2 text-sm font-bold transition-colors ${
+                          distUnit === 'km'
+                            ? 'bg-[#2D8B7E] text-white'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                        }`}
+                      >
+                        km
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (distUnit === 'km') {
+                            const val = parseInt(kmStr, 10);
+                            if (!isNaN(val) && val > 0) setKmStr(String(toDisplayUnit(val, 'mi')));
+                            setDistUnit('mi');
+                          }
+                        }}
+                        className={`px-3 py-2 text-sm font-bold transition-colors ${
+                          distUnit === 'mi'
+                            ? 'bg-[#2D8B7E] text-white'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                        }`}
+                      >
+                        mi
+                      </button>
+                    </div>
+                  </div>
                   <p className="text-[11px] text-slate-400 mt-1">{t('mileageHint')}</p>
                 </div>
               </div>
