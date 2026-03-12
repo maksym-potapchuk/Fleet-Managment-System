@@ -1520,6 +1520,16 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
     loadRegulation();
   }, [loadRegulation]);
 
+  const translateText = async (text: string): Promise<Record<string, string>> => {
+    if (!text.trim()) return {};
+    try {
+      const res = await api.post<Record<string, string>>('/fleet/translate/', { text: text.trim(), source: locale });
+      return res.data;
+    } catch {
+      return {};
+    }
+  };
+
   const autoTranslate = async (
     text: string,
     setter: React.Dispatch<React.SetStateAction<typeof addForm>>,
@@ -1528,10 +1538,8 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
     if (!text.trim()) return;
     setTranslating(true);
     try {
-      const res = await api.post<Record<string, string>>('/fleet/translate/', { text: text.trim(), source: locale });
-      setter(prev => ({ ...prev, title_pl: res.data.pl ?? prev.title_pl, title_uk: res.data.uk ?? prev.title_uk, title_en: res.data.en ?? prev.title_en }));
-    } catch (err) {
-      console.error('Translation failed:', err);
+      const translations = await translateText(text);
+      setter(prev => ({ ...prev, title_pl: translations.pl ?? prev.title_pl, title_uk: translations.uk ?? prev.title_uk, title_en: translations.en ?? prev.title_en }));
     } finally {
       setTranslating(false);
     }
@@ -1562,6 +1570,23 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
     setSaving(true);
     setError(null);
     try {
+      // Auto-translate custom entries that are missing translations
+      const translatedCustom = await Promise.all(
+        customEntries.map(async (ce) => {
+          const needsTranslation = ce.title.trim() && (!ce.title_pl || !ce.title_uk || !ce.title_en);
+          if (needsTranslation) {
+            const translations = await translateText(ce.title);
+            return {
+              ...ce,
+              title_pl: ce.title_pl || translations.pl || ce.title,
+              title_uk: ce.title_uk || translations.uk || ce.title,
+              title_en: ce.title_en || translations.en || ce.title,
+            };
+          }
+          return ce;
+        }),
+      );
+
       await api.post(`/fleet/regulation/${vehicleId}/assign/`, {
         schema_id: defaultSchema.id,
         entries: filteredItems.map(item => {
@@ -1582,29 +1607,43 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
           return entry;
         }),
       });
+
       // Create custom entries after assignment
-      for (const ce of customEntries) {
-        const lastDoneDisplay = parseInt(ce.last_done_km || '0', 10) || 0;
-        const lastDone = toKm(lastDoneDisplay, distanceUnit);
-        const cePayload: Record<string, string | number | null> = {
-          title: ce.title_uk || ce.title,
-          title_pl: ce.title_pl,
-          title_uk: ce.title_uk || ce.title,
-          title_en: ce.title_en,
-          every_km: toKm(parseInt(ce.every_km, 10), distanceUnit),
-          notify_before_km: toKm(parseInt(ce.notify_before_km || '500', 10), distanceUnit),
-          last_done_km: lastDone,
-        };
-        const ceMi = parseInt(ce.every_mi, 10);
-        if (!isNaN(ceMi) && ceMi > 0) cePayload.every_mi = ceMi;
-        const ceNotifyMi = parseInt(ce.notify_before_mi, 10);
-        if (!isNaN(ceNotifyMi) && ceNotifyMi >= 0) cePayload.notify_before_mi = ceNotifyMi;
-        await api.post(`/fleet/vehicles/${vehicleId}/regulation/entries/`, cePayload);
+      const failedEntries: string[] = [];
+      for (const ce of translatedCustom) {
+        try {
+          const lastDoneDisplay = parseInt(ce.last_done_km || '0', 10) || 0;
+          const lastDone = toKm(lastDoneDisplay, distanceUnit);
+          const cePayload: Record<string, string | number | null> = {
+            title: ce.title_uk || ce.title,
+            title_pl: ce.title_pl || ce.title,
+            title_uk: ce.title_uk || ce.title,
+            title_en: ce.title_en || ce.title,
+            every_km: toKm(parseInt(ce.every_km, 10), distanceUnit),
+            notify_before_km: toKm(parseInt(ce.notify_before_km || '500', 10), distanceUnit),
+            last_done_km: lastDone,
+          };
+          const ceMi = parseInt(ce.every_mi, 10);
+          if (!isNaN(ceMi) && ceMi > 0) cePayload.every_mi = ceMi;
+          const ceNotifyMi = parseInt(ce.notify_before_mi, 10);
+          if (!isNaN(ceNotifyMi) && ceNotifyMi >= 0) cePayload.notify_before_mi = ceNotifyMi;
+          await api.post(`/fleet/vehicles/${vehicleId}/regulation/entries/`, cePayload);
+        } catch {
+          failedEntries.push(ce.title);
+        }
       }
+
+      // Always reload — regulation is assigned even if some custom entries failed
       await loadRegulation();
+
+      if (failedEntries.length > 0) {
+        setError(`${t('saveError')}: ${failedEntries.join(', ')}`);
+      }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       setError(msg ?? t('saveError'));
+      // Reload in case the assign succeeded before the error
+      await loadRegulation();
     } finally {
       setSaving(false);
     }
@@ -1685,24 +1724,32 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
     if (!addForm.title || !addForm.every_km) return;
     setAddLoading(true);
     try {
+      // Auto-translate if missing
+      let { title_pl, title_uk, title_en } = addForm;
+      if (!title_pl || !title_uk || !title_en) {
+        const translations = await translateText(addForm.title);
+        title_pl = title_pl || translations.pl || addForm.title;
+        title_uk = title_uk || translations.uk || addForm.title;
+        title_en = title_en || translations.en || addForm.title;
+      }
+
+      const payload: Record<string, string | number | null> = {
+        title: title_uk || addForm.title,
+        title_pl,
+        title_uk: title_uk || addForm.title,
+        title_en,
+        every_km: toKm(parseInt(addForm.every_km, 10), distanceUnit),
+        notify_before_km: toKm(parseInt(addForm.notify_before_km || '500', 10), distanceUnit),
+        last_done_km: toKm(parseInt(addForm.last_done_km || '0', 10), distanceUnit),
+      };
+      const everyMi = parseInt(addForm.every_mi, 10);
+      if (!isNaN(everyMi) && everyMi > 0) payload.every_mi = everyMi;
+      const notifyMi = parseInt(addForm.notify_before_mi, 10);
+      if (!isNaN(notifyMi) && notifyMi >= 0) payload.notify_before_mi = notifyMi;
+
       const res = await api.post<RegulationPlanEntry>(
         `/fleet/vehicles/${vehicleId}/regulation/entries/`,
-        (() => {
-          const payload: Record<string, string | number | null> = {
-            title: addForm.title_uk || addForm.title,
-            title_pl: addForm.title_pl,
-            title_uk: addForm.title_uk || addForm.title,
-            title_en: addForm.title_en,
-            every_km: toKm(parseInt(addForm.every_km, 10), distanceUnit),
-            notify_before_km: toKm(parseInt(addForm.notify_before_km || '500', 10), distanceUnit),
-            last_done_km: toKm(parseInt(addForm.last_done_km || '0', 10), distanceUnit),
-          };
-          const everyMi = parseInt(addForm.every_mi, 10);
-          if (!isNaN(everyMi) && everyMi > 0) payload.every_mi = everyMi;
-          const notifyMi = parseInt(addForm.notify_before_mi, 10);
-          if (!isNaN(notifyMi) && notifyMi >= 0) payload.notify_before_mi = notifyMi;
-          return payload;
-        })(),
+        payload,
       );
       setPlan(prev => prev ? { ...prev, entries: [...prev.entries, res.data] } : prev);
       setShowAddForm(false);
