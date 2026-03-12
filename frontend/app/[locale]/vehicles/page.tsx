@@ -1,18 +1,75 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/src/i18n/routing';
-import { VehicleKanban } from '@/components/vehicle/VehicleKanban';
+import { VehicleKanban, KanbanFilters } from '@/components/vehicle/VehicleKanban';
 import { VehicleModal } from '@/components/vehicle/VehicleModal';
 import { vehicleService } from '@/services/vehicle';
 import { Vehicle, VehicleStatus } from '@/types/vehicle';
 import { useSidebar } from './SidebarContext';
 
+const VALID_STATUSES = new Set<string>([
+  'AUCTION', 'FOCUS', 'GAS_INSTALL', 'SERVICE', 'CLEANING',
+  'PRE_DELIVERY', 'READY', 'RENT', 'LEASING', 'SELLING', 'SOLD',
+]);
+const VALID_DRIVER_FILTERS = new Set(['all', 'with_driver', 'without_driver']);
+
 export default function VehiclesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#2D8B7E] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-600 font-semibold">Завантаження...</p>
+        </div>
+      </div>
+    }>
+      <VehiclesPageContent />
+    </Suspense>
+  );
+}
+
+function VehiclesPageContent() {
   const t = useTranslations('vehicles');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { openSidebar } = useSidebar();
+
+  const initialFilters = useMemo((): Partial<KanbanFilters> => {
+    const search = searchParams.get('search') ?? '';
+    const statuses = (searchParams.get('statuses') ?? '')
+      .split(',')
+      .filter(s => VALID_STATUSES.has(s)) as VehicleStatus[];
+    const driverRaw = searchParams.get('driver') ?? 'all';
+    const driver = VALID_DRIVER_FILTERS.has(driverRaw)
+      ? driverRaw as KanbanFilters['driver']
+      : 'all';
+    const manufacturers = (searchParams.get('manufacturers') ?? '')
+      .split(',')
+      .filter(Boolean);
+    const mobileTabRaw = searchParams.get('tab') ?? 'ALL';
+    const mobileTab = (mobileTabRaw === 'ALL' || VALID_STATUSES.has(mobileTabRaw))
+      ? mobileTabRaw as KanbanFilters['mobileTab']
+      : 'ALL';
+
+    return { search, statuses, driver, manufacturers, mobileTab };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleFiltersChange = useCallback((filters: KanbanFilters) => {
+    const params = new URLSearchParams();
+    if (filters.search) params.set('search', filters.search);
+    if (filters.statuses.length) params.set('statuses', filters.statuses.join(','));
+    if (filters.driver !== 'all') params.set('driver', filters.driver);
+    if (filters.manufacturers.length) params.set('manufacturers', filters.manufacturers.join(','));
+    if (filters.mobileTab !== 'ALL') params.set('tab', filters.mobileTab);
+
+    const qs = params.toString();
+    const newUrl = qs ? `?${qs}` : window.location.pathname;
+    window.history.replaceState(null, '', newUrl);
+  }, []);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -186,6 +243,8 @@ export default function VehiclesPage() {
         onDuplicateVehicle={handleDuplicateVehicle}
         onReorderVehicles={handleReorderVehicles}
         onOpenSidebar={openSidebar}
+        initialFilters={initialFilters}
+        onFiltersChange={handleFiltersChange}
       />
 
       <VehicleModal

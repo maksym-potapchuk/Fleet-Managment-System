@@ -48,7 +48,6 @@ import {
   Package,
   AlertTriangle,
   ScrollText,
-  Receipt,
   Zap,
   GripHorizontal,
 } from 'lucide-react';
@@ -120,6 +119,14 @@ function PortalDropdown({ anchorRef, open, onClose, align = 'right', children }:
   );
 }
 
+export interface KanbanFilters {
+  search: string;
+  statuses: VehicleStatus[];
+  driver: 'all' | 'with_driver' | 'without_driver';
+  manufacturers: string[];
+  mobileTab: VehicleStatus | 'ALL';
+}
+
 interface VehicleKanbanProps {
   vehicles: Vehicle[];
   onSelectVehicle: (id: string) => void;
@@ -130,6 +137,8 @@ interface VehicleKanbanProps {
   onDuplicateVehicle?: (id: string) => void;
   onReorderVehicles?: (items: { id: string; status_position: number }[]) => Promise<void>;
   onOpenSidebar?: () => void;
+  initialFilters?: Partial<KanbanFilters>;
+  onFiltersChange?: (filters: KanbanFilters) => void;
 }
 
 export function VehicleKanban({
@@ -142,17 +151,30 @@ export function VehicleKanban({
   onDuplicateVehicle,
   onReorderVehicles,
   onOpenSidebar,
+  initialFilters,
+  onFiltersChange,
 }: VehicleKanbanProps) {
   const t = useTranslations('vehicles');
   const tNav = useTranslations('nav');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(initialFilters?.search ?? '');
   const debouncedSearch = useDebounce(searchTerm, 300);
-  const [selectedStatuses, setSelectedStatuses] = useState<VehicleStatus[]>([]);
-  const [driverFilter, setDriverFilter] = useState<'all' | 'with_driver' | 'without_driver'>('all');
-  const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<VehicleStatus[]>(initialFilters?.statuses ?? []);
+  const [driverFilter, setDriverFilter] = useState<'all' | 'with_driver' | 'without_driver'>(initialFilters?.driver ?? 'all');
+  const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>(initialFilters?.manufacturers ?? []);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeDragType, setActiveDragType] = useState<'vehicle' | 'column' | null>(null);
-  const [mobileActiveStatus, setMobileActiveStatus] = useState<VehicleStatus | 'ALL'>('ALL');
+  const [mobileActiveStatus, setMobileActiveStatus] = useState<VehicleStatus | 'ALL'>(initialFilters?.mobileTab ?? 'ALL');
+
+  // Sync filter changes to parent (for URL persistence)
+  useEffect(() => {
+    onFiltersChange?.({
+      search: debouncedSearch,
+      statuses: selectedStatuses,
+      driver: driverFilter,
+      manufacturers: selectedManufacturers,
+      mobileTab: mobileActiveStatus,
+    });
+  }, [debouncedSearch, selectedStatuses, driverFilter, selectedManufacturers, mobileActiveStatus]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -598,10 +620,10 @@ export function VehicleKanban({
 
       {/* ── Mobile Status Tabs ── */}
       <div className="md:hidden flex-shrink-0 bg-white/90 border-b border-slate-200/50 shadow-sm">
-        <div className="flex flex-wrap gap-1.5 px-3 py-2.5">
+        <div className="flex gap-1.5 px-3 py-2.5 overflow-x-auto scrollbar-hide -mx-px">
           <button
             onClick={() => setMobileActiveStatus('ALL')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+            className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
               mobileActiveStatus === 'ALL'
                 ? 'bg-slate-800 text-white shadow-md'
                 : 'bg-slate-100 text-slate-600 active:bg-slate-200'
@@ -616,7 +638,7 @@ export function VehicleKanban({
               <button
                 key={col.id}
                 onClick={() => setMobileActiveStatus(col.id)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all border ${
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all border ${
                   mobileActiveStatus === col.id
                     ? `${col.bgColor} ${col.color} ${col.borderColor} shadow-md`
                     : 'bg-slate-100 text-slate-600 border-transparent active:bg-slate-200'
@@ -1138,16 +1160,6 @@ const VehicleCard = memo(function VehicleCard({ vehicle, onSelect, onEdit, onArc
 
         {/* Compact info row */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Total cost */}
-          {vehicle.total_cost && (
-            <div className="flex items-center gap-1.5 bg-[#2D8B7E]/5 border border-[#2D8B7E]/20 rounded-lg px-2.5 py-1.5">
-              <Receipt className="w-3.5 h-3.5 text-[#2D8B7E]" />
-              <span className="text-xs font-bold text-[#2D8B7E] tabular-nums">
-                {parseFloat(vehicle.total_cost).toLocaleString('pl-PL', { maximumFractionDigits: 0 })}
-              </span>
-            </div>
-          )}
-
           {/* Equipment */}
           {vehicle.equipment_total > 0 && (
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
@@ -1277,15 +1289,6 @@ function VehicleCardOverlay({ vehicle }: { vehicle: Vehicle }) {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {vehicle.total_cost && (
-            <div className="flex items-center gap-1.5 bg-[#2D8B7E]/5 border border-[#2D8B7E]/20 rounded-lg px-2.5 py-1.5">
-              <Receipt className="w-3.5 h-3.5 text-[#2D8B7E]" />
-              <span className="text-xs font-bold text-[#2D8B7E] tabular-nums">
-                {parseFloat(vehicle.total_cost).toLocaleString('pl-PL', { maximumFractionDigits: 0 })}
-              </span>
-            </div>
-          )}
-
           {vehicle.equipment_total > 0 && (
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
               <Package className="w-3.5 h-3.5 text-slate-400" />
@@ -1524,14 +1527,6 @@ const MobileVehicleCard = memo(function MobileVehicleCard({ vehicle, columns, on
         {/* Row 1: info chips + position arrows */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0 flex-1 flex-wrap">
-            {vehicle.total_cost && (
-              <div className="flex items-center gap-1.5">
-                <Receipt className="w-3.5 h-3.5 text-[#2D8B7E] shrink-0" />
-                <span className="text-xs font-bold text-[#2D8B7E] tabular-nums">
-                  {parseFloat(vehicle.total_cost).toLocaleString('pl-PL', { maximumFractionDigits: 0 })}
-                </span>
-              </div>
-            )}
             {vehicle.equipment_total > 0 && (
               <div className="flex items-center gap-1.5">
                 <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" />
