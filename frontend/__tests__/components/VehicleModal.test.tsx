@@ -52,6 +52,7 @@ const mockVehicle: Vehicle = {
   color: 'Чорний',
   fuel_type: 'GASOLINE',
   initial_km: 50000,
+  distance_unit: 'km' as const,
   is_selected: false,
   status: 'READY',
   status_position: 0,

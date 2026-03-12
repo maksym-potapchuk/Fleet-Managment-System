@@ -100,6 +100,7 @@ const makeVehicle = (overrides: Partial<Vehicle>): Vehicle => ({
   color: 'Білий',
   fuel_type: 'GASOLINE',
   initial_km: 0,
+  distance_unit: 'km' as const,
   is_selected: false,
   status: 'READY',
   status_position: 0,
