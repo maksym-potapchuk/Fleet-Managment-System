@@ -1447,7 +1447,6 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
   const [plan, setPlan] = useState<RegulationPlan | null>(null);
   const [defaultSchema, setDefaultSchema] = useState<RegulationSchema | null>(null);
   const [kmInputs, setKmInputs] = useState<Record<number, string>>({});
-  const [nextKmInputs, setNextKmInputs] = useState<Record<number, string>>({});
   const [everyKmInputs, setEveryKmInputs] = useState<Record<number, string>>({});
   const [notifyKmInputs, setNotifyKmInputs] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
@@ -1476,11 +1475,6 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
     distanceUnit === 'mi' && entry.effective_every_mi != null
       ? entry.effective_every_mi
       : toDisplayUnit(entry.effective_every_km, distanceUnit);
-  const displayNotify = (entry: RegulationPlanEntry) =>
-    distanceUnit === 'mi' && entry.effective_notify_before_mi != null
-      ? entry.effective_notify_before_mi
-      : toDisplayUnit(entry.effective_notify_before_km, distanceUnit);
-
   // Delete entry state
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);

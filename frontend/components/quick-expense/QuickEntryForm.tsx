@@ -316,7 +316,6 @@ export function QuickEntryForm({
   }, [totalAmount]);
 
   // ── Validation ──
-  const hasInvoice = !!foundInvoice || !!invoiceFile;
   const isValid = useMemo(() => {
     if (code === 'INSPECTION') return parseFloat(officialCost) > 0 && inspectionDate;
     if (code === 'SERVICE') return serviceItems.some(i => i.name.trim() && parseFloat(i.price) > 0);

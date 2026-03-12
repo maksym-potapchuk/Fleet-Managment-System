@@ -87,15 +87,12 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
   const resolvedDriver = vehicleDriverProp !== undefined ? vehicleDriverProp : (selectedVehicle?.driver ?? null);
   const resolvedDriverLabel = resolvedDriver ? `${resolvedDriver.first_name} ${resolvedDriver.last_name}` : null;
 
-  // When vehicle changes and payer is CLIENT, auto-update driver
+  // When vehicle or driver changes and payer is CLIENT, auto-update driver
   useEffect(() => {
     if (formData.payer_type === 'CLIENT') {
-      if (resolvedDriver) {
-        setClientDriver(String(resolvedDriver.id));
-      } else {
-        setClientDriver('');
-      }
+      setClientDriver(resolvedDriver ? String(resolvedDriver.id) : '');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.vehicle, resolvedDriver?.id]);
 
   // Load fleet services on mount
