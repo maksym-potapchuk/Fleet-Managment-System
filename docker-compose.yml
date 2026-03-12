@@ -17,7 +17,11 @@ services:
       dockerfile: Dockerfile
     command: >
       sh -c "python manage.py migrate &&
-             uvicorn config.asgi:application --host 0.0.0.0 --port 8000 --reload"
+             uvicorn config.asgi:application --host 0.0.0.0 --port 8000
+             --reload --reload-dir /app/config --reload-dir /app/account
+             --reload-dir /app/driver --reload-dir /app/vehicle
+             --reload-dir /app/expense --reload-dir /app/fleet_management
+             --reload-dir /app/notification"
     ports:
       - "8000:8000"
     volumes:
@@ -55,10 +59,11 @@ services:
       backend:
         condition: service_healthy
     environment:
-      - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
+      - WATCHPACK_POLLING_INTERVAL=3000
       - NEXT_TELEMETRY_DISABLED=1
       - BACKEND_URL=http://backend:8000
+      - NODE_OPTIONS=--max-old-space-size=1024
     restart: unless-stopped
 
   nginx:

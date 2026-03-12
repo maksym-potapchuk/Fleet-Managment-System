@@ -18,7 +18,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto delete-superuser db-dump db-seed db-reset dump seed seed-defaults seed-categories create-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-reg-schema drop-vehicles trello-lists import-trello import-trello-dry import-trello-all import-trello-all-dry import-trello-reposition lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
+.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto delete-superuser db-dump db-seed db-reset dump seed seed-defaults seed-categories create-reg-schema force-reg-schema prod-force-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-reg-schema drop-vehicles trello-lists import-trello import-trello-dry import-trello-all import-trello-all-dry import-trello-reposition lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
 
 help:
 >@echo "Available commands:"
@@ -60,6 +60,8 @@ help:
 >@echo "  make seed-defaults       - Seed all defaults (categories, regulation schema, equipment)"
 >@echo "  make seed-categories     - Seed expense categories only (idempotent)"
 >@echo "  make create-reg-schema   - Seed default vehicle regulation schema"
+>@echo "  make force-reg-schema    - Update regulation schema in-place (safe for prod)"
+>@echo "  make prod-force-reg-schema - Same but on prod stack"
 >@echo "  make create-driver-vehicle - Create driver +380663234712, vehicle, assign"
 >@echo "  make create-driver-vehicle-force - Same, recreate/reassign if exists"
 >@echo "  make show-regulation CAR=AA6601BB - Show regulation plan for vehicle by car number"
@@ -208,6 +210,9 @@ create-reg-schema: seed-defaults
 
 force-reg-schema:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py create_vehicle_reg_basic_schema --force
+
+prod-force-reg-schema:
+>$(COMPOSE_PROD) exec $(BACKEND_SERVICE) python manage.py create_vehicle_reg_basic_schema --force
 
 create-driver-vehicle:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py create_driver_with_vehicle
