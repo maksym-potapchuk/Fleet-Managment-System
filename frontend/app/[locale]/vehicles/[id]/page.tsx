@@ -3440,7 +3440,7 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,application/pdf"
+                accept=".pdf,application/pdf,image/*"
                 className="hidden"
                 onChange={e => { setFormFile(e.target.files?.[0] ?? null); e.target.value = ''; }}
               />
@@ -3515,7 +3515,7 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
                       className="text-xs font-semibold text-[#2D8B7E] hover:underline flex items-center gap-1 mt-1"
                     >
                       <FileText className="w-3 h-3" />
-                      PDF
+                      {t('downloadReport')}
                     </a>
                   )}
                 </div>
