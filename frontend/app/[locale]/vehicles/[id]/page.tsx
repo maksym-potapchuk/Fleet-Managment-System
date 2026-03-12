@@ -32,13 +32,15 @@ import {
   ChevronDown,
   Archive,
   Languages,
+  ArrowRight,
 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import api from '@/lib/api';
+import { toDisplayUnit, toKm, unitLabel, type DistanceUnit } from '@/lib/distance';
 import { vehicleService } from '@/services/vehicle';
 import { expenseService } from '@/services/expense';
 import { Vehicle, VehicleOwner, OwnerHistoryRecord, VehicleStatus, FuelType, TechnicalInspection, MileageLog } from '@/types/vehicle';
-import { Expense, CreateExpenseData, ExpenseCategory, ExpenseFilters as ExpenseFiltersType } from '@/types/expense';
+import { Expense, CreateExpenseData, ExpenseCategory, ExpenseFilters as ExpenseFiltersType, ExpenseSummary } from '@/types/expense';
 import { VehicleModal } from '@/components/vehicle/VehicleModal';
 import { ExpenseTable } from '@/components/expense/ExpenseTable';
 import { ExpenseForm } from '@/components/expense/ExpenseForm';
@@ -71,7 +73,9 @@ interface RegulationItem {
   title_uk: string;
   title_en: string;
   every_km: number;
+  every_mi: number | null;
   notify_before_km: number;
+  notify_before_mi: number | null;
 }
 
 interface RegulationSchema {
@@ -90,9 +94,14 @@ interface RegulationPlanEntry {
   item: RegulationItem;
   last_done_km: number;
   every_km: number | null;
+  every_mi: number | null;
   notify_before_km: number | null;
+  notify_before_mi: number | null;
+  next_due_km_override: number | null;
   effective_every_km: number;
+  effective_every_mi: number | null;
   effective_notify_before_km: number;
+  effective_notify_before_mi: number | null;
   next_due_km: number;
   updated_at: string;
 }
@@ -170,6 +179,14 @@ export default function VehicleWorkspacePage() {
   const [mileageKm, setMileageKm] = useState('');
   const [savingMileage, setSavingMileage] = useState(false);
   const mileageInputRef = useRef<HTMLInputElement>(null);
+  const toggleDistanceUnit = () => {
+    if (!vehicle) return;
+    const newUnit: DistanceUnit = (vehicle.distance_unit ?? 'km') === 'km' ? 'mi' : 'km';
+    setVehicle(prev => prev ? { ...prev, distance_unit: newUnit } : prev);
+    api.patch(`/vehicle/${vehicle.id}/`, { distance_unit: newUnit }).catch(() => {
+      setVehicle(prev => prev ? { ...prev, distance_unit: vehicle.distance_unit } : prev);
+    });
+  };
 
   // Inline driver assignment
   const [showDriverPicker, setShowDriverPicker] = useState(false);
@@ -199,17 +216,19 @@ export default function VehicleWorkspacePage() {
   const [mileageError, setMileageError] = useState('');
 
   const handleQuickMileage = async () => {
-    const kmVal = parseInt(mileageKm, 10);
-    if (!kmVal || kmVal <= 0 || !vehicle) return;
-    if (kmVal <= vehicle.initial_km) {
-      setMileageError(t('mileage.minError', { km: vehicle.initial_km.toLocaleString() }));
+    const inputVal = parseInt(mileageKm, 10);
+    if (!inputVal || inputVal <= 0 || !vehicle) return;
+    const unit = vehicle.distance_unit ?? 'km';
+    const displayKm = toDisplayUnit(vehicle.initial_km, unit);
+    if (inputVal <= displayKm) {
+      setMileageError(t('mileage.minError', { km: displayKm.toLocaleString(), unit: unitLabel(unit) }));
       return;
     }
     setMileageError('');
     setSavingMileage(true);
     try {
       await api.post(`/vehicle/${vehicle.id}/mileage/`, {
-        km: kmVal,
+        km: toKm(inputVal, unit),
         recorded_at: new Date().toISOString().split('T')[0],
       });
       setShowMileageInput(false);
@@ -406,7 +425,7 @@ export default function VehicleWorkspacePage() {
             <Menu className="w-5 h-5 text-slate-700" />
           </button>
           <button
-            onClick={() => router.push('/vehicles')}
+            onClick={() => router.back()}
             className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-semibold text-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -522,7 +541,7 @@ export default function VehicleWorkspacePage() {
           <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-3 py-2 min-w-0">
             <DollarSign className="w-4 h-4 text-[#2D8B7E] flex-shrink-0" />
             <span className="text-xs sm:text-sm font-bold text-[#2D8B7E] truncate">
-              {parseFloat(vehicle.cost).toLocaleString()} PLN
+              {parseFloat(vehicle.cost).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PLN
             </span>
           </div>
           <div className="relative" ref={fuelPickerRef}>
@@ -627,14 +646,14 @@ export default function VehicleWorkspacePage() {
                 <input
                   ref={mileageInputRef}
                   type="number"
-                  min={vehicle.initial_km + 1}
+                  min={toDisplayUnit(vehicle.initial_km, vehicle.distance_unit ?? 'km') + 1}
                   value={mileageKm}
                   onChange={(e) => { setMileageKm(e.target.value); setMileageError(''); }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleQuickMileage();
                     if (e.key === 'Escape') { setShowMileageInput(false); setMileageKm(''); setMileageError(''); }
                   }}
-                  placeholder={t('mileage.newKm')}
+                  placeholder={t('mileage.newKm', { unit: unitLabel(vehicle.distance_unit ?? 'km') })}
                   className="flex-1 min-w-0 text-sm font-bold text-slate-800 bg-transparent outline-none placeholder:text-slate-400"
                   autoFocus
                 />
@@ -659,17 +678,31 @@ export default function VehicleWorkspacePage() {
               )}
             </div>
           ) : (
-            <button
-              onClick={() => { setShowMileageInput(true); setMileageKm(''); setMileageError(''); }}
-              className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-3 py-2 hover:border-[#2D8B7E]/50 hover:bg-[#2D8B7E]/5 transition-all group cursor-pointer text-left min-w-0"
-              title={t('mileage.updateMileage')}
-            >
-              <Gauge className="w-4 h-4 text-slate-400 group-hover:text-[#2D8B7E] transition-colors flex-shrink-0" />
-              <span className="text-xs sm:text-sm font-bold text-slate-700 group-hover:text-[#2D8B7E] transition-colors truncate">
-                {vehicle.initial_km.toLocaleString()} км
-              </span>
-              <Pencil className="w-3 h-3 text-slate-300 group-hover:text-[#2D8B7E] transition-colors ml-auto flex-shrink-0" />
-            </button>
+            <div className="flex items-center gap-1 min-w-0">
+              <button
+                onClick={() => { setShowMileageInput(true); setMileageKm(''); setMileageError(''); }}
+                className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-3 py-2 hover:border-[#2D8B7E]/50 hover:bg-[#2D8B7E]/5 transition-all group cursor-pointer text-left min-w-0"
+                title={t('mileage.updateMileage')}
+              >
+                <Gauge className="w-4 h-4 text-slate-400 group-hover:text-[#2D8B7E] transition-colors flex-shrink-0" />
+                <span className="text-xs sm:text-sm font-bold text-slate-700 group-hover:text-[#2D8B7E] transition-colors truncate">
+                  {toDisplayUnit(vehicle.initial_km, vehicle.distance_unit ?? 'km').toLocaleString()} {unitLabel(vehicle.distance_unit ?? 'km')}
+                </span>
+                <Pencil className="w-3 h-3 text-slate-300 group-hover:text-[#2D8B7E] transition-colors ml-auto flex-shrink-0" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleDistanceUnit(); }}
+                className="flex items-center rounded-lg border border-slate-200 overflow-hidden flex-shrink-0 hover:border-[#2D8B7E]/40 transition-colors"
+                title={t('mileage.switchUnit')}
+              >
+                <span className={`px-1.5 py-1 text-[10px] font-bold transition-colors ${
+                  (vehicle.distance_unit ?? 'km') === 'km' ? 'bg-[#2D8B7E] text-white' : 'bg-slate-50 text-slate-400'
+                }`}>km</span>
+                <span className={`px-1.5 py-1 text-[10px] font-bold transition-colors ${
+                  (vehicle.distance_unit ?? 'km') === 'mi' ? 'bg-[#2D8B7E] text-white' : 'bg-slate-50 text-slate-400'
+                }`}>mi</span>
+              </button>
+            </div>
           )}
           <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-3 py-2 min-w-0">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex-shrink-0">VIN</span>
@@ -738,10 +771,10 @@ export default function VehicleWorkspacePage() {
       <div className="flex-1 p-3 sm:p-4 md:p-6">
         {activeTab === 'service'    && <ServiceTab    vehicleId={vehicle.id} />}
         {activeTab === 'equipment'  && <EquipmentTab  vehicleId={vehicle.id} />}
-        {activeTab === 'regulation' && <RegulationTab vehicleId={vehicle.id} initialKm={vehicle.initial_km} />}
-        {activeTab === 'history'    && <HistoryTab    vehicleId={vehicle.id} onMileageChange={loadVehicle} />}
+        {activeTab === 'regulation' && <RegulationTab vehicleId={vehicle.id} initialKm={vehicle.initial_km} distanceUnit={vehicle.distance_unit ?? 'km'} />}
+        {activeTab === 'history'    && <HistoryTab    vehicleId={vehicle.id} onMileageChange={loadVehicle} distanceUnit={vehicle.distance_unit ?? 'km'} />}
         {activeTab === 'inspection' && <InspectionTab vehicleId={vehicle.id} onInspectionChange={loadVehicle} />}
-        {activeTab === 'expenses'   && <ExpensesTab  vehicleId={vehicle.id} />}
+        {activeTab === 'expenses'   && <ExpensesTab  vehicleId={vehicle.id} vehicleDriver={vehicle.driver} />}
       </div>
 
       {/* Lightbox */}
@@ -1407,25 +1440,46 @@ function localTitle(
 // ─────────────────────────────────────────────
 // Regulation Tab
 // ─────────────────────────────────────────────
-function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm: number }) {
+function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: string; initialKm: number; distanceUnit: DistanceUnit }) {
   const t = useTranslations('vehicleWorkspace.regulation');
   const locale = useLocale();
   const [status, setStatus] = useState<'loading' | 'unassigned' | 'assigned'>('loading');
   const [plan, setPlan] = useState<RegulationPlan | null>(null);
   const [defaultSchema, setDefaultSchema] = useState<RegulationSchema | null>(null);
   const [kmInputs, setKmInputs] = useState<Record<number, string>>({});
+  const [nextKmInputs, setNextKmInputs] = useState<Record<number, string>>({});
+  const [everyKmInputs, setEveryKmInputs] = useState<Record<number, string>>({});
+  const [notifyKmInputs, setNotifyKmInputs] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [zeroKmWarning, setZeroKmWarning] = useState(false);
   const [activeView, setActiveView] = useState<'plan' | 'history'>('plan');
   const [markingId, setMarkingId] = useState<number | null>(null);
   const [markKm, setMarkKm] = useState('');
+  const [markNextKm, setMarkNextKm] = useState('');
   const [markLoading, setMarkLoading] = useState(false);
+  const [markWarning, setMarkWarning] = useState(false);
+
+  // Edit entry state
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ every_km: '', every_mi: '', notify_before_km: '', notify_before_mi: '', last_done_km: '' });
+  const [editLoading, setEditLoading] = useState(false);
 
   // Add entry form state
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+  const [addForm, setAddForm] = useState({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', every_mi: '', notify_before_km: '500', notify_before_mi: '300', last_done_km: '0' });
   const [addLoading, setAddLoading] = useState(false);
   const [addTranslating, setAddTranslating] = useState(false);
+
+  // Display helper: use explicit mi value when available, otherwise convert km
+  const displayInterval = (entry: RegulationPlanEntry) =>
+    distanceUnit === 'mi' && entry.effective_every_mi != null
+      ? entry.effective_every_mi
+      : toDisplayUnit(entry.effective_every_km, distanceUnit);
+  const displayNotify = (entry: RegulationPlanEntry) =>
+    distanceUnit === 'mi' && entry.effective_notify_before_mi != null
+      ? entry.effective_notify_before_mi
+      : toDisplayUnit(entry.effective_notify_before_km, distanceUnit);
 
   // Delete entry state
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -1435,10 +1489,10 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
   const [excludedItemIds, setExcludedItemIds] = useState<Set<number>>(new Set());
 
   // Custom items added during initial assignment
-  interface CustomEntry { id: number; title: string; title_pl: string; title_uk: string; title_en: string; every_km: string; notify_before_km: string; last_done_km: string }
+  interface CustomEntry { id: number; title: string; title_pl: string; title_uk: string; title_en: string; every_km: string; every_mi: string; notify_before_km: string; notify_before_mi: string; last_done_km: string; next_km_override: string }
   const [customEntries, setCustomEntries] = useState<CustomEntry[]>([]);
   const [showCustomForm, setShowCustomForm] = useState(false);
-  const [customForm, setCustomForm] = useState({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+  const [customForm, setCustomForm] = useState({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', every_mi: '', notify_before_km: '500', notify_before_mi: '300', last_done_km: '0' });
   const [customTranslating, setCustomTranslating] = useState(false);
   const customIdRef = useRef(0);
 
@@ -1489,30 +1543,69 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
     }
   };
 
-  const handleAssign = async () => {
+  const handleAssign = async (skipZeroWarning = false) => {
     if (!defaultSchema) return;
+
+    const filteredItems = defaultSchema.items.filter(item => !excludedItemIds.has(item.id));
+
+    // Check for zero-km items when vehicle mileage is 0
+    if (!skipZeroWarning && initialKm === 0) {
+      const zeroItems = filteredItems.filter(item => {
+        const lastDone = parseInt(kmInputs[item.id] || '0', 10) || 0;
+        return lastDone === 0;
+      });
+      const zeroCustom = customEntries.filter(ce => {
+        const lastDone = parseInt(ce.last_done_km || '0', 10) || 0;
+        return lastDone === 0;
+      });
+      if (zeroItems.length > 0 || zeroCustom.length > 0) {
+        setZeroKmWarning(true);
+        return;
+      }
+    }
+    setZeroKmWarning(false);
+
     setSaving(true);
     setError(null);
     try {
-      const filteredItems = defaultSchema.items.filter(item => !excludedItemIds.has(item.id));
       await api.post(`/fleet/regulation/${vehicleId}/assign/`, {
         schema_id: defaultSchema.id,
-        entries: filteredItems.map(item => ({
-          item_id: item.id,
-          last_done_km: parseInt(kmInputs[item.id] ?? '0', 10),
-        })),
+        entries: filteredItems.map(item => {
+          const lastDoneDisplay = parseInt(kmInputs[item.id] || '0', 10) || 0;
+          const lastDone = toKm(lastDoneDisplay, distanceUnit);
+          const entry: Record<string, number> = {
+            item_id: item.id,
+            last_done_km: lastDone,
+          };
+          const everyKm = parseInt(everyKmInputs[item.id] || '', 10);
+          if (!isNaN(everyKm) && everyKm > 0) {
+            entry.every_km = toKm(everyKm, distanceUnit);
+          }
+          const notifyKm = parseInt(notifyKmInputs[item.id] || '', 10);
+          if (!isNaN(notifyKm) && notifyKm >= 0) {
+            entry.notify_before_km = toKm(notifyKm, distanceUnit);
+          }
+          return entry;
+        }),
       });
       // Create custom entries after assignment
       for (const ce of customEntries) {
-        await api.post(`/fleet/vehicles/${vehicleId}/regulation/entries/`, {
+        const lastDoneDisplay = parseInt(ce.last_done_km || '0', 10) || 0;
+        const lastDone = toKm(lastDoneDisplay, distanceUnit);
+        const cePayload: Record<string, string | number | null> = {
           title: ce.title_uk || ce.title,
           title_pl: ce.title_pl,
           title_uk: ce.title_uk || ce.title,
           title_en: ce.title_en,
-          every_km: parseInt(ce.every_km, 10),
-          notify_before_km: parseInt(ce.notify_before_km || '500', 10),
-          last_done_km: parseInt(ce.last_done_km || '0', 10),
-        });
+          every_km: toKm(parseInt(ce.every_km, 10), distanceUnit),
+          notify_before_km: toKm(parseInt(ce.notify_before_km || '500', 10), distanceUnit),
+          last_done_km: lastDone,
+        };
+        const ceMi = parseInt(ce.every_mi, 10);
+        if (!isNaN(ceMi) && ceMi > 0) cePayload.every_mi = ceMi;
+        const ceNotifyMi = parseInt(ce.notify_before_mi, 10);
+        if (!isNaN(ceNotifyMi) && ceNotifyMi >= 0) cePayload.notify_before_mi = ceNotifyMi;
+        await api.post(`/fleet/vehicles/${vehicleId}/regulation/entries/`, cePayload);
       }
       await loadRegulation();
     } catch (err: unknown) {
@@ -1523,14 +1616,27 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
     }
   };
 
-  const markDone = async (entryId: number) => {
-    const km = parseInt(markKm, 10);
-    if (isNaN(km) || km < 0) return;
+  const markDone = async (entryId: number, skipWarning = false) => {
+    const displayKm = parseInt(markKm, 10);
+    if (isNaN(displayKm) || displayKm < 0) return;
+    const displayNextKm = parseInt(markNextKm, 10);
+    if (isNaN(displayNextKm) || displayNextKm <= displayKm) {
+      if (!skipWarning) { setMarkWarning(true); return; }
+    }
+    setMarkWarning(false);
     setMarkLoading(true);
     try {
+      const km = toKm(displayKm, distanceUnit);
+      const nextKm = toKm(displayNextKm, distanceUnit);
+      const entry = plan?.entries.find(e => e.id === entryId);
+      const defaultNext = km + (entry?.effective_every_km ?? 0);
+      const payload: Record<string, number | null> = { last_done_km: km };
+      if (nextKm !== defaultNext && nextKm > km) {
+        payload.next_due_km_override = nextKm;
+      }
       const res = await api.patch<RegulationPlanEntry>(
         `/fleet/vehicles/${vehicleId}/regulation/entries/${entryId}/`,
-        { last_done_km: km },
+        payload,
       );
       setPlan(prev => prev ? {
         ...prev,
@@ -1538,10 +1644,46 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
       } : prev);
       setMarkingId(null);
       setMarkKm('');
+      setMarkNextKm('');
+      setMarkWarning(false);
     } catch (err) {
       console.error(err);
     } finally {
       setMarkLoading(false);
+    }
+  };
+
+  const editEntry = async (entryId: number) => {
+    const everyDisplay = parseInt(editForm.every_km, 10);
+    const notifyDisplay = parseInt(editForm.notify_before_km, 10);
+    if (isNaN(everyDisplay) || everyDisplay <= 0) return;
+    if (isNaN(notifyDisplay) || notifyDisplay < 0) return;
+    setEditLoading(true);
+    try {
+      const res = await api.patch<RegulationPlanEntry>(
+        `/fleet/vehicles/${vehicleId}/regulation/entries/${entryId}/`,
+        (() => {
+          const payload: Record<string, number | null> = { every_km: toKm(everyDisplay, distanceUnit), notify_before_km: toKm(notifyDisplay, distanceUnit) };
+          const lastDoneDisplay = parseInt(editForm.last_done_km, 10);
+          if (!isNaN(lastDoneDisplay) && lastDoneDisplay >= 0) {
+            payload.last_done_km = toKm(lastDoneDisplay, distanceUnit);
+          }
+          const everyMi = parseInt(editForm.every_mi, 10);
+          if (!isNaN(everyMi) && everyMi > 0) payload.every_mi = everyMi;
+          const notifyMi = parseInt(editForm.notify_before_mi, 10);
+          if (!isNaN(notifyMi) && notifyMi >= 0) payload.notify_before_mi = notifyMi;
+          return payload;
+        })(),
+      );
+      setPlan(prev => prev ? {
+        ...prev,
+        entries: prev.entries.map(e => e.id === entryId ? res.data : e),
+      } : prev);
+      setEditingId(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -1551,19 +1693,26 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
     try {
       const res = await api.post<RegulationPlanEntry>(
         `/fleet/vehicles/${vehicleId}/regulation/entries/`,
-        {
-          title: addForm.title_uk || addForm.title,
-          title_pl: addForm.title_pl,
-          title_uk: addForm.title_uk || addForm.title,
-          title_en: addForm.title_en,
-          every_km: parseInt(addForm.every_km, 10),
-          notify_before_km: parseInt(addForm.notify_before_km || '500', 10),
-          last_done_km: parseInt(addForm.last_done_km || '0', 10),
-        },
+        (() => {
+          const payload: Record<string, string | number | null> = {
+            title: addForm.title_uk || addForm.title,
+            title_pl: addForm.title_pl,
+            title_uk: addForm.title_uk || addForm.title,
+            title_en: addForm.title_en,
+            every_km: toKm(parseInt(addForm.every_km, 10), distanceUnit),
+            notify_before_km: toKm(parseInt(addForm.notify_before_km || '500', 10), distanceUnit),
+            last_done_km: toKm(parseInt(addForm.last_done_km || '0', 10), distanceUnit),
+          };
+          const everyMi = parseInt(addForm.every_mi, 10);
+          if (!isNaN(everyMi) && everyMi > 0) payload.every_mi = everyMi;
+          const notifyMi = parseInt(addForm.notify_before_mi, 10);
+          if (!isNaN(notifyMi) && notifyMi >= 0) payload.notify_before_mi = notifyMi;
+          return payload;
+        })(),
       );
       setPlan(prev => prev ? { ...prev, entries: [...prev.entries, res.data] } : prev);
       setShowAddForm(false);
-      setAddForm({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+      setAddForm({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', every_mi: '', notify_before_km: '500', notify_before_mi: '300', last_done_km: '0' });
     } catch (err) {
       console.error(err);
     } finally {
@@ -1680,28 +1829,56 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                       </div>
                     )}
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryInterval')}</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={addForm.every_km}
-                      onChange={e => setAddForm(prev => ({ ...prev, every_km: e.target.value }))}
-                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
+                  <div className="sm:col-span-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryInterval', { unit: 'km / mi' })}</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={addForm.every_km}
+                        onChange={e => setAddForm(prev => ({ ...prev, every_km: e.target.value }))}
+                        placeholder="km"
+                        className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-[10px] text-slate-400 font-bold">km</span>
+                      <span className="text-slate-300">/</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={addForm.every_mi}
+                        onChange={e => setAddForm(prev => ({ ...prev, every_mi: e.target.value }))}
+                        placeholder="mi"
+                        className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-[10px] text-slate-400 font-bold">mi</span>
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNotifyBefore', { unit: 'km / mi' })}</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        value={addForm.notify_before_km}
+                        onChange={e => setAddForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
+                        placeholder="km"
+                        className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-[10px] text-slate-400 font-bold">km</span>
+                      <span className="text-slate-300">/</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={addForm.notify_before_mi}
+                        onChange={e => setAddForm(prev => ({ ...prev, notify_before_mi: e.target.value }))}
+                        placeholder="mi"
+                        className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-[10px] text-slate-400 font-bold">mi</span>
+                    </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNotifyBefore')}</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={addForm.notify_before_km}
-                      onChange={e => setAddForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
-                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryLastDone')}</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryLastDone', { unit: unitLabel(distanceUnit) })}</label>
                     <input
                       type="number"
                       min="0"
@@ -1723,7 +1900,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                     {t('save')}
                   </button>
                   <button
-                    onClick={() => { setShowAddForm(false); setAddForm({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', notify_before_km: '500', last_done_km: '0' }); }}
+                    onClick={() => { setShowAddForm(false); setAddForm({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', every_mi: '', notify_before_km: '500', notify_before_mi: '300', last_done_km: '0' }); }}
                     className="text-xs font-bold text-slate-500 hover:text-slate-700 px-3 py-2 transition-colors"
                   >
                     {t('cancel')}
@@ -1737,6 +1914,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
               const isDueSoon = !isOverdue && initialKm >= entry.next_due_km - entry.effective_notify_before_km;
               const isMarking = markingId === entry.id;
               const isDeleting = deletingId === entry.id;
+              const isEditing = editingId === entry.id;
 
               return (
                 <div
@@ -1754,15 +1932,15 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-slate-900 truncate">{localTitle(entry.item, locale)}</p>
                       <p className="text-xs text-slate-400 font-medium mt-0.5">
-                        {t('everyKm', { km: entry.effective_every_km.toLocaleString() })}
+                        {t('everyKm', { km: displayInterval(entry).toLocaleString(), unit: unitLabel(distanceUnit) })}
                       </p>
                     </div>
 
-                    {/* Desktop: km blocks + mark done + delete inline */}
+                    {/* Desktop: km blocks + actions inline */}
                     <div className="hidden md:flex items-center gap-2 flex-shrink-0 text-right">
                       <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('done')}</p>
-                        <p className="text-sm font-bold text-slate-700">{entry.last_done_km.toLocaleString()} {t('km')}</p>
+                        <p className="text-sm font-bold text-slate-700">{toDisplayUnit(entry.last_done_km, distanceUnit).toLocaleString()} {unitLabel(distanceUnit)}</p>
                       </div>
                       <div className={`rounded-xl px-3 py-2 border ${
                         isOverdue
@@ -1776,17 +1954,23 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                         }`}>{t('next')}</p>
                         <p className={`text-sm font-bold ${
                           isOverdue ? 'text-red-600' : isDueSoon ? 'text-amber-700' : 'text-[#2D8B7E]'
-                        }`}>{entry.next_due_km.toLocaleString()} {t('km')}</p>
+                        }`}>{toDisplayUnit(entry.next_due_km, distanceUnit).toLocaleString()} {unitLabel(distanceUnit)}</p>
                       </div>
                       <button
-                        onClick={() => { setMarkingId(entry.id); setMarkKm(String(initialKm)); }}
+                        onClick={() => { setMarkingId(entry.id); setMarkKm(String(toDisplayUnit(initialKm, distanceUnit))); setMarkNextKm(String(toDisplayUnit(initialKm, distanceUnit) + displayInterval(entry))); setMarkWarning(false); setEditingId(null); }}
                         className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#2D8B7E] bg-slate-50 hover:bg-[#2D8B7E]/5 border border-slate-200 hover:border-[#2D8B7E]/30 rounded-xl px-3 py-2 transition-all"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         {t('markDone')}
                       </button>
                       <button
-                        onClick={() => setDeletingId(entry.id)}
+                        onClick={() => { setEditingId(entry.id); setEditForm({ every_km: String(toDisplayUnit(entry.effective_every_km, distanceUnit)), every_mi: String(entry.effective_every_mi ?? ''), notify_before_km: String(toDisplayUnit(entry.effective_notify_before_km, distanceUnit)), notify_before_mi: String(entry.effective_notify_before_mi ?? ''), last_done_km: String(toDisplayUnit(entry.last_done_km, distanceUnit)) }); setMarkingId(null); setDeletingId(null); }}
+                        className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 border border-transparent hover:border-blue-200 rounded-xl transition-all"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => { setDeletingId(entry.id); setEditingId(null); setMarkingId(null); }}
                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-xl transition-all"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1796,13 +1980,19 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                     {/* Mobile: action buttons */}
                     <div className="flex md:hidden items-center gap-1 flex-shrink-0">
                       <button
-                        onClick={() => { setMarkingId(entry.id); setMarkKm(String(initialKm)); }}
+                        onClick={() => { setMarkingId(entry.id); setMarkKm(String(toDisplayUnit(initialKm, distanceUnit))); setMarkNextKm(String(toDisplayUnit(initialKm, distanceUnit) + displayInterval(entry))); setMarkWarning(false); setEditingId(null); }}
                         className="items-center text-xs font-bold text-slate-500 hover:text-[#2D8B7E] bg-slate-50 hover:bg-[#2D8B7E]/5 border border-slate-200 hover:border-[#2D8B7E]/30 rounded-xl p-2 transition-all"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => setDeletingId(entry.id)}
+                        onClick={() => { setEditingId(entry.id); setEditForm({ every_km: String(toDisplayUnit(entry.effective_every_km, distanceUnit)), every_mi: String(entry.effective_every_mi ?? ''), notify_before_km: String(toDisplayUnit(entry.effective_notify_before_km, distanceUnit)), notify_before_mi: String(entry.effective_notify_before_mi ?? ''), last_done_km: String(toDisplayUnit(entry.last_done_km, distanceUnit)) }); setMarkingId(null); setDeletingId(null); }}
+                        className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 border border-transparent hover:border-blue-200 rounded-xl transition-all"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => { setDeletingId(entry.id); setEditingId(null); setMarkingId(null); }}
                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-xl transition-all"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1814,7 +2004,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                   <div className="flex md:hidden items-center gap-2 mt-2.5 ml-[22px] sm:ml-[26px]">
                     <div className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('done')}</p>
-                      <p className="text-xs font-bold text-slate-700">{entry.last_done_km.toLocaleString()} {t('km')}</p>
+                      <p className="text-xs font-bold text-slate-700">{toDisplayUnit(entry.last_done_km, distanceUnit).toLocaleString()} {unitLabel(distanceUnit)}</p>
                     </div>
                     <div className={`rounded-xl px-2.5 py-1.5 border ${
                       isOverdue
@@ -1828,7 +2018,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                       }`}>{t('next')}</p>
                       <p className={`text-xs font-bold ${
                         isOverdue ? 'text-red-600' : isDueSoon ? 'text-amber-700' : 'text-[#2D8B7E]'
-                      }`}>{entry.next_due_km.toLocaleString()} {t('km')}</p>
+                      }`}>{toDisplayUnit(entry.next_due_km, distanceUnit).toLocaleString()} {unitLabel(distanceUnit)}</p>
                     </div>
                   </div>
 
@@ -1854,37 +2044,175 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                     </div>
                   )}
 
+                  {/* Inline edit form */}
+                  {isEditing && (
+                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Gauge className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                        <span className="text-xs text-slate-500 font-medium flex-shrink-0">{t('entryLastDone', { unit: unitLabel(distanceUnit) })}:</span>
+                        <input
+                          autoFocus
+                          type="number"
+                          min="0"
+                          value={editForm.last_done_km}
+                          onChange={e => setEditForm(prev => ({ ...prev, last_done_km: e.target.value }))}
+                          onKeyDown={e => { if (e.key === 'Enter') editEntry(entry.id); if (e.key === 'Escape') setEditingId(null); }}
+                          className="w-24 sm:w-32 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2.5 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-300/30 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-xs text-slate-400 font-medium">{unitLabel(distanceUnit)}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Gauge className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                        <span className="text-xs text-slate-500 font-medium flex-shrink-0">{t('entryInterval', { unit: 'km' })}:</span>
+                        <input
+                          autoFocus
+                          type="number"
+                          min="1"
+                          value={editForm.every_km}
+                          onChange={e => setEditForm(prev => ({ ...prev, every_km: e.target.value }))}
+                          onKeyDown={e => { if (e.key === 'Enter') editEntry(entry.id); if (e.key === 'Escape') setEditingId(null); }}
+                          className="w-20 sm:w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-300/30 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-[10px] text-slate-400 font-medium">km</span>
+                        <span className="text-slate-300">/</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={editForm.every_mi}
+                          onChange={e => setEditForm(prev => ({ ...prev, every_mi: e.target.value }))}
+                          onKeyDown={e => { if (e.key === 'Enter') editEntry(entry.id); if (e.key === 'Escape') setEditingId(null); }}
+                          placeholder="—"
+                          className="w-20 sm:w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-300/30 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-[10px] text-slate-400 font-medium">mi</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <ArrowRight className="w-4 h-4 text-blue-400/60 flex-shrink-0" />
+                        <span className="text-xs text-slate-500 font-medium flex-shrink-0">{t('entryNotifyBefore', { unit: 'km' })}:</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={editForm.notify_before_km}
+                          onChange={e => setEditForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
+                          onKeyDown={e => { if (e.key === 'Enter') editEntry(entry.id); if (e.key === 'Escape') setEditingId(null); }}
+                          className="w-20 sm:w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-300/30 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-[10px] text-slate-400 font-medium">km</span>
+                        <span className="text-slate-300">/</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={editForm.notify_before_mi}
+                          onChange={e => setEditForm(prev => ({ ...prev, notify_before_mi: e.target.value }))}
+                          onKeyDown={e => { if (e.key === 'Enter') editEntry(entry.id); if (e.key === 'Escape') setEditingId(null); }}
+                          placeholder="—"
+                          className="w-20 sm:w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-300/30 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-[10px] text-slate-400 font-medium">mi</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => editEntry(entry.id)}
+                          disabled={editLoading || !editForm.every_km || parseInt(editForm.every_km, 10) <= 0}
+                          className="flex items-center gap-1 text-xs font-bold text-white bg-blue-500 hover:bg-blue-600 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+                        >
+                          {editLoading
+                            ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            : <Check className="w-3.5 h-3.5" />}
+                          {t('save')}
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Inline mark-done form */}
                   {isMarking && (
-                    <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
-                      <Gauge className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                      <span className="text-xs text-slate-500 font-medium flex-shrink-0">Виконано при:</span>
-                      <input
-                        autoFocus
-                        type="number"
-                        min="0"
-                        value={markKm}
-                        onChange={e => setMarkKm(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') markDone(entry.id); if (e.key === 'Escape') { setMarkingId(null); setMarkKm(''); } }}
-                        className="w-24 sm:w-32 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2.5 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <span className="text-xs text-slate-400 font-medium">{t('km')}</span>
-                      <button
-                        onClick={() => markDone(entry.id)}
-                        disabled={markLoading}
-                        className="flex items-center gap-1 text-xs font-bold text-white bg-[#2D8B7E] hover:bg-[#246f65] rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
-                      >
-                        {markLoading
-                          ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          : <CheckCircle2 className="w-3.5 h-3.5" />}
-                        {t('save')}
-                      </button>
-                      <button
-                        onClick={() => { setMarkingId(null); setMarkKm(''); }}
-                        className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Gauge className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        <span className="text-xs text-slate-500 font-medium flex-shrink-0">{t('doneAt')}:</span>
+                        <input
+                          autoFocus
+                          type="number"
+                          min="0"
+                          value={markKm}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setMarkKm(val);
+                            setMarkWarning(false);
+                            const parsed = parseInt(val, 10);
+                            if (!isNaN(parsed)) setMarkNextKm(String(parsed + displayInterval(entry)));
+                          }}
+                          onKeyDown={e => { if (e.key === 'Enter') markDone(entry.id); if (e.key === 'Escape') { setMarkingId(null); setMarkKm(''); setMarkNextKm(''); setMarkWarning(false); } }}
+                          className="w-24 sm:w-32 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2.5 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-xs text-slate-400 font-medium">{unitLabel(distanceUnit)}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <ArrowRight className="w-4 h-4 text-[#2D8B7E]/60 flex-shrink-0" />
+                        <span className="text-xs text-slate-500 font-medium flex-shrink-0">{t('nextDueAt')}:</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={markNextKm}
+                          onChange={e => { setMarkNextKm(e.target.value); setMarkWarning(false); }}
+                          onKeyDown={e => { if (e.key === 'Enter') markDone(entry.id); if (e.key === 'Escape') { setMarkingId(null); setMarkKm(''); setMarkNextKm(''); setMarkWarning(false); } }}
+                          className="w-24 sm:w-32 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2.5 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-xs text-slate-400 font-medium">{unitLabel(distanceUnit)}</span>
+                      </div>
+
+                      {/* Warning when next_due <= done_at */}
+                      {markWarning && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 space-y-2">
+                          <p className="text-xs text-amber-700 font-medium">{t('markWarning')}</p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => markDone(entry.id, true)}
+                              disabled={markLoading}
+                              className="flex items-center gap-1 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+                            >
+                              {markLoading
+                                ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                : <CheckCircle2 className="w-3.5 h-3.5" />}
+                              {t('markWarningConfirm')}
+                            </button>
+                            <button
+                              onClick={() => setMarkWarning(false)}
+                              className="text-xs font-bold text-amber-600 hover:text-amber-700 px-2 py-1.5 transition-colors"
+                            >
+                              {t('cancel')}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {!markWarning && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => markDone(entry.id)}
+                            disabled={markLoading || !markKm || !markNextKm}
+                            className="flex items-center gap-1 text-xs font-bold text-white bg-[#2D8B7E] hover:bg-[#246f65] rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+                          >
+                            {markLoading
+                              ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              : <CheckCircle2 className="w-3.5 h-3.5" />}
+                            {t('save')}
+                          </button>
+                          <button
+                            onClick={() => { setMarkingId(null); setMarkKm(''); setMarkNextKm(''); setMarkWarning(false); }}
+                            className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1892,7 +2220,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
             })}
           </div>
         ) : (
-          <RegulationHistoryPanel vehicleId={vehicleId} />
+          <RegulationHistoryPanel vehicleId={vehicleId} distanceUnit={distanceUnit} />
         )}
       </div>
     );
@@ -1926,40 +2254,16 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
         <div className="divide-y divide-slate-100">
           {visibleItems.map((item, idx) => {
             const lastDone = parseInt(kmInputs[item.id] ?? '0', 10) || 0;
-            const nextDue = lastDone + item.every_km;
+            const effectiveEvery = parseInt(everyKmInputs[item.id] || '', 10) || (distanceUnit === 'mi' && item.every_mi != null ? item.every_mi : toDisplayUnit(item.every_km, distanceUnit));
+            const nextDue = lastDone + effectiveEvery;
             return (
-              <div key={item.id} className="flex flex-wrap md:flex-nowrap items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-4">
-                <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 text-xs font-bold flex items-center justify-center flex-shrink-0">
-                  {idx + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800">{localTitle(item, locale)}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {t('everyKm', { km: item.every_km.toLocaleString() })}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 w-full md:w-auto ml-9 md:ml-0">
-                  <div className="text-right flex-1 md:flex-initial">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
-                      {t('entryLastDone')}
-                    </p>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="0"
-                      value={kmInputs[item.id] ?? ''}
-                      onChange={e => setKmInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
-                      className="w-full md:w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
-                  <div className="w-4 h-px bg-slate-200 flex-shrink-0 hidden sm:block" />
-                  <div className="bg-[#2D8B7E]/5 border border-[#2D8B7E]/20 rounded-xl px-3 py-2 text-right min-w-[90px]">
-                    <p className="text-[10px] font-bold text-[#2D8B7E]/70 uppercase tracking-widest mb-0.5">
-                      {t('next')}
-                    </p>
-                    <p className="text-sm font-bold text-[#2D8B7E]">
-                      {nextDue.toLocaleString()} {t('km')}
-                    </p>
+              <div key={item.id} className="px-3 sm:px-5 py-3 sm:py-4">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    {idx + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800">{localTitle(item, locale)}</p>
                   </div>
                   <button
                     onClick={() => setExcludedItemIds(prev => new Set([...prev, item.id]))}
@@ -1968,6 +2272,45 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
+                </div>
+                <div className="flex flex-wrap md:flex-nowrap items-end gap-2 mt-2.5 ml-9">
+                  <div className="w-[calc(50%-4px)] md:flex-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('entryLastDone', { unit: unitLabel(distanceUnit) })}</p>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={kmInputs[item.id] ?? ''}
+                      onChange={e => setKmInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
+                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <div className="w-[calc(50%-4px)] md:flex-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('entryInterval', { unit: unitLabel(distanceUnit) })}</p>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder={String(distanceUnit === 'mi' && item.every_mi != null ? item.every_mi : toDisplayUnit(item.every_km, distanceUnit))}
+                      value={everyKmInputs[item.id] ?? ''}
+                      onChange={e => setEveryKmInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
+                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <div className="w-[calc(50%-4px)] md:flex-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('entryNotifyBefore', { unit: unitLabel(distanceUnit) })}</p>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder={String(distanceUnit === 'mi' && item.notify_before_mi != null ? item.notify_before_mi : toDisplayUnit(item.notify_before_km, distanceUnit))}
+                      value={notifyKmInputs[item.id] ?? ''}
+                      onChange={e => setNotifyKmInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
+                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <div className="bg-[#2D8B7E]/5 border border-[#2D8B7E]/20 rounded-xl px-3 py-2 text-right flex-shrink-0">
+                    <p className="text-[10px] font-bold text-[#2D8B7E]/70 uppercase tracking-widest">{t('next')}</p>
+                    <p className="text-sm font-bold text-[#2D8B7E]">{nextDue.toLocaleString()} {unitLabel(distanceUnit)}</p>
+                  </div>
                 </div>
               </div>
             );
@@ -1981,7 +2324,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
           <div className="divide-y divide-slate-100">
             {customEntries.map((ce, idx) => {
               const lastDone = parseInt(ce.last_done_km || '0', 10) || 0;
-              const nextDue = lastDone + (parseInt(ce.every_km || '0', 10) || 0);
+              const defaultNext = lastDone + (parseInt(ce.every_km || '0', 10) || 0);
               return (
                 <div key={ce.id} className="flex flex-wrap md:flex-nowrap items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-4">
                   <span className="w-6 h-6 rounded-full bg-[#2D8B7E]/10 text-[#2D8B7E] text-xs font-bold flex items-center justify-center flex-shrink-0">
@@ -1990,25 +2333,32 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-800">{ce.title}</p>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      {t('everyKm', { km: parseInt(ce.every_km || '0', 10).toLocaleString() })}
+                      {t('everyKm', { km: parseInt(ce.every_km || '0', 10).toLocaleString(), unit: unitLabel(distanceUnit) })}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 w-full md:w-auto ml-9 md:ml-0">
                     <div className="text-right flex-1 md:flex-initial">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('entryLastDone')}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('entryLastDone', { unit: unitLabel(distanceUnit) })}</p>
                       <input
                         type="number"
                         min="0"
                         placeholder="0"
                         value={ce.last_done_km}
-                        onChange={e => setCustomEntries(prev => prev.map(c => c.id === ce.id ? { ...c, last_done_km: e.target.value } : c))}
+                        onChange={e => setCustomEntries(prev => prev.map(c => c.id === ce.id ? { ...c, last_done_km: e.target.value, next_km_override: '' } : c))}
                         className="w-full md:w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
                     <div className="w-4 h-px bg-slate-200 flex-shrink-0 hidden sm:block" />
-                    <div className="bg-[#2D8B7E]/5 border border-[#2D8B7E]/20 rounded-xl px-3 py-2 text-right min-w-[90px]">
+                    <div className="text-right flex-1 md:flex-initial">
                       <p className="text-[10px] font-bold text-[#2D8B7E]/70 uppercase tracking-widest mb-0.5">{t('next')}</p>
-                      <p className="text-sm font-bold text-[#2D8B7E]">{nextDue.toLocaleString()} {t('km')}</p>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder={String(defaultNext)}
+                        value={ce.next_km_override}
+                        onChange={e => setCustomEntries(prev => prev.map(c => c.id === ce.id ? { ...c, next_km_override: e.target.value } : c))}
+                        className="w-full md:w-28 text-sm font-bold text-[#2D8B7E] bg-[#2D8B7E]/5 border border-[#2D8B7E]/20 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
                     </div>
                     <button
                       onClick={() => setCustomEntries(prev => prev.filter(c => c.id !== ce.id))}
@@ -2061,25 +2411,53 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
                 </div>
               )}
             </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryInterval')}</label>
-              <input
-                type="number"
-                min="1"
-                value={customForm.every_km}
-                onChange={e => setCustomForm(prev => ({ ...prev, every_km: e.target.value }))}
-                className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
+            <div className="sm:col-span-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryInterval', { unit: 'km / mi' })}</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  value={customForm.every_km}
+                  onChange={e => setCustomForm(prev => ({ ...prev, every_km: e.target.value }))}
+                  placeholder="km"
+                  className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="text-[10px] text-slate-400 font-bold">km</span>
+                <span className="text-slate-300">/</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={customForm.every_mi ?? ''}
+                  onChange={e => setCustomForm(prev => ({ ...prev, every_mi: e.target.value }))}
+                  placeholder="mi"
+                  className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="text-[10px] text-slate-400 font-bold">mi</span>
+              </div>
             </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNotifyBefore')}</label>
-              <input
-                type="number"
-                min="0"
-                value={customForm.notify_before_km}
-                onChange={e => setCustomForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
-                className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
+            <div className="sm:col-span-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNotifyBefore', { unit: 'km / mi' })}</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  value={customForm.notify_before_km}
+                  onChange={e => setCustomForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
+                  placeholder="km"
+                  className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="text-[10px] text-slate-400 font-bold">km</span>
+                <span className="text-slate-300">/</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={customForm.notify_before_mi ?? ''}
+                  onChange={e => setCustomForm(prev => ({ ...prev, notify_before_mi: e.target.value }))}
+                  placeholder="mi"
+                  className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="text-[10px] text-slate-400 font-bold">mi</span>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -2087,9 +2465,9 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
               onClick={() => {
                 if (!customForm.title || !customForm.every_km) return;
                 customIdRef.current -= 1;
-                setCustomEntries(prev => [...prev, { id: customIdRef.current, ...customForm }]);
+                setCustomEntries(prev => [...prev, { id: customIdRef.current, ...customForm, next_km_override: '' }]);
                 setShowCustomForm(false);
-                setCustomForm({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', notify_before_km: '500', last_done_km: '0' });
+                setCustomForm({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', every_mi: '', notify_before_km: '500', notify_before_mi: '300', last_done_km: '0' });
               }}
               disabled={!customForm.title || !customForm.every_km}
               className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#2D8B7E] hover:bg-[#246f65] rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
@@ -2098,7 +2476,7 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
               {t('save')}
             </button>
             <button
-              onClick={() => { setShowCustomForm(false); setCustomForm({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', notify_before_km: '500', last_done_km: '0' }); }}
+              onClick={() => { setShowCustomForm(false); setCustomForm({ title: '', title_pl: '', title_uk: '', title_en: '', every_km: '', every_mi: '', notify_before_km: '500', notify_before_mi: '300', last_done_km: '0' }); }}
               className="text-xs font-bold text-slate-500 hover:text-slate-700 px-3 py-2 transition-colors"
             >
               {t('cancel')}
@@ -2124,12 +2502,33 @@ function RegulationTab({ vehicleId, initialKm }: { vehicleId: string; initialKm:
         </button>
       )}
 
+      {zeroKmWarning && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-4 space-y-2">
+          <p className="text-sm text-amber-700 font-medium">{t('zeroKmWarning')}</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleAssign(true)}
+              disabled={saving}
+              className="flex items-center gap-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
+            >
+              {t('zeroKmConfirm')}
+            </button>
+            <button
+              onClick={() => setZeroKmWarning(false)}
+              className="text-xs font-bold text-amber-600 hover:text-amber-700 px-3 py-2 transition-colors"
+            >
+              {t('cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+
       {error && (
         <p className="text-sm text-red-600 font-medium mb-4">{error}</p>
       )}
 
       <button
-        onClick={handleAssign}
+        onClick={() => handleAssign()}
         disabled={saving || visibleItems.length === 0}
         className="bg-gradient-to-r from-[#2D8B7E] to-[#248B7B] text-white px-6 py-2.5 rounded-xl hover:shadow-xl hover:shadow-[#2D8B7E]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shadow-lg flex items-center gap-2 text-sm font-bold disabled:opacity-60 disabled:pointer-events-none"
       >
@@ -2162,7 +2561,7 @@ const EVENT_CONFIG = {
   },
 } as const;
 
-function RegulationHistoryPanel({ vehicleId }: { vehicleId: string }) {
+function RegulationHistoryPanel({ vehicleId, distanceUnit }: { vehicleId: string; distanceUnit: DistanceUnit }) {
   const locale = useLocale();
   const t = useTranslations('vehicleWorkspace.regulation');
 
@@ -2336,12 +2735,12 @@ function RegulationHistoryPanel({ vehicleId }: { vehicleId: string }) {
                             <div className="flex items-center gap-1.5">
                               <Gauge className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} />
                               <span className="text-xs font-semibold text-slate-700">
-                                {entry.km_at_event.toLocaleString()} {t('km')}
+                                {toDisplayUnit(entry.km_at_event, distanceUnit).toLocaleString()} {unitLabel(distanceUnit)}
                               </span>
                             </div>
                             <span className="text-slate-200 text-xs">·</span>
                             <span className={`text-xs font-semibold ${entry.km_remaining > 0 ? 'text-slate-400' : 'text-red-500'}`}>
-                              {entry.km_remaining > 0 ? `+${entry.km_remaining.toLocaleString()}` : entry.km_remaining.toLocaleString()} {t('km')} {t('history.remaining')}
+                              {entry.km_remaining > 0 ? `+${toDisplayUnit(entry.km_remaining, distanceUnit).toLocaleString()}` : toDisplayUnit(entry.km_remaining, distanceUnit).toLocaleString()} {unitLabel(distanceUnit)} {t('history.remaining')}
                             </span>
                             {entry.note ? (
                               <>
@@ -2656,7 +3055,7 @@ function OwnersTab({ vehicleId }: { vehicleId: string }) {
 
 type HistorySubTab = 'owners' | 'mileage';
 
-function HistoryTab({ vehicleId, onMileageChange }: { vehicleId: string; onMileageChange: () => void }) {
+function HistoryTab({ vehicleId, onMileageChange, distanceUnit }: { vehicleId: string; onMileageChange: () => void; distanceUnit: DistanceUnit }) {
   const t = useTranslations('vehicleWorkspace');
   const [subTab, setSubTab] = useState<HistorySubTab>('owners');
 
@@ -2688,7 +3087,7 @@ function HistoryTab({ vehicleId, onMileageChange }: { vehicleId: string; onMilea
         })}
       </div>
       {subTab === 'owners'  && <OwnersTab  vehicleId={vehicleId} />}
-      {subTab === 'mileage' && <MileageTab vehicleId={vehicleId} onMileageChange={onMileageChange} />}
+      {subTab === 'mileage' && <MileageTab vehicleId={vehicleId} onMileageChange={onMileageChange} distanceUnit={distanceUnit} />}
     </div>
   );
 }
@@ -2697,7 +3096,7 @@ function HistoryTab({ vehicleId, onMileageChange }: { vehicleId: string; onMilea
 // Mileage Tab
 // ══════════════════════════════════════════════════════════════════════════════
 
-function MileageTab({ vehicleId, onMileageChange }: { vehicleId: string; onMileageChange: () => void }) {
+function MileageTab({ vehicleId, onMileageChange, distanceUnit }: { vehicleId: string; onMileageChange: () => void; distanceUnit: DistanceUnit }) {
   const t = useTranslations('vehicleWorkspace.mileage');
   const [logs, setLogs] = useState<MileageLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2721,20 +3120,21 @@ function MileageTab({ vehicleId, onMileageChange }: { vehicleId: string; onMilea
 
   useEffect(() => { loadLogs(); }, [loadLogs]);
 
-  const currentKm = logs.length > 0 ? logs[0].km : 0;
+  const currentKmRaw = logs.length > 0 ? logs[0].km : 0;
+  const currentKmDisplay = toDisplayUnit(currentKmRaw, distanceUnit);
 
   const addLog = async () => {
-    const kmVal = parseInt(km, 10);
-    if (!kmVal || kmVal <= 0 || !recordedAt) return;
-    if (kmVal <= currentKm) {
-      setAddError(t('minError', { km: currentKm.toLocaleString() }));
+    const inputVal = parseInt(km, 10);
+    if (!inputVal || inputVal <= 0 || !recordedAt) return;
+    if (inputVal <= currentKmDisplay) {
+      setAddError(t('minError', { km: currentKmDisplay.toLocaleString(), unit: unitLabel(distanceUnit) }));
       return;
     }
     setAddError('');
     setSaving(true);
     try {
       const res = await api.post<MileageLog>(`/vehicle/${vehicleId}/mileage/`, {
-        km: kmVal,
+        km: toKm(inputVal, distanceUnit),
         recorded_at: recordedAt,
       });
       setLogs(prev => [res.data, ...prev]);
@@ -2778,10 +3178,10 @@ function MileageTab({ vehicleId, onMileageChange }: { vehicleId: string; onMilea
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <input
               type="number"
-              min={currentKm + 1}
+              min={currentKmDisplay + 1}
               value={km}
               onChange={(e) => { setKm(e.target.value); setAddError(''); }}
-              placeholder={t('kmPlaceholder')}
+              placeholder={t('kmPlaceholder', { unit: unitLabel(distanceUnit) })}
               className={`px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 bg-white ${addError ? 'border-red-400 focus:ring-red-300' : 'border-slate-300 focus:ring-[#2D8B7E]'}`}
             />
             <input
@@ -2831,9 +3231,9 @@ function MileageTab({ vehicleId, onMileageChange }: { vehicleId: string; onMilea
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-black text-slate-900">{log.km.toLocaleString()} км</span>
+                    <span className="text-lg font-black text-slate-900">{toDisplayUnit(log.km, distanceUnit).toLocaleString()} {unitLabel(distanceUnit)}</span>
                     {diff !== null && diff > 0 && (
-                      <span className="text-xs font-bold text-[#2D8B7E]">+{diff.toLocaleString()}</span>
+                      <span className="text-xs font-bold text-[#2D8B7E]">+{toDisplayUnit(diff, distanceUnit).toLocaleString()}</span>
                     )}
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -3145,12 +3545,13 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
 
 // ── Expenses Tab ──
 
-function ExpensesTab({ vehicleId }: { vehicleId: string }) {
+function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleDriver: { id: string; first_name: string; last_name: string } | null }) {
   const t = useTranslations('expenses');
   const tCommon = useTranslations('common');
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [summary, setSummary] = useState<ExpenseSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -3190,8 +3591,18 @@ function ExpensesTab({ vehicleId }: { vehicleId: string }) {
     }
   }, []);
 
+  const loadSummary = useCallback(async () => {
+    try {
+      const data = await expenseService.getVehicleExpenseSummary(vehicleId);
+      setSummary(data);
+    } catch {
+      // silent
+    }
+  }, [vehicleId]);
+
   useEffect(() => { loadExpenses(); }, [loadExpenses]);
   useEffect(() => { loadCategories(); }, [loadCategories]);
+  useEffect(() => { loadSummary(); }, [loadSummary]);
 
   const handleSubmit = async (data: CreateExpenseData) => {
     try {
@@ -3211,6 +3622,7 @@ function ExpensesTab({ vehicleId }: { vehicleId: string }) {
       }
       setShowForm(false);
       setEditingExpense(null);
+      loadSummary();
     } catch (err) {
       console.error('Expense submit error:', err);
       throw err;
@@ -3231,6 +3643,7 @@ function ExpensesTab({ vehicleId }: { vehicleId: string }) {
       await expenseService.deleteExpense(expenseToDelete.id);
       setExpenses(prev => prev.filter(e => e.id !== expenseToDelete.id));
       setExpenseToDelete(null);
+      loadSummary();
     } catch {
       setError(t('deleteError'));
     } finally {
@@ -3251,6 +3664,33 @@ function ExpensesTab({ vehicleId }: { vehicleId: string }) {
           <span className="hidden sm:inline">{t('addExpense')}</span>
         </button>
       </div>
+
+      {summary && parseFloat(summary.total) > 0 && (
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-slate-700">{t('summary.title')}</span>
+            <span className="text-base font-bold text-[#2D8B7E] tabular-nums">
+              {parseFloat(summary.total).toLocaleString('pl-PL', { maximumFractionDigits: 0 })} PLN
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {summary.categories.map((cat) => (
+              <div
+                key={cat.code || cat.name}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 bg-slate-50 border border-slate-100"
+              >
+                <span className="text-base" style={cat.color ? { color: cat.color } : undefined}>{cat.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-slate-500 truncate">{cat.name}</p>
+                  <p className="text-sm font-bold text-slate-800 tabular-nums">
+                    {parseFloat(cat.total).toLocaleString('pl-PL', { maximumFractionDigits: 0 })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <ExpenseFilters filters={filters} onChange={setFilters} categories={categories} showSearch={false} />
 
@@ -3284,6 +3724,7 @@ function ExpensesTab({ vehicleId }: { vehicleId: string }) {
                 initialData={editingExpense}
                 isLoading={isSubmitting}
                 vehicleId={vehicleId}
+                vehicleDriver={vehicleDriver}
               />
             </div>
           </div>

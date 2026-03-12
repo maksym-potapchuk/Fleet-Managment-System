@@ -346,11 +346,15 @@
       "title": "Regulation",
       "subtitle": "Mileage-based maintenance schedule",
       "assignedOn": "assigned",
-      "everyKm": "every {km} km",
+      "everyKm": "every {km} {unit}",
       "reminder": "Reminder",
       "done": "Done at",
       "next": "Next due",
       "markDone": "Mark done",
+      "doneAt": "Done at",
+      "nextDueAt": "Next due at",
+      "markWarning": "Next due mileage is less than or equal to done mileage. The entry will be saved without adjusting the next interval.",
+      "markWarningConfirm": "Save anyway",
       "km": "km",
       "noDefault": "No default schema",
       "noDefaultDesc": "First create a regulation schema and mark it as default.",
@@ -364,14 +368,16 @@
       "entryNamePl": "Name (PL)",
       "translate": "Translate",
       "autoTranslate": "Auto-translate to other languages",
-      "entryInterval": "Interval (km)",
-      "entryNotifyBefore": "Remind before (km)",
-      "entryLastDone": "Last done (km)",
+      "entryInterval": "Interval ({unit})",
+      "entryNotifyBefore": "Remind before ({unit})",
+      "entryLastDone": "Last done ({unit})",
       "save": "Save",
       "cancel": "Cancel",
       "deleteEntry": "Delete entry",
       "deleteConfirm": "Delete this regulation entry?",
       "removeFromList": "Remove",
+      "zeroKmWarning": "Vehicle mileage is 0 and some entries have last replacement at 0 or empty. These entries will be added with zero mileage.",
+      "zeroKmConfirm": "Save anyway",
       "planView": "Plan",
       "historyView": "History",
       "history": {
@@ -439,14 +445,15 @@
       "title": "Mileage",
       "subtitle": "Vehicle mileage change history",
       "add": "Add entry",
-      "kmPlaceholder": "Mileage (km)",
+      "kmPlaceholder": "Mileage ({unit})",
       "save": "Save",
       "cancel": "Cancel",
       "empty": "No mileage entries",
       "emptyDesc": "Add the first mileage entry for this vehicle",
       "updateMileage": "Update mileage",
-      "newKm": "New mileage (km)",
-      "minError": "Mileage must be greater than {km} km"
+      "switchUnit": "Switch km/mi",
+      "newKm": "New mileage ({unit})",
+      "minError": "Mileage must be greater than {km} {unit}"
     },
     "expenses": {
       "title": "Vehicle expenses",
@@ -531,7 +538,8 @@
       "clientDriver": "Driver (client)",
       "clientPercent": "Client percent",
       "approvalStatus": "Approval status",
-      "splitMismatch": "Sum mismatch"
+      "splitMismatch": "Sum mismatch",
+      "noDriverWarning": "No driver assigned to this vehicle. Assign a driver to select \"Client\" payer type."
     },
     "detail": {
       "title": "Expense details",
@@ -578,7 +586,8 @@
     },
     "supplierTypes": {
       "DISASSEMBLY": "Disassembly",
-      "INDIVIDUAL": "Individual"
+      "INDIVIDUAL": "Individual",
+      "SHOP": "Shop"
     },
     "fuelTypes": {
       "GASOLINE": "Gasoline",
@@ -606,6 +615,9 @@
       "uploadFile": "Add invoice file",
       "attachedExisting": "Invoice {invoiceNumber} — found in database",
       "createdNew": "Invoice {invoiceNumber} — added to database"
+    },
+    "summary": {
+      "title": "Expense summary"
     },
     "filters": {
       "search": "Search",
@@ -636,7 +648,7 @@
     "fuelType": "Fuel type",
     "cost": "Cost (PLN)",
     "status": "Status",
-    "mileage": "Current mileage (km)",
+    "mileage": "Current mileage",
     "mileageHint": "Used for regulation calculation",
     "assignDriver": "Assign driver",
     "assignDriverHint": "Select existing or create new",

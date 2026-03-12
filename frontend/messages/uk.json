@@ -346,11 +346,15 @@
       "title": "Регламент",
       "subtitle": "Схема технічного обслуговування за пробігом",
       "assignedOn": "призначено",
-      "everyKm": "кожні {km} км",
+      "everyKm": "кожні {km} {unit}",
       "reminder": "Нагадування",
       "done": "Виконано",
       "next": "Наступне",
       "markDone": "Відмітити",
+      "doneAt": "Виконано при",
+      "nextDueAt": "Наступне при",
+      "markWarning": "Наступний пробіг менший або рівний поточному. Запис буде збережено без коригування наступного пробігу.",
+      "markWarningConfirm": "Зберегти все одно",
       "km": "км",
       "noDefault": "Немає схеми за замовчуванням",
       "noDefaultDesc": "Спочатку створіть схему регламенту та позначте її як основну.",
@@ -364,14 +368,16 @@
       "entryNamePl": "Назва (PL)",
       "translate": "Перекласти",
       "autoTranslate": "Автоматичний переклад на інші мови",
-      "entryInterval": "Інтервал (км)",
-      "entryNotifyBefore": "Нагадування за (км)",
-      "entryLastDone": "Останній раз (км)",
+      "entryInterval": "Інтервал ({unit})",
+      "entryNotifyBefore": "Нагадування за ({unit})",
+      "entryLastDone": "Останній раз ({unit})",
       "save": "Зберегти",
       "cancel": "Скасувати",
       "deleteEntry": "Видалити пункт",
       "deleteConfirm": "Видалити цей пункт регламенту?",
       "removeFromList": "Прибрати",
+      "zeroKmWarning": "Пробіг авто 0 і деякі пункти мають останню заміну 0 або не заповнені. Ці пункти будуть додані з нульовим пробігом.",
+      "zeroKmConfirm": "Зберегти все одно",
       "planView": "План",
       "historyView": "Історія",
       "history": {
@@ -439,14 +445,15 @@
       "title": "Пробіг",
       "subtitle": "Історія змін пробігу авто",
       "add": "Додати запис",
-      "kmPlaceholder": "Пробіг (км)",
+      "kmPlaceholder": "Пробіг ({unit})",
       "save": "Зберегти",
       "cancel": "Скасувати",
       "empty": "Немає записів пробігу",
       "emptyDesc": "Додайте перший запис пробігу цього авто",
       "updateMileage": "Оновити пробіг",
-      "newKm": "Новий пробіг (км)",
-      "minError": "Пробіг має бути більшим за {km} км"
+      "switchUnit": "Перемкнути км/милі",
+      "newKm": "Новий пробіг ({unit})",
+      "minError": "Пробіг має бути більшим за {km} {unit}"
     },
     "expenses": {
       "title": "Витрати авто",
@@ -531,7 +538,8 @@
       "clientDriver": "Водій (клієнт)",
       "clientPercent": "Відсоток клієнта",
       "approvalStatus": "Статус",
-      "splitMismatch": "Сума не збігається"
+      "splitMismatch": "Сума не збігається",
+      "noDriverWarning": "До транспорту не призначено водія. Призначте водія, щоб обрати тип оплати \"Клієнт\"."
     },
     "approvalStatuses": {
       "DRAFT": "Чернетка",
@@ -549,7 +557,8 @@
     },
     "supplierTypes": {
       "DISASSEMBLY": "Розборка",
-      "INDIVIDUAL": "Фізик"
+      "INDIVIDUAL": "Фізик",
+      "SHOP": "Магазин"
     },
     "detail": {
       "title": "Деталі витрати",
@@ -607,6 +616,9 @@
       "attachedExisting": "Фактура {invoiceNumber} — знайдена в базі",
       "createdNew": "Фактура {invoiceNumber} — додана в базу"
     },
+    "summary": {
+      "title": "Підсумок витрат"
+    },
     "filters": {
       "search": "Пошук",
       "searchPlaceholder": "Номер, марка, модель...",
@@ -636,7 +648,7 @@
     "fuelType": "Тип палива",
     "cost": "Вартість (PLN)",
     "status": "Статус",
-    "mileage": "Поточний пробіг (км)",
+    "mileage": "Поточний пробіг",
     "mileageHint": "Використовується для розрахунку регламенту",
     "assignDriver": "Призначити водія",
     "assignDriverHint": "Оберіть існуючого або створіть нового",

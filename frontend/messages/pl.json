@@ -346,11 +346,15 @@
       "title": "Regulamin",
       "subtitle": "Schemat konserwacji według przebiegu",
       "assignedOn": "przypisano",
-      "everyKm": "co {km} km",
+      "everyKm": "co {km} {unit}",
       "reminder": "Przypomnienie",
       "done": "Wykonano",
       "next": "Następny",
       "markDone": "Oznacz",
+      "doneAt": "Wykonano przy",
+      "nextDueAt": "Następny przy",
+      "markWarning": "Następny przebieg jest mniejszy lub równy aktualnemu. Wpis zostanie zapisany bez korekty następnego przebiegu.",
+      "markWarningConfirm": "Zapisz mimo to",
       "km": "km",
       "noDefault": "Brak domyślnego schematu",
       "noDefaultDesc": "Najpierw utwórz schemat regulaminu i oznacz go jako domyślny.",
@@ -364,14 +368,16 @@
       "entryNamePl": "Nazwa (PL)",
       "translate": "Tłumacz",
       "autoTranslate": "Automatyczne tłumaczenie na inne języki",
-      "entryInterval": "Interwał (km)",
-      "entryNotifyBefore": "Przypomnienie za (km)",
-      "entryLastDone": "Ostatnio (km)",
+      "entryInterval": "Interwał ({unit})",
+      "entryNotifyBefore": "Przypomnienie za ({unit})",
+      "entryLastDone": "Ostatnio ({unit})",
       "save": "Zapisz",
       "cancel": "Anuluj",
       "deleteEntry": "Usuń pozycję",
       "deleteConfirm": "Usunąć tę pozycję regulaminu?",
       "removeFromList": "Usuń",
+      "zeroKmWarning": "Przebieg pojazdu wynosi 0 i niektóre pozycje mają ostatnią wymianę na 0 lub pustą. Te pozycje zostaną dodane z zerowym przebiegiem.",
+      "zeroKmConfirm": "Zapisz mimo to",
       "planView": "Plan",
       "historyView": "Historia",
       "history": {
@@ -439,14 +445,15 @@
       "title": "Przebieg",
       "subtitle": "Historia zmian przebiegu pojazdu",
       "add": "Dodaj wpis",
-      "kmPlaceholder": "Przebieg (km)",
+      "kmPlaceholder": "Przebieg ({unit})",
       "save": "Zapisz",
       "cancel": "Anuluj",
       "empty": "Brak wpisów przebiegu",
       "emptyDesc": "Dodaj pierwszy wpis o przebiegu tego pojazdu",
       "updateMileage": "Zaktualizuj przebieg",
-      "newKm": "Nowy przebieg (km)",
-      "minError": "Przebieg musi być większy niż {km} km"
+      "switchUnit": "Przełącz km/mi",
+      "newKm": "Nowy przebieg ({unit})",
+      "minError": "Przebieg musi być większy niż {km} {unit}"
     },
     "expenses": {
       "title": "Wydatki pojazdu",
@@ -531,7 +538,8 @@
       "clientDriver": "Kierowca (klient)",
       "clientPercent": "Procent klienta",
       "approvalStatus": "Status zatwierdzenia",
-      "splitMismatch": "Suma nie zgadza się"
+      "splitMismatch": "Suma nie zgadza się",
+      "noDriverWarning": "Brak przypisanego kierowcy do pojazdu. Przypisz kierowcę, aby wybrać typ płatności \"Klient\"."
     },
     "detail": {
       "title": "Szczegóły wydatku",
@@ -578,7 +586,8 @@
     },
     "supplierTypes": {
       "DISASSEMBLY": "Rozbiórka",
-      "INDIVIDUAL": "Osoba fizyczna"
+      "INDIVIDUAL": "Osoba fizyczna",
+      "SHOP": "Sklep"
     },
     "fuelTypes": {
       "GASOLINE": "Benzyna",
@@ -606,6 +615,9 @@
       "uploadFile": "Dodaj plik faktury",
       "attachedExisting": "Faktura {invoiceNumber} — znaleziona w bazie",
       "createdNew": "Faktura {invoiceNumber} — dodana do bazy"
+    },
+    "summary": {
+      "title": "Podsumowanie wydatków"
     },
     "filters": {
       "search": "Szukaj",
@@ -636,7 +648,7 @@
     "fuelType": "Typ paliwa",
     "cost": "Koszt (PLN)",
     "status": "Status",
-    "mileage": "Aktualny przebieg (km)",
+    "mileage": "Aktualny przebieg",
     "mileageHint": "Używany do obliczania regulaminu",
     "assignDriver": "Przypisz kierowcę",
     "assignDriverHint": "Wybierz istniejącego lub utwórz nowego",
