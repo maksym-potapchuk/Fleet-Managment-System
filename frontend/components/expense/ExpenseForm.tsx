@@ -26,7 +26,7 @@ const FUEL_TYPES: FuelType[] = ['GASOLINE', 'DIESEL', 'LPG', 'ELECTRIC'];
 const WASH_TYPES: WashType[] = ['EXTERIOR', 'INTERIOR', 'FULL'];
 const PAYMENT_METHODS: PaymentMethod[] = ['CASHLESS', 'CASH'];
 const PAYER_TYPES: PayerType[] = ['COMPANY', 'CLIENT'];
-const SUPPLIER_TYPES: SupplierType[] = ['DISASSEMBLY', 'INDIVIDUAL'];
+const SUPPLIER_TYPES: SupplierType[] = ['DISASSEMBLY', 'INDIVIDUAL', 'SHOP'];
 
 const emptyPart = (): ExpensePart => ({ name: '', quantity: 1, unit_price: '' });
 const emptyServiceItem = (): ServiceItem => ({ name: '', price: '' });
@@ -92,10 +92,8 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
     if (formData.payer_type === 'CLIENT') {
       if (resolvedDriver) {
         setClientDriver(String(resolvedDriver.id));
-        setNoDriverWarning(false);
       } else {
         setClientDriver('');
-        setNoDriverWarning(true);
       }
     }
   }, [formData.vehicle, resolvedDriver?.id]);
@@ -662,16 +660,9 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
           {/* Auto-resolved driver */}
           <div>
             <label className={labelClasses}>{t('fields.clientDriver')}</label>
-            {resolvedDriverLabel ? (
-              <div className="px-3 py-2.5 bg-white border border-amber-200 rounded-xl text-sm text-slate-900 font-medium">
-                {resolvedDriverLabel}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {t('fields.noDriverWarning')}
-              </div>
-            )}
+            <div className="px-3 py-2.5 bg-white border border-amber-200 rounded-xl text-sm text-slate-900 font-medium">
+              {resolvedDriverLabel || '—'}
+            </div>
           </div>
 
           {/* Split mode toggle */}

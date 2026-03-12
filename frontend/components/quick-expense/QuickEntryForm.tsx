@@ -319,14 +319,14 @@ export function QuickEntryForm({
   const hasInvoice = !!foundInvoice || !!invoiceFile;
   const isValid = useMemo(() => {
     if (code === 'INSPECTION') return parseFloat(officialCost) > 0 && inspectionDate;
-    if (code === 'SERVICE') return serviceItems.some(i => i.name.trim() && parseFloat(i.price) > 0) && hasInvoice;
-    if (code === 'PARTS' || code === 'ACCESSORIES' || code === 'DOCUMENTS') return parts.some(p => p.name.trim() && parseFloat(p.unit_price as string) > 0) && hasInvoice;
+    if (code === 'SERVICE') return serviceItems.some(i => i.name.trim() && parseFloat(i.price) > 0);
+    if (code === 'PARTS' || code === 'ACCESSORIES' || code === 'DOCUMENTS') return parts.some(p => p.name.trim() && parseFloat(p.unit_price as string) > 0);
     if (code === 'FUEL') return fuelEntries.every(fe => parseFloat(fe.amount) > 0 && fe.fuel_types.length > 0);
     if (!amount || parseFloat(amount) <= 0) return false;
     if (code === 'WASHING' && !washType) return false;
     if (code === 'FINES' && !violationType.trim()) return false;
     return true;
-  }, [amount, code, fuelEntries, washType, violationType, officialCost, inspectionDate, serviceItems, parts, hasInvoice]);
+  }, [amount, code, fuelEntries, washType, violationType, officialCost, inspectionDate, serviceItems, parts]);
 
   if (!category) return null;
 
@@ -468,16 +468,9 @@ export function QuickEntryForm({
               {/* Auto-resolved driver */}
               <div>
                 <label className={labelClasses}>{tExpenses('fields.clientDriver')}</label>
-                {vehicleDriverLabel ? (
-                  <div className="px-3 py-2 bg-white border border-amber-200 rounded-xl text-sm text-slate-900 font-medium">
-                    {vehicleDriverLabel}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
-                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                    {tExpenses('fields.noDriverWarning')}
-                  </div>
-                )}
+                <div className="px-3 py-2 bg-white border border-amber-200 rounded-xl text-sm text-slate-900 font-medium">
+                  {vehicleDriverLabel || '—'}
+                </div>
               </div>
 
               {/* Split mode toggle */}
@@ -809,7 +802,6 @@ export function QuickEntryForm({
                 onInvoiceFound={setFoundInvoice}
                 file={invoiceFile}
                 onFileChange={setInvoiceFile}
-                required
               />
             </>
           )}
