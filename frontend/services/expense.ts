@@ -4,6 +4,7 @@ import {
   ExpenseCategory,
   CreateExpenseData,
   ExpenseFilters,
+  ExpenseSummary,
   FuelSubEntry,
   InvoiceSearchResult,
   PaginatedExpenseResponse,
@@ -62,6 +63,11 @@ export const expenseService = {
     const url = `/vehicle/${vehicleId}/expenses/${buildQueryString(filters)}`;
     const response = await api.get<PaginatedExpenseResponse>(url);
     return response.data.results;
+  },
+
+  async getVehicleExpenseSummary(vehicleId: string): Promise<ExpenseSummary> {
+    const response = await api.get<ExpenseSummary>(`/vehicle/${vehicleId}/expenses/summary/`);
+    return response.data;
   },
 
   async searchInvoices(query: string): Promise<InvoiceSearchResult[]> {

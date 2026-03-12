@@ -28,7 +28,7 @@ export type FuelType = 'GASOLINE' | 'DIESEL' | 'LPG' | 'ELECTRIC';
 export type WashType = 'EXTERIOR' | 'INTERIOR' | 'FULL';
 export type PaymentMethod = 'CASH' | 'CASHLESS';
 export type PayerType = 'COMPANY' | 'CLIENT';
-export type SupplierType = 'DISASSEMBLY' | 'INDIVIDUAL';
+export type SupplierType = 'DISASSEMBLY' | 'INDIVIDUAL' | 'SHOP';
 export type ApprovalStatus = 'DRAFT' | 'SENT' | 'REVIEW' | 'APPROVED';
 
 // ── Parts & Invoices ──
@@ -239,6 +239,21 @@ export interface QuickExpenseEntry {
   source_name?: string;
   supplier_type?: SupplierType;
   parts?: ExpensePart[];
+}
+
+// ── Expense Summary ──
+
+export interface ExpenseCategorySummary {
+  code: string | null;
+  name: string;
+  icon: string;
+  color: string;
+  total: string;
+}
+
+export interface ExpenseSummary {
+  total: string;
+  categories: ExpenseCategorySummary[];
 }
 
 export type QuickExpenseSubmissionStatus = 'pending' | 'submitting' | 'success' | 'error';
