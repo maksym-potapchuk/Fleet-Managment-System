@@ -32,8 +32,7 @@ const COLOR_STYLES: Record<string, { bg: string; text: string }> = {
 function getDetail(entry: QuickExpenseEntry, tExpenses: (key: string) => string): string {
   const parts: string[] = [];
   if (entry.category_code === 'FUEL') {
-    if (entry.liters) parts.push(`${entry.liters}L`);
-    if (entry.fuel_type) parts.push(tExpenses(`fuelTypes.${entry.fuel_type}`));
+    if (entry.fuel_types?.length) parts.push(entry.fuel_types.map(ft => tExpenses(`fuelTypes.${ft}`)).join(', '));
     if (entry.receipt) parts.push('+receipt');
   } else if (entry.category_code === 'WASHING' && entry.wash_type) {
     parts.push(tExpenses(`washTypes.${entry.wash_type}`));

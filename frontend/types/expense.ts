@@ -96,8 +96,7 @@ export interface Expense {
   client_driver_name: string | null;
   approval_status: ApprovalStatus | null;
   // FUEL
-  liters: string | null;
-  fuel_type: FuelType | '';
+  fuel_types: FuelType[];
   // SERVICE
   service: number | null;
   service_name: string;
@@ -131,20 +130,19 @@ export interface Expense {
 export interface CreateExpenseData {
   vehicle?: string;
   category: string;
-  amount?: string | number;
   expense_date: string;
   receipt?: File;
   // Payment & payer
   payment_method?: PaymentMethod;
   payer_type?: PayerType;
   expense_for?: string;
-  // Cost splitting
+  // Amounts: amount for COMPANY payer; company_amount + client_amount for CLIENT payer
+  amount?: string | number;
   company_amount?: string | number;
   client_amount?: string | number;
   client_driver?: string;
   // FUEL
-  liters?: string | number;
-  fuel_type?: FuelType;
+  fuel_types?: FuelType[];
   // SERVICE
   service?: number | string;
   service_items_json?: string;
@@ -195,8 +193,7 @@ export interface PaginatedExpenseResponse {
 
 export interface FuelSubEntry {
   amount: string;
-  liters: string;
-  fuel_type?: FuelType;
+  fuel_types: FuelType[];
   receipt?: File;
 }
 
@@ -218,8 +215,7 @@ export interface QuickExpenseEntry {
   client_amount?: string;
   client_driver?: string;
   // FUEL
-  liters?: string;
-  fuel_type?: FuelType;
+  fuel_types?: FuelType[];
   receipt?: File;
   fuel_entries?: FuelSubEntry[];
   // WASHING

@@ -17,6 +17,8 @@ function buildFormData(data: Record<string, unknown>): FormData {
     if (value === undefined || value === null || value === '') return;
     if (value instanceof File) {
       formData.append(key, value);
+    } else if (Array.isArray(value)) {
+      formData.append(key, JSON.stringify(value));
     } else {
       formData.append(key, String(value));
     }
@@ -125,9 +127,7 @@ export const expenseService = {
             const data: CreateExpenseData = {
               category: entry.category,
               expense_date: entry.expense_date,
-              amount: fe.amount || '0',
-              liters: fe.liters,
-              fuel_type: fe.fuel_type,
+              fuel_types: fe.fuel_types,
             };
             if (entry.payment_method) data.payment_method = entry.payment_method;
             if (entry.payer_type) data.payer_type = entry.payer_type;
@@ -141,6 +141,9 @@ export const expenseService = {
               data.client_amount = clientAmt;
               data.company_amount = Math.round((entryTotal - clientAmt) * 100) / 100;
               if (entry.client_driver) data.client_driver = entry.client_driver;
+            } else {
+              // COMPANY payer: amount = full amount
+              data.amount = fe.amount || '0';
             }
             await this.createVehicleExpense(vehicleId, data);
           }
@@ -148,7 +151,6 @@ export const expenseService = {
           const data: CreateExpenseData = {
             category: entry.category,
             expense_date: entry.expense_date,
-            amount: entry.amount || '0',
           };
 
           if (entry.payment_method) data.payment_method = entry.payment_method;
@@ -159,6 +161,9 @@ export const expenseService = {
             if (entry.company_amount) data.company_amount = entry.company_amount;
             if (entry.client_amount) data.client_amount = entry.client_amount;
             if (entry.client_driver) data.client_driver = entry.client_driver;
+          } else {
+            // COMPANY payer: amount = full amount
+            data.amount = entry.amount || '0';
           }
 
           if (code === 'INSPECTION') {

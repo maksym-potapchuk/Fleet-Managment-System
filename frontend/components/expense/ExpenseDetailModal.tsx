@@ -116,11 +116,11 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
         <div className="mb-5">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{t('detail.categoryDetails')}</h3>
 
-          {code === 'FUEL' && (
-            <>
-              <DetailRow label={t('detail.liters')} value={expense.liters ? `${expense.liters} L` : null} />
-              <DetailRow label={t('detail.fuelType')} value={expense.fuel_type ? t(`fuelTypes.${expense.fuel_type}`) : null} />
-            </>
+          {code === 'FUEL' && expense.fuel_types?.length > 0 && (
+            <DetailRow
+              label={t('detail.fuelType')}
+              value={expense.fuel_types.map(ft => t(`fuelTypes.${ft}`)).join(', ')}
+            />
           )}
 
           {code === 'SERVICE' && (

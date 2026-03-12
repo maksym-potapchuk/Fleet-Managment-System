@@ -3,9 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { ExpenseCategory, QuickExpenseEntry, ExpensePart, ServiceItem, FuelSubEntry, FuelType, WashType, PaymentMethod, PayerType, InvoiceSearchResult } from '@/types/expense';
 import { Service } from '@/types/service';
-import { Driver } from '@/types/driver';
 import { getAllServices } from '@/services/service';
-import { getAllDrivers } from '@/services/driver';
 import { FileInput } from '@/components/common/FileInput';
 import { InvoiceInput } from '@/components/expense/InvoiceInput';
 import { ChevronDown, Plus, Check, Trash2, AlertCircle } from 'lucide-react';
@@ -38,7 +36,7 @@ const PAYER_TYPES_OPTIONS: { value: PayerType; short: string }[] = [
 
 const emptyPart = (): ExpensePart => ({ name: '', quantity: 1, unit_price: '' });
 const emptyServiceItem = (): ServiceItem => ({ name: '', price: '' });
-const emptyFuelEntry = (): FuelSubEntry => ({ amount: '', liters: '', fuel_type: undefined, receipt: undefined });
+const emptyFuelEntry = (): FuelSubEntry => ({ amount: '', fuel_types: [], receipt: undefined });
 
 interface QuickEntryFormProps {
   categories: ExpenseCategory[];
@@ -48,6 +46,7 @@ interface QuickEntryFormProps {
   onCancel: () => void;
   tExpenses: (key: string) => string;
   t: (key: string) => string;
+  vehicleDriver?: { id: string; first_name: string; last_name: string } | null;
 }
 
 function SegmentedControl<T extends string>({
@@ -147,6 +146,7 @@ export function QuickEntryForm({
   onCancel,
   tExpenses,
   t,
+  vehicleDriver,
 }: QuickEntryFormProps) {
   const category = categories.find(c => c.id === activeCategoryId);
   const code = category?.code || null;
@@ -162,7 +162,6 @@ export function QuickEntryForm({
   const [expenseFor, setExpenseFor] = useState(editingEntry?.expense_for || '');
 
   // ── Cost splitting ──
-  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [clientDriver, setClientDriver] = useState(editingEntry?.client_driver || '');
   const [splitMode, setSplitMode] = useState<'PLN' | '%'>('PLN');
   const [companyAmount, setCompanyAmount] = useState(editingEntry?.company_amount || '');
@@ -175,8 +174,8 @@ export function QuickEntryForm({
   // ── FUEL (multi-entry) ──
   const [fuelEntries, setFuelEntries] = useState<FuelSubEntry[]>(() => {
     if (editingEntry?.fuel_entries?.length) return editingEntry.fuel_entries;
-    if (editingEntry?.liters || editingEntry?.fuel_type) {
-      return [{ amount: editingEntry.amount || '', liters: editingEntry.liters || '', fuel_type: editingEntry.fuel_type, receipt: editingEntry.receipt }];
+    if (editingEntry?.fuel_types?.length) {
+      return [{ amount: editingEntry.amount || '', fuel_types: editingEntry.fuel_types, receipt: editingEntry.receipt }];
     }
     return [emptyFuelEntry()];
   });
@@ -239,15 +238,19 @@ export function QuickEntryForm({
     return () => { ignore = true; };
   }, [code]);
 
-  // Load drivers when payer type is CLIENT
-  useEffect(() => {
-    if (payerType !== 'CLIENT' || drivers.length > 0) return;
-    let ignore = false;
-    getAllDrivers()
-      .then(d => { if (!ignore) setDrivers(d); })
-      .catch(() => {});
-    return () => { ignore = true; };
-  }, [payerType, drivers.length]);
+  const vehicleDriverLabel = vehicleDriver ? `${vehicleDriver.first_name} ${vehicleDriver.last_name}` : null;
+
+  // Handle payer type change — intercept CLIENT selection
+  const handlePayerTypeChange = useCallback((val: PayerType) => {
+    if (val === 'CLIENT') {
+      if (vehicleDriver) {
+        setClientDriver(String(vehicleDriver.id));
+      }
+    } else {
+      setClientDriver('');
+    }
+    setPayerType(val);
+  }, [vehicleDriver]);
 
   // ── Computed totals ──
   const serviceTotal = serviceItems.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
@@ -318,7 +321,7 @@ export function QuickEntryForm({
     if (code === 'INSPECTION') return parseFloat(officialCost) > 0 && inspectionDate;
     if (code === 'SERVICE') return serviceItems.some(i => i.name.trim() && parseFloat(i.price) > 0) && hasInvoice;
     if (code === 'PARTS' || code === 'ACCESSORIES' || code === 'DOCUMENTS') return parts.some(p => p.name.trim() && parseFloat(p.unit_price as string) > 0) && hasInvoice;
-    if (code === 'FUEL') return fuelEntries.every(fe => parseFloat(fe.amount) > 0 && parseFloat(fe.liters) > 0 && fe.fuel_type);
+    if (code === 'FUEL') return fuelEntries.every(fe => parseFloat(fe.amount) > 0 && fe.fuel_types.length > 0);
     if (!amount || parseFloat(amount) <= 0) return false;
     if (code === 'WASHING' && !washType) return false;
     if (code === 'FINES' && !violationType.trim()) return false;
@@ -355,9 +358,7 @@ export function QuickEntryForm({
 
     if (code === 'FUEL') {
       entry.fuel_entries = fuelEntries;
-      // Keep first entry fields for backward compat with entry list display
-      entry.liters = fuelEntries[0]?.liters;
-      entry.fuel_type = fuelEntries[0]?.fuel_type;
+      entry.fuel_types = fuelEntries[0]?.fuel_types;
       if (fuelEntries[0]?.receipt) entry.receipt = fuelEntries[0].receipt;
     } else if (code === 'WASHING') {
       entry.wash_type = washType;
@@ -452,7 +453,7 @@ export function QuickEntryForm({
                 <SegmentedControl
                   options={PAYER_TYPES_OPTIONS}
                   value={payerType}
-                  onChange={setPayerType}
+                  onChange={handlePayerTypeChange}
                   renderLabel={(opt) => tExpenses(`payerTypes.${opt.value}`)}
                 />
               </div>
@@ -464,20 +465,19 @@ export function QuickEntryForm({
             <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-xl space-y-3">
               <p className="text-xs font-semibold text-amber-800">{tExpenses('fields.costSplitting')}</p>
 
-              {/* Driver selector */}
-              <div className="relative">
+              {/* Auto-resolved driver */}
+              <div>
                 <label className={labelClasses}>{tExpenses('fields.clientDriver')}</label>
-                <select
-                  value={clientDriver}
-                  onChange={(e) => setClientDriver(e.target.value)}
-                  className={`${inputClasses} appearance-none pr-9`}
-                >
-                  <option value="">—</option>
-                  {drivers.map(d => (
-                    <option key={d.id} value={d.id}>{d.first_name} {d.last_name}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 bottom-3 w-4 h-4 text-slate-400 pointer-events-none" />
+                {vehicleDriverLabel ? (
+                  <div className="px-3 py-2 bg-white border border-amber-200 rounded-xl text-sm text-slate-900 font-medium">
+                    {vehicleDriverLabel}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    {tExpenses('fields.noDriverWarning')}
+                  </div>
+                )}
               </div>
 
               {/* Split mode toggle */}
@@ -576,32 +576,42 @@ export function QuickEntryForm({
                           </button>
                         )}
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <NumericInput
-                          value={fe.amount}
-                          onChange={(val) => updateFuelEntry(idx, 'amount', val)}
-                          placeholder="0.00 PLN"
-                          autoFocus={idx === 0 && !editingEntry}
-                          label={`${t('addStep.amount')} *`}
-                          className={inputClasses}
-                        />
-                        <NumericInput
-                          value={fe.liters}
-                          onChange={(val) => updateFuelEntry(idx, 'liters', val)}
-                          placeholder="0.00"
-                          label={`${tExpenses('fields.liters')} *`}
-                          className={inputClasses}
-                        />
-                      </div>
+                      <NumericInput
+                        value={fe.amount}
+                        onChange={(val) => updateFuelEntry(idx, 'amount', val)}
+                        placeholder="0.00 PLN"
+                        autoFocus={idx === 0 && !editingEntry}
+                        label={`${t('addStep.amount')} *`}
+                        className={inputClasses}
+                      />
                       <div>
                         <label className={labelClasses}>{tExpenses('fields.fuelType')} *</label>
-                        <div className="pt-0.5">
-                          <SegmentedControl
-                            options={FUEL_TYPES}
-                            value={fe.fuel_type}
-                            onChange={(val) => updateFuelEntry(idx, 'fuel_type', val)}
-                            renderLabel={(opt) => tExpenses(`fuelTypes.${opt.value}`)}
-                          />
+                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                          {FUEL_TYPES.map(ft => {
+                            const selected = fe.fuel_types.includes(ft.value);
+                            return (
+                              <button
+                                key={ft.value}
+                                type="button"
+                                onClick={() => {
+                                  setFuelEntries(prev => prev.map((entry, i) => {
+                                    if (i !== idx) return entry;
+                                    const next = selected
+                                      ? entry.fuel_types.filter(v => v !== ft.value)
+                                      : [...entry.fuel_types, ft.value];
+                                    return { ...entry, fuel_types: next };
+                                  }));
+                                }}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all duration-150 ${
+                                  selected
+                                    ? 'bg-teal-500 text-white border-teal-500 shadow-sm'
+                                    : 'bg-white text-slate-500 border-slate-200 hover:border-teal-400 hover:text-teal-600'
+                                }`}
+                              >
+                                {tExpenses(`fuelTypes.${ft.value}`)}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                       <FileInput
@@ -665,7 +675,7 @@ export function QuickEntryForm({
                     type="date"
                     value={fineDate}
                     onChange={(e) => setFineDate(e.target.value)}
-                    className={inputClasses}
+                    className={`${inputClasses}${!fineDate ? ' date-empty' : ''}`}
                   />
                 </div>
               </div>
@@ -682,7 +692,7 @@ export function QuickEntryForm({
                     type="date"
                     value={inspectionDate}
                     onChange={(e) => handleInspectionDateChange(e.target.value)}
-                    className={inputClasses}
+                    className={`${inputClasses}${!inspectionDate ? ' date-empty' : ''}`}
                   />
                 </div>
                 <div>
@@ -691,7 +701,7 @@ export function QuickEntryForm({
                     type="date"
                     value={nextInspectionDate}
                     onChange={(e) => setNextInspectionDate(e.target.value)}
-                    className={inputClasses}
+                    className={`${inputClasses}${!nextInspectionDate ? ' date-empty' : ''}`}
                   />
                 </div>
               </div>
@@ -1004,7 +1014,7 @@ export function QuickEntryForm({
               type="date"
               value={expenseDate}
               onChange={(e) => setExpenseDate(e.target.value)}
-              className={inputClasses}
+              className={`${inputClasses}${!expenseDate ? ' date-empty' : ''}`}
             />
           </div>
 

@@ -36,15 +36,11 @@ function getDetail(entry: QuickExpenseEntry, tExpenses: (key: string) => string)
   const parts: string[] = [];
   if (entry.category_code === 'FUEL') {
     const fuelCount = entry.fuel_entries?.length || 0;
-    if (fuelCount > 1) {
-      const totalLiters = entry.fuel_entries!.reduce((s, fe) => s + (parseFloat(fe.liters) || 0), 0);
-      parts.push(`${fuelCount}x`);
-      if (totalLiters > 0) parts.push(`${totalLiters.toFixed(1)}L`);
-    } else {
-      if (entry.liters) parts.push(`${entry.liters}L`);
-      if (entry.fuel_type) parts.push(tExpenses(`fuelTypes.${entry.fuel_type}`));
-      if (entry.receipt) parts.push('+receipt');
+    if (fuelCount > 1) parts.push(`${fuelCount}x`);
+    if (entry.fuel_types?.length) {
+      parts.push(entry.fuel_types.map(ft => tExpenses(`fuelTypes.${ft}`)).join(', '));
     }
+    if (entry.receipt) parts.push('+receipt');
   } else if (entry.category_code === 'WASHING' && entry.wash_type) {
     parts.push(tExpenses(`washTypes.${entry.wash_type}`));
   } else if (entry.category_code === 'FINES') {

@@ -99,7 +99,7 @@ describe('expenseService – submitQuickExpenses', () => {
     mockedApi.post.mockResolvedValue({ data: { id: 'exp-1' } });
 
     const entries = [
-      makeEntry({ id: 'e1', amount: '100', liters: '40', fuel_type: 'DIESEL' }),
+      makeEntry({ id: 'e1', amount: '100', fuel_types: ['DIESEL'] }),
       makeEntry({ id: 'e2', category_code: 'OTHER', amount: '50' }),
     ];
 
@@ -167,15 +167,14 @@ describe('expenseService – submitQuickExpenses', () => {
       id: 'e1',
       category_code: 'FUEL',
       amount: '200',
-      fuel_entries: [{ amount: '200', liters: '80', fuel_type: 'GASOLINE' }],
+      fuel_entries: [{ amount: '200', fuel_types: ['GASOLINE'] }],
     });
 
     await expenseService.submitQuickExpenses('v-1', [entry], () => {});
 
     const formData = mockedApi.post.mock.calls[0][1] as FormData;
     expect(formData.get('amount')).toBe('200');
-    expect(formData.get('liters')).toBe('80');
-    expect(formData.get('fuel_type')).toBe('GASOLINE');
+    expect(formData.get('fuel_types')).toBe(JSON.stringify(['GASOLINE']));
   });
 
   it('sends service_items_json for SERVICE category', async () => {
@@ -279,7 +278,7 @@ describe('expenseService – submitQuickExpenses', () => {
       client_amount: '80',
       client_driver: 'driver-1',
       fuel_entries: [
-        { amount: '200', liters: '80', fuel_type: 'DIESEL' },
+        { amount: '200', fuel_types: ['DIESEL'] },
       ],
     });
 

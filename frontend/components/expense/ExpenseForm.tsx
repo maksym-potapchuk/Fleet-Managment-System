@@ -5,9 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Expense, CreateExpenseData, ExpenseCategory, ExpensePart, ServiceItem, FuelType, WashType, PaymentMethod, PayerType, SupplierType, InvoiceSearchResult } from '@/types/expense';
 import { Service } from '@/types/service';
 import { Vehicle } from '@/types/vehicle';
-import { Driver } from '@/types/driver';
 import { getAllServices } from '@/services/service';
-import { getAllDrivers } from '@/services/driver';
 import { VehicleAutocomplete } from '@/components/expense/VehicleAutocomplete';
 import { FileInput } from '@/components/common/FileInput';
 import { InvoiceInput } from '@/components/expense/InvoiceInput';
@@ -21,6 +19,7 @@ interface ExpenseFormProps {
   isLoading?: boolean;
   vehicleId?: string;
   vehicles?: Vehicle[];
+  vehicleDriver?: { id: string; first_name: string; last_name: string } | null;
 }
 
 const FUEL_TYPES: FuelType[] = ['GASOLINE', 'DIESEL', 'LPG', 'ELECTRIC'];
@@ -32,7 +31,7 @@ const SUPPLIER_TYPES: SupplierType[] = ['DISASSEMBLY', 'INDIVIDUAL'];
 const emptyPart = (): ExpensePart => ({ name: '', quantity: 1, unit_price: '' });
 const emptyServiceItem = (): ServiceItem => ({ name: '', price: '' });
 
-export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoading = false, vehicleId, vehicles }: ExpenseFormProps) {
+export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoading = false, vehicleId, vehicles, vehicleDriver: vehicleDriverProp }: ExpenseFormProps) {
   const t = useTranslations('expenses');
   const tCommon = useTranslations('common');
 
@@ -48,9 +47,6 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
     // PARTS detail
     source_name: initialData?.source_name || '',
     supplier_type: initialData?.supplier_type || 'DISASSEMBLY',
-    // FUEL
-    liters: initialData?.liters || '',
-    fuel_type: initialData?.fuel_type || '',
     // SERVICE
     service: initialData?.service?.toString() || '',
     // WASHING
@@ -67,6 +63,7 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
     next_inspection_date: initialData?.next_inspection_date || '',
   });
 
+  const [fuelTypes, setFuelTypes] = useState<FuelType[]>(initialData?.fuel_types?.length ? initialData.fuel_types : []);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoice_data?.number || '');
@@ -75,7 +72,6 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>(initialData?.service_items?.length ? initialData.service_items : [emptyServiceItem()]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [fleetServices, setFleetServices] = useState<Service[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [clientDriver, setClientDriver] = useState(initialData?.client_driver || '');
   const [splitMode, setSplitMode] = useState<'PLN' | '%'>('PLN');
   const [companyAmount, setCompanyAmount] = useState(initialData?.company_amount || '');
@@ -86,20 +82,45 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
   const categoryCode = selectedCategory?.code || null;
   const isAutoAmountCategory = categoryCode === 'SERVICE' || categoryCode === 'PARTS' || categoryCode === 'INSPECTION' || categoryCode === 'ACCESSORIES' || categoryCode === 'DOCUMENTS';
 
-  // Load fleet services and drivers once on mount
+  // Resolve driver: prop (vehicle detail page) or from selected vehicle (expenses page)
+  const selectedVehicle = vehicles?.find(v => v.id === formData.vehicle);
+  const resolvedDriver = vehicleDriverProp !== undefined ? vehicleDriverProp : (selectedVehicle?.driver ?? null);
+  const resolvedDriverLabel = resolvedDriver ? `${resolvedDriver.first_name} ${resolvedDriver.last_name}` : null;
+
+  // When vehicle changes and payer is CLIENT, auto-update driver
+  useEffect(() => {
+    if (formData.payer_type === 'CLIENT') {
+      if (resolvedDriver) {
+        setClientDriver(String(resolvedDriver.id));
+        setNoDriverWarning(false);
+      } else {
+        setClientDriver('');
+        setNoDriverWarning(true);
+      }
+    }
+  }, [formData.vehicle, resolvedDriver?.id]);
+
+  // Load fleet services on mount
   useEffect(() => {
     let ignore = false;
     getAllServices()
       .then(services => { if (!ignore) setFleetServices(services); })
-      .catch(() => {});
-    getAllDrivers()
-      .then(d => { if (!ignore) setDrivers(d); })
       .catch(() => {});
     return () => { ignore = true; };
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+
+    if (name === 'payer_type' && value === 'CLIENT') {
+      if (resolvedDriver) {
+        setClientDriver(String(resolvedDriver.id));
+      }
+    }
+    if (name === 'payer_type' && value === 'COMPANY') {
+      setClientDriver('');
+    }
+
     setFormData(prev => {
       const next = { ...prev, [name]: value };
       // Auto-compute next_inspection_date (+1 year) when inspection_date changes
@@ -190,25 +211,17 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
     if (!vehicleId && formData.vehicle) data.vehicle = formData.vehicle;
 
     if (categoryCode === 'FUEL') {
-      data.amount = formData.amount;
-      data.liters = formData.liters;
-      data.fuel_type = formData.fuel_type as FuelType;
+      data.fuel_types = fuelTypes;
       if (receiptFile) data.receipt = receiptFile;
     } else if (categoryCode === 'SERVICE') {
-      if (!foundInvoice && !invoiceFile && !initialData) {
-        setErrors(prev => ({ ...prev, invoice: t('fields.invoiceRequired') }));
-        return;
-      }
       if (formData.service) data.service = formData.service;
       const validItems = serviceItems.filter(item => item.name.trim());
       if (validItems.length) data.service_items_json = JSON.stringify(validItems);
       if (invoiceNumber) data.invoice_number = invoiceNumber;
       if (!foundInvoice && invoiceFile) data.invoice_file = invoiceFile;
     } else if (categoryCode === 'WASHING') {
-      data.amount = formData.amount;
       if (formData.wash_type) data.wash_type = formData.wash_type as WashType;
     } else if (categoryCode === 'FINES') {
-      data.amount = formData.amount;
       data.violation_type = formData.violation_type;
       if (formData.fine_number) data.fine_number = formData.fine_number;
       if (formData.fine_date) data.fine_date = formData.fine_date;
@@ -219,10 +232,6 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
       if (formData.additional_cost) data.additional_cost = formData.additional_cost;
       if (formData.next_inspection_date) data.next_inspection_date = formData.next_inspection_date;
     } else if (categoryCode === 'PARTS') {
-      if (!foundInvoice && !invoiceFile && !initialData) {
-        setErrors(prev => ({ ...prev, invoice: t('fields.invoiceRequired') }));
-        return;
-      }
       if (formData.source_name) data.source_name = formData.source_name;
       data.supplier_type = formData.supplier_type as SupplierType;
       const validParts = parts.filter(p => p.name.trim()).map(p => ({ ...p, quantity: p.quantity || 1 }));
@@ -230,26 +239,21 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
       if (invoiceNumber) data.invoice_number = invoiceNumber;
       if (!foundInvoice && invoiceFile) data.invoice_file = invoiceFile;
     } else if (categoryCode === 'ACCESSORIES' || categoryCode === 'DOCUMENTS') {
-      if (!foundInvoice && !invoiceFile && !initialData) {
-        setErrors(prev => ({ ...prev, invoice: t('fields.invoiceRequired') }));
-        return;
-      }
       const validParts = parts.filter(p => p.name.trim()).map(p => ({ ...p, quantity: p.quantity || 1 }));
       if (validParts.length) data.parts_json = JSON.stringify(validParts);
       if (invoiceNumber) data.invoice_number = invoiceNumber;
       if (!foundInvoice && invoiceFile) data.invoice_file = invoiceFile;
     } else if (categoryCode === 'OTHER') {
-      data.amount = formData.amount;
       if (formData.expense_for) data.expense_for = formData.expense_for;
-    } else {
-      data.amount = formData.amount;
     }
 
-    // Cost splitting
+    // Amounts: CLIENT → split (company_amount + client_amount), COMPANY → amount
     if (formData.payer_type === 'CLIENT') {
       data.company_amount = companyAmount;
       data.client_amount = clientAmount;
       if (clientDriver) data.client_driver = clientDriver;
+    } else if (!isAutoAmountCategory) {
+      data.amount = formData.amount;
     }
 
     try {
@@ -291,20 +295,29 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
       case 'FUEL':
         return (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClasses}>{t('fields.liters')} *</label>
-                <input type="number" name="liters" step="0.01" value={formData.liters} onChange={handleChange} onWheel={noWheel} disabled={isLoading} className={inputClasses('liters')} />
-                {renderError('liters')}
+            <div>
+              <label className={labelClasses}>{t('fields.fuelType')} *</label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {FUEL_TYPES.map(ft => {
+                  const selected = fuelTypes.includes(ft);
+                  return (
+                    <button
+                      key={ft}
+                      type="button"
+                      onClick={() => setFuelTypes(prev => selected ? prev.filter(v => v !== ft) : [...prev, ft])}
+                      disabled={isLoading}
+                      className={`px-4 py-2 text-sm font-medium rounded-xl border transition-all duration-150 ${
+                        selected
+                          ? 'bg-teal-500 text-white border-teal-500 shadow-sm'
+                          : 'bg-white text-slate-600 border-slate-300 hover:border-teal-400 hover:text-teal-600'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {t(`fuelTypes.${ft}`)}
+                    </button>
+                  );
+                })}
               </div>
-              <div>
-                <label className={labelClasses}>{t('fields.fuelType')} *</label>
-                <select name="fuel_type" value={formData.fuel_type} onChange={handleChange} disabled={isLoading} className={inputClasses('fuel_type')}>
-                  <option value="">—</option>
-                  {FUEL_TYPES.map(ft => <option key={ft} value={ft}>{t(`fuelTypes.${ft}`)}</option>)}
-                </select>
-                {renderError('fuel_type')}
-              </div>
+              {renderError('fuel_types')}
             </div>
             <FileInput label={t('fields.receipt')} onChange={setReceiptFile} disabled={isLoading} />
           </div>
@@ -366,11 +379,8 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
               onInvoiceFound={setFoundInvoice}
               file={invoiceFile}
               onFileChange={setInvoiceFile}
-              required
               disabled={isLoading}
-              hasError={!!errors.invoice}
             />
-            {errors.invoice && <p className="mt-1 text-xs text-red-600">{errors.invoice}</p>}
           </div>
         );
 
@@ -399,7 +409,7 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
             </div>
             <div>
               <label className={labelClasses}>{t('fields.fineDate')}</label>
-              <input type="date" name="fine_date" value={formData.fine_date} onChange={handleChange} disabled={isLoading} className={inputClasses('fine_date')} />
+              <input type="date" name="fine_date" value={formData.fine_date} onChange={handleChange} disabled={isLoading} className={`${inputClasses('fine_date')}${!formData.fine_date ? ' date-empty' : ''}`} />
             </div>
           </div>
         );
@@ -410,12 +420,12 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelClasses}>{t('fields.inspectionDate')} *</label>
-                <input type="date" name="inspection_date" value={formData.inspection_date} onChange={handleChange} disabled={isLoading} className={inputClasses('inspection_date')} />
+                <input type="date" name="inspection_date" value={formData.inspection_date} onChange={handleChange} disabled={isLoading} className={`${inputClasses('inspection_date')}${!formData.inspection_date ? ' date-empty' : ''}`} />
                 {renderError('inspection_date')}
               </div>
               <div>
                 <label className={labelClasses}>{t('fields.nextInspectionDate')}</label>
-                <input type="date" name="next_inspection_date" value={formData.next_inspection_date} onChange={handleChange} disabled={isLoading} className={inputClasses('next_inspection_date')} />
+                <input type="date" name="next_inspection_date" value={formData.next_inspection_date} onChange={handleChange} disabled={isLoading} className={`${inputClasses('next_inspection_date')}${!formData.next_inspection_date ? ' date-empty' : ''}`} />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -649,15 +659,19 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
         <div className="p-4 bg-amber-50/60 border border-amber-200 rounded-xl space-y-4">
           <p className="text-sm font-semibold text-amber-800">{t('fields.costSplitting')}</p>
 
-          {/* Driver selector */}
+          {/* Auto-resolved driver */}
           <div>
             <label className={labelClasses}>{t('fields.clientDriver')}</label>
-            <select value={clientDriver} onChange={(e) => setClientDriver(e.target.value)} disabled={isLoading} className={inputClasses('client_driver')}>
-              <option value="">—</option>
-              {drivers.map(d => (
-                <option key={d.id} value={d.id}>{d.first_name} {d.last_name}</option>
-              ))}
-            </select>
+            {resolvedDriverLabel ? (
+              <div className="px-3 py-2.5 bg-white border border-amber-200 rounded-xl text-sm text-slate-900 font-medium">
+                {resolvedDriverLabel}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {t('fields.noDriverWarning')}
+              </div>
+            )}
           </div>
 
           {/* Split mode toggle */}

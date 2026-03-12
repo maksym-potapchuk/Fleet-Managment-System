@@ -198,6 +198,10 @@ export function QuickExpenseWizard() {
   const showForm = state.activeCategoryId || state.editingIndex !== null;
   const showCategoryPicker = state.editingIndex === null && !state.activeCategoryId;
 
+  // Resolve driver from selected vehicle
+  const selectedVehicle = vehicles.find(v => v.id === state.vehicleId);
+  const vehicleDriver = selectedVehicle?.driver ?? null;
+
   return (
     <div className="flex h-screen flex-col bg-slate-50 overflow-x-hidden">
       {/* Header */}
@@ -294,6 +298,7 @@ export function QuickExpenseWizard() {
                       onCancel={() => dispatch({ type: 'CANCEL_EDIT' })}
                       tExpenses={tExpenses}
                       t={t}
+                      vehicleDriver={vehicleDriver}
                     />
                   )}
 
@@ -337,6 +342,7 @@ export function QuickExpenseWizard() {
                           onCancel={() => dispatch({ type: 'CANCEL_EDIT' })}
                           tExpenses={tExpenses}
                           t={t}
+                          vehicleDriver={vehicleDriver}
                         />
                       </div>
                     ) : (
