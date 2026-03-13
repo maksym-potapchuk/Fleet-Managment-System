@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { FileText, Check, X, Loader2, Upload } from 'lucide-react';
+import { FileText, Check, X, Loader2, Upload, Image } from 'lucide-react';
 import { expenseService } from '@/services/expense';
 import { InvoiceSearchResult } from '@/types/expense';
 
@@ -126,7 +126,11 @@ export function InvoiceInput({
       {file ? (
         <div className="space-y-2">
           <div className={`flex items-center gap-3 px-3 py-2.5 border rounded-xl ${hasError ? 'border-red-500' : 'border-slate-300'}`}>
-            <FileText className="w-4 h-4 text-[#2D8B7E] flex-shrink-0" />
+            {file.type.startsWith('image/') ? (
+              <Image className="w-4 h-4 text-[#2D8B7E] flex-shrink-0" />
+            ) : (
+              <FileText className="w-4 h-4 text-[#2D8B7E] flex-shrink-0" />
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-800 truncate">{file.name}</p>
               {searching ? (
@@ -164,14 +168,14 @@ export function InvoiceInput({
         >
           <Upload className="w-4 h-4 text-slate-400" />
           <span className="text-sm text-slate-500">{t('uploadFile')}</span>
-          <span className="text-xs text-slate-400 ml-auto">.pdf, .doc, .docx</span>
+          <span className="text-xs text-slate-400 ml-auto">.pdf, .doc, .jpg, .png</span>
         </button>
       )}
 
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.doc,.docx"
+        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,image/*"
         onChange={handleFileSelect}
         className="hidden"
       />
