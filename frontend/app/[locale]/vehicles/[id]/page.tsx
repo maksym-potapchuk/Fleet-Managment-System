@@ -30,13 +30,18 @@ import {
   Fuel,
   Search,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Archive,
   Languages,
   ArrowRight,
+  Printer,
+  Receipt,
 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import api from '@/lib/api';
 import { toDisplayUnit, toKm, unitLabel, type DistanceUnit } from '@/lib/distance';
+import { generateRegulationPdf } from '@/lib/regulation-pdf';
 import { vehicleService } from '@/services/vehicle';
 import { expenseService } from '@/services/expense';
 import { Vehicle, VehicleOwner, OwnerHistoryRecord, VehicleStatus, FuelType, TechnicalInspection, MileageLog } from '@/types/vehicle';
@@ -48,6 +53,7 @@ import { ExpenseFilters } from '@/components/expense/ExpenseFilters';
 import { ExpenseDetailModal } from '@/components/expense/ExpenseDetailModal';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ToastContainer, ToastData } from '@/components/common/Toast';
+import InspectionDetailModal from '@/components/vehicle/InspectionDetailModal';
 import { useSidebar } from '../SidebarContext';
 
 const STATUS_COLORS: Record<VehicleStatus, { bg: string; text: string; border: string }> = {
@@ -771,7 +777,7 @@ export default function VehicleWorkspacePage() {
       <div className="flex-1 p-3 sm:p-4 md:p-6">
         {activeTab === 'service'    && <ServiceTab    vehicleId={vehicle.id} />}
         {activeTab === 'equipment'  && <EquipmentTab  vehicleId={vehicle.id} />}
-        {activeTab === 'regulation' && <RegulationTab vehicleId={vehicle.id} initialKm={vehicle.initial_km} distanceUnit={vehicle.distance_unit ?? 'km'} />}
+        {activeTab === 'regulation' && <RegulationTab vehicleId={vehicle.id} carNumber={vehicle.car_number ?? ''} initialKm={vehicle.initial_km} distanceUnit={vehicle.distance_unit ?? 'km'} />}
         {activeTab === 'history'    && <HistoryTab    vehicleId={vehicle.id} onMileageChange={loadVehicle} distanceUnit={vehicle.distance_unit ?? 'km'} />}
         {activeTab === 'inspection' && <InspectionTab vehicleId={vehicle.id} onInspectionChange={loadVehicle} />}
         {activeTab === 'expenses'   && <ExpensesTab  vehicleId={vehicle.id} vehicleDriver={vehicle.driver} />}
@@ -1440,7 +1446,7 @@ function localTitle(
 // ─────────────────────────────────────────────
 // Regulation Tab
 // ─────────────────────────────────────────────
-function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: string; initialKm: number; distanceUnit: DistanceUnit }) {
+function RegulationTab({ vehicleId, carNumber, initialKm, distanceUnit }: { vehicleId: string; carNumber: string; initialKm: number; distanceUnit: DistanceUnit }) {
   const t = useTranslations('vehicleWorkspace.regulation');
   const locale = useLocale();
   const [status, setStatus] = useState<'loading' | 'unassigned' | 'assigned'>('loading');
@@ -1449,6 +1455,7 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
   const [kmInputs, setKmInputs] = useState<Record<number, string>>({});
   const [everyKmInputs, setEveryKmInputs] = useState<Record<number, string>>({});
   const [notifyKmInputs, setNotifyKmInputs] = useState<Record<number, string>>({});
+  const [nextKmInputs, setNextKmInputs] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [zeroKmWarning, setZeroKmWarning] = useState(false);
@@ -1463,6 +1470,12 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ every_km: '', every_mi: '', notify_before_km: '', notify_before_mi: '', last_done_km: '' });
   const [editLoading, setEditLoading] = useState(false);
+
+  // Print PDF
+  const [showPrintMenu, setShowPrintMenu] = useState(false);
+  const [pdfLang, setPdfLang] = useState<'uk' | 'pl' | 'en' | null>(null);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
+  const printMenuRef = useRef<HTMLDivElement>(null);
 
   // Add entry form state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -1519,6 +1532,16 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
   useEffect(() => {
     loadRegulation();
   }, [loadRegulation]);
+
+  // Close print menu on outside click
+  useEffect(() => {
+    if (!showPrintMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (printMenuRef.current && !printMenuRef.current.contains(e.target as Node)) { setShowPrintMenu(false); setPdfLang(null); }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showPrintMenu]);
 
   const translateText = async (text: string): Promise<Record<string, string>> => {
     if (!text.trim()) return {};
@@ -1604,6 +1627,16 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
           if (!isNaN(notifyKm) && notifyKm >= 0) {
             entry.notify_before_km = toKm(notifyKm, distanceUnit);
           }
+          // If user typed a custom "next" value, send override
+          const nextDisplay = parseInt(nextKmInputs[item.id] || '', 10);
+          if (!isNaN(nextDisplay) && nextDisplay > 0) {
+            const nextKmVal = toKm(nextDisplay, distanceUnit);
+            const effectiveEveryKm = entry.every_km ?? item.every_km;
+            const defaultNext = lastDone + effectiveEveryKm;
+            if (nextKmVal !== defaultNext) {
+              entry.next_due_km_override = nextKmVal;
+            }
+          }
           return entry;
         }),
       });
@@ -1623,10 +1656,6 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
             notify_before_km: toKm(parseInt(ce.notify_before_km || '500', 10), distanceUnit),
             last_done_km: lastDone,
           };
-          const ceMi = parseInt(ce.every_mi, 10);
-          if (!isNaN(ceMi) && ceMi > 0) cePayload.every_mi = ceMi;
-          const ceNotifyMi = parseInt(ce.notify_before_mi, 10);
-          if (!isNaN(ceNotifyMi) && ceNotifyMi >= 0) cePayload.notify_before_mi = ceNotifyMi;
           await api.post(`/fleet/vehicles/${vehicleId}/regulation/entries/`, cePayload);
         } catch {
           failedEntries.push(ce.title);
@@ -1701,10 +1730,6 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
           if (!isNaN(lastDoneDisplay) && lastDoneDisplay >= 0) {
             payload.last_done_km = toKm(lastDoneDisplay, distanceUnit);
           }
-          const everyMi = parseInt(editForm.every_mi, 10);
-          if (!isNaN(everyMi) && everyMi > 0) payload.every_mi = everyMi;
-          const notifyMi = parseInt(editForm.notify_before_mi, 10);
-          if (!isNaN(notifyMi) && notifyMi >= 0) payload.notify_before_mi = notifyMi;
           return payload;
         })(),
       );
@@ -1733,19 +1758,17 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
         title_en = title_en || translations.en || addForm.title;
       }
 
+      const everyKmVal = toKm(parseInt(addForm.every_km, 10), distanceUnit);
+      const notifyKmVal = toKm(parseInt(addForm.notify_before_km || '500', 10), distanceUnit);
       const payload: Record<string, string | number | null> = {
         title: title_uk || addForm.title,
         title_pl,
         title_uk: title_uk || addForm.title,
         title_en,
-        every_km: toKm(parseInt(addForm.every_km, 10), distanceUnit),
-        notify_before_km: toKm(parseInt(addForm.notify_before_km || '500', 10), distanceUnit),
+        every_km: everyKmVal,
+        notify_before_km: notifyKmVal,
         last_done_km: toKm(parseInt(addForm.last_done_km || '0', 10), distanceUnit),
       };
-      const everyMi = parseInt(addForm.every_mi, 10);
-      if (!isNaN(everyMi) && everyMi > 0) payload.every_mi = everyMi;
-      const notifyMi = parseInt(addForm.notify_before_mi, 10);
-      if (!isNaN(notifyMi) && notifyMi >= 0) payload.notify_before_mi = notifyMi;
 
       const res = await api.post<RegulationPlanEntry>(
         `/fleet/vehicles/${vehicleId}/regulation/entries/`,
@@ -1820,13 +1843,73 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
               </button>
             </div>
             {activeView === 'plan' && (
-              <button
-                onClick={() => setShowAddForm(prev => !prev)}
-                className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#2D8B7E] hover:bg-[#246f65] rounded-xl px-3 py-2 transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" strokeWidth={3} />
-                <span className="hidden sm:inline">{t('addEntry')}</span>
-              </button>
+              <>
+                <div className="relative" ref={printMenuRef}>
+                  <button
+                    onClick={() => setShowPrintMenu(prev => !prev)}
+                    className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 transition-colors"
+                    title={t('printPdf')}
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">PDF</span>
+                  </button>
+                  {showPrintMenu && (
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 min-w-[160px]">
+                      {!pdfLang ? (
+                        <>
+                          <p className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t('pdfLanguage')}</p>
+                          {([['uk', '🇺🇦 Українська'], ['pl', '🇵🇱 Polski'], ['en', '🇬🇧 English']] as const).map(([lang, label]) => (
+                            <button
+                              key={lang}
+                              onClick={() => setPdfLang(lang)}
+                              className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setPdfLang(null)}
+                            className="w-full text-left px-3 py-1.5 text-[10px] font-semibold text-slate-400 hover:text-slate-600 transition-colors"
+                          >
+                            ← {t('pdfLanguage')}
+                          </button>
+                          <p className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t('pdfUnit')}</p>
+                          {([['km', 'Kilometres (km)'], ['mi', 'Miles (mi)']] as const).map(([u, label]) => (
+                            <button
+                              key={u}
+                              disabled={pdfGenerating}
+                              onClick={async () => {
+                                if (!plan) return;
+                                setPdfGenerating(true);
+                                try {
+                                  await generateRegulationPdf(plan, carNumber, initialKm, u, pdfLang);
+                                } finally {
+                                  setPdfGenerating(false);
+                                  setShowPrintMenu(false);
+                                  setPdfLang(null);
+                                }
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                            >
+                              {pdfGenerating ? '...' : label}
+                            </button>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowAddForm(prev => !prev)}
+                  className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#2D8B7E] hover:bg-[#246f65] rounded-xl px-3 py-2 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" strokeWidth={3} />
+                  <span className="hidden sm:inline">{t('addEntry')}</span>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -1870,53 +1953,25 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
                       </div>
                     )}
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryInterval', { unit: 'km / mi' })}</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="1"
-                        value={addForm.every_km}
-                        onChange={e => setAddForm(prev => ({ ...prev, every_km: e.target.value }))}
-                        placeholder="km"
-                        className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <span className="text-[10px] text-slate-400 font-bold">km</span>
-                      <span className="text-slate-300">/</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={addForm.every_mi}
-                        onChange={e => setAddForm(prev => ({ ...prev, every_mi: e.target.value }))}
-                        placeholder="mi"
-                        className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <span className="text-[10px] text-slate-400 font-bold">mi</span>
-                    </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryInterval', { unit: unitLabel(distanceUnit) })}</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={addForm.every_km}
+                      onChange={e => setAddForm(prev => ({ ...prev, every_km: e.target.value }))}
+                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNotifyBefore', { unit: 'km / mi' })}</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="0"
-                        value={addForm.notify_before_km}
-                        onChange={e => setAddForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
-                        placeholder="km"
-                        className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <span className="text-[10px] text-slate-400 font-bold">km</span>
-                      <span className="text-slate-300">/</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={addForm.notify_before_mi}
-                        onChange={e => setAddForm(prev => ({ ...prev, notify_before_mi: e.target.value }))}
-                        placeholder="mi"
-                        className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <span className="text-[10px] text-slate-400 font-bold">mi</span>
-                    </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNotifyBefore', { unit: unitLabel(distanceUnit) })}</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={addForm.notify_before_km}
+                      onChange={e => setAddForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
+                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryLastDone', { unit: unitLabel(distanceUnit) })}</label>
@@ -2104,7 +2159,7 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <Gauge className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                        <span className="text-xs text-slate-500 font-medium flex-shrink-0">{t('entryInterval', { unit: 'km' })}:</span>
+                        <span className="text-xs text-slate-500 font-medium flex-shrink-0">{t('entryInterval', { unit: unitLabel(distanceUnit) })}:</span>
                         <input
                           autoFocus
                           type="number"
@@ -2112,44 +2167,22 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
                           value={editForm.every_km}
                           onChange={e => setEditForm(prev => ({ ...prev, every_km: e.target.value }))}
                           onKeyDown={e => { if (e.key === 'Enter') editEntry(entry.id); if (e.key === 'Escape') setEditingId(null); }}
-                          className="w-20 sm:w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-300/30 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="w-24 sm:w-32 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2.5 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-300/30 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
-                        <span className="text-[10px] text-slate-400 font-medium">km</span>
-                        <span className="text-slate-300">/</span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={editForm.every_mi}
-                          onChange={e => setEditForm(prev => ({ ...prev, every_mi: e.target.value }))}
-                          onKeyDown={e => { if (e.key === 'Enter') editEntry(entry.id); if (e.key === 'Escape') setEditingId(null); }}
-                          placeholder="—"
-                          className="w-20 sm:w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-300/30 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <span className="text-[10px] text-slate-400 font-medium">mi</span>
+                        <span className="text-xs text-slate-400 font-medium">{unitLabel(distanceUnit)}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <ArrowRight className="w-4 h-4 text-blue-400/60 flex-shrink-0" />
-                        <span className="text-xs text-slate-500 font-medium flex-shrink-0">{t('entryNotifyBefore', { unit: 'km' })}:</span>
+                        <span className="text-xs text-slate-500 font-medium flex-shrink-0">{t('entryNotifyBefore', { unit: unitLabel(distanceUnit) })}:</span>
                         <input
                           type="number"
                           min="0"
                           value={editForm.notify_before_km}
                           onChange={e => setEditForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
                           onKeyDown={e => { if (e.key === 'Enter') editEntry(entry.id); if (e.key === 'Escape') setEditingId(null); }}
-                          className="w-20 sm:w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-300/30 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="w-24 sm:w-32 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2.5 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-300/30 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
-                        <span className="text-[10px] text-slate-400 font-medium">km</span>
-                        <span className="text-slate-300">/</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={editForm.notify_before_mi}
-                          onChange={e => setEditForm(prev => ({ ...prev, notify_before_mi: e.target.value }))}
-                          onKeyDown={e => { if (e.key === 'Enter') editEntry(entry.id); if (e.key === 'Escape') setEditingId(null); }}
-                          placeholder="—"
-                          className="w-20 sm:w-28 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-300/30 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <span className="text-[10px] text-slate-400 font-medium">mi</span>
+                        <span className="text-xs text-slate-400 font-medium">{unitLabel(distanceUnit)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -2348,9 +2381,16 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
                       className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
-                  <div className="bg-[#2D8B7E]/5 border border-[#2D8B7E]/20 rounded-xl px-3 py-2 text-right flex-shrink-0">
-                    <p className="text-[10px] font-bold text-[#2D8B7E]/70 uppercase tracking-widest">{t('next')}</p>
-                    <p className="text-sm font-bold text-[#2D8B7E]">{nextDue.toLocaleString()} {unitLabel(distanceUnit)}</p>
+                  <div className="w-[calc(50%-4px)] md:flex-1">
+                    <p className="text-[10px] font-bold text-[#2D8B7E]/70 uppercase tracking-widest mb-0.5">{t('next')}</p>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder={String(nextDue)}
+                      value={nextKmInputs[item.id] ?? ''}
+                      onChange={e => setNextKmInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
+                      className="w-full text-sm font-bold text-[#2D8B7E] bg-[#2D8B7E]/5 border border-[#2D8B7E]/20 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
                   </div>
                 </div>
               </div>
@@ -2452,53 +2492,25 @@ function RegulationTab({ vehicleId, initialKm, distanceUnit }: { vehicleId: stri
                 </div>
               )}
             </div>
-            <div className="sm:col-span-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryInterval', { unit: 'km / mi' })}</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="1"
-                  value={customForm.every_km}
-                  onChange={e => setCustomForm(prev => ({ ...prev, every_km: e.target.value }))}
-                  placeholder="km"
-                  className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <span className="text-[10px] text-slate-400 font-bold">km</span>
-                <span className="text-slate-300">/</span>
-                <input
-                  type="number"
-                  min="1"
-                  value={customForm.every_mi ?? ''}
-                  onChange={e => setCustomForm(prev => ({ ...prev, every_mi: e.target.value }))}
-                  placeholder="mi"
-                  className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <span className="text-[10px] text-slate-400 font-bold">mi</span>
-              </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryInterval', { unit: unitLabel(distanceUnit) })}</label>
+              <input
+                type="number"
+                min="1"
+                value={customForm.every_km}
+                onChange={e => setCustomForm(prev => ({ ...prev, every_km: e.target.value }))}
+                className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
             </div>
-            <div className="sm:col-span-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNotifyBefore', { unit: 'km / mi' })}</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  value={customForm.notify_before_km}
-                  onChange={e => setCustomForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
-                  placeholder="km"
-                  className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <span className="text-[10px] text-slate-400 font-bold">km</span>
-                <span className="text-slate-300">/</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={customForm.notify_before_mi ?? ''}
-                  onChange={e => setCustomForm(prev => ({ ...prev, notify_before_mi: e.target.value }))}
-                  placeholder="mi"
-                  className="flex-1 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <span className="text-[10px] text-slate-400 font-bold">mi</span>
-              </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNotifyBefore', { unit: unitLabel(distanceUnit) })}</label>
+              <input
+                type="number"
+                min="0"
+                value={customForm.notify_before_km}
+                onChange={e => setCustomForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
+                className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -3301,6 +3313,7 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [viewingInspection, setViewingInspection] = useState<TechnicalInspection | null>(null);
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
   const [formNextDate, setFormNextDate] = useState('');
   const [formNotes, setFormNotes] = useState('');
@@ -3355,10 +3368,10 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
   };
 
   const handleDelete = async (inspectionId: number) => {
-    if (!confirm(t('deleteConfirm'))) return;
     setDeletingId(inspectionId);
     try {
       await vehicleService.deleteInspection(vehicleId, inspectionId);
+      setViewingInspection(null);
       await loadInspections();
       onInspectionChange();
     } catch (err) {
@@ -3366,6 +3379,18 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleUpdate = async (
+    inspectionId: number,
+    data: { inspection_date?: string; next_inspection_date?: string; notes?: string; report?: File },
+  ) => {
+    await vehicleService.updateInspection(vehicleId, inspectionId, data);
+    const refreshed = await vehicleService.getInspections(vehicleId);
+    setInspections(refreshed);
+    const updated = refreshed.find(i => i.id === inspectionId) ?? null;
+    setViewingInspection(updated);
+    onInspectionChange();
   };
 
   const latest = inspections[0] ?? null;
@@ -3392,7 +3417,10 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
         const daysLeft = Math.round((new Date(latest.next_inspection_date || latest.expiry_date).getTime() - Date.now()) / 86400000);
         const sc = getStatusColor(daysLeft);
         return (
-          <div className={`${sc.bg} border ${sc.border} rounded-2xl p-3 sm:p-5`}>
+          <div
+            onClick={() => setViewingInspection(latest)}
+            className={`${sc.bg} border ${sc.border} rounded-2xl p-3 sm:p-5 cursor-pointer hover:shadow-md transition-all`}
+          >
             <div className="flex items-start sm:items-center gap-3 mb-3">
               <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${sc.badge}`}>
                 <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -3422,15 +3450,16 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
               </div>
             </div>
             {latest.report && (
-              <a
-                href={latest.report}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#2D8B7E] hover:text-[#248B7B] transition-colors"
-              >
+              <span className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#2D8B7E]">
                 <FileText className="w-4 h-4" />
                 {t('downloadReport')}
-              </a>
+              </span>
+            )}
+            {latest.linked_expense && (
+              <span className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg ml-0 sm:ml-2">
+                <Receipt className="w-3 h-3" />
+                {Number(latest.linked_expense.amount).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} PLN
+              </span>
             )}
           </div>
         );
@@ -3526,15 +3555,20 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
       {inspections.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">{t('subtitle')}</h3>
-          {inspections.map(ins => {
+          {inspections.map((ins, idx) => {
             const daysLeft = Math.round((new Date(ins.next_inspection_date || ins.expiry_date).getTime() - Date.now()) / 86400000);
             const isExpired = daysLeft < 0;
+            const isActive = idx === 0;
             return (
-              <div key={ins.id} className={`flex items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border transition-all ${
-                isExpired ? 'bg-red-50/50 border-red-200/60' : 'bg-white border-slate-200/60 hover:border-slate-300'
-              }`}>
+              <div
+                key={ins.id}
+                onClick={() => setViewingInspection(ins)}
+                className={`flex items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border cursor-pointer transition-all ${
+                  isActive && isExpired ? 'bg-red-50/50 border-red-200/60 hover:shadow-md' : 'bg-white border-slate-200/60 hover:border-slate-300 hover:shadow-md'
+                }`}
+              >
                 <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                  isExpired ? 'bg-red-100 text-red-500' : 'bg-emerald-100 text-emerald-500'
+                  !isActive ? 'bg-slate-100 text-slate-400' : isExpired ? 'bg-red-100 text-red-500' : 'bg-emerald-100 text-emerald-500'
                 }`}>
                   <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
@@ -3544,9 +3578,14 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
                       {new Date(ins.inspection_date).toLocaleDateString()}
                     </span>
                     <span className="text-slate-300">&rarr;</span>
-                    <span className={`text-xs sm:text-sm font-semibold ${isExpired ? 'text-red-600' : 'text-slate-600'}`}>
+                    <span className={`text-xs sm:text-sm font-semibold ${isActive && isExpired ? 'text-red-600' : 'text-slate-600'}`}>
                       {new Date(ins.next_inspection_date || ins.expiry_date).toLocaleDateString()}
                     </span>
+                    {ins.linked_expense && (
+                      <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md">
+                        {Number(ins.linked_expense.amount).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} PLN
+                      </span>
+                    )}
                   </div>
                   {ins.created_at && (
                     <p className="text-[11px] text-slate-400 mt-0.5">
@@ -3555,31 +3594,26 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
                   )}
                   {ins.notes && <p className="text-xs text-slate-500 mt-0.5 truncate">{ins.notes}</p>}
                   {ins.report && (
-                    <a
-                      href={ins.report}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-semibold text-[#2D8B7E] hover:underline flex items-center gap-1 mt-1"
-                    >
+                    <span className="text-xs font-semibold text-[#2D8B7E] flex items-center gap-1 mt-1">
                       <FileText className="w-3 h-3" />
                       {t('downloadReport')}
-                    </a>
+                    </span>
                   )}
                 </div>
-                <button
-                  onClick={() => handleDelete(ins.id)}
-                  disabled={deletingId === ins.id}
-                  className="p-1.5 sm:p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all disabled:opacity-50 shrink-0"
-                >
-                  {deletingId === ins.id
-                    ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    : <Trash2 className="w-4 h-4" />}
-                </button>
               </div>
             );
           })}
         </div>
       )}
+
+      {/* Inspection Detail Modal */}
+      <InspectionDetailModal
+        inspection={viewingInspection}
+        isLatest={viewingInspection?.id === latest?.id}
+        onClose={() => setViewingInspection(null)}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+      />
     </div>
   );
 }
@@ -3602,6 +3636,8 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ExpenseFiltersType>({});
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [toasts, setToasts] = useState<ToastData[]>([]);
 
   const addToast = useCallback((message: string, type: ToastData['type'] = 'success') => {
@@ -3614,14 +3650,22 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
   const loadExpenses = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await expenseService.getVehicleExpenses(vehicleId, filters);
-      setExpenses(data);
-    } catch {
+      const data = await expenseService.getVehicleExpenses(vehicleId, filters, page);
+      setExpenses(data.results);
+      setTotalCount(data.count);
+    } catch (err) {
+      const status = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { status?: number } }).response?.status
+        : null;
+      if (status === 404 && page > 1) {
+        setPage(page - 1);
+        return;
+      }
       setError(t('loadError'));
     } finally {
       setLoading(false);
     }
-  }, [vehicleId, filters, t]);
+  }, [vehicleId, filters, page, t]);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -3649,11 +3693,9 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
     try {
       setIsSubmitting(true);
       if (editingExpense) {
-        const updated = await expenseService.updateExpense(editingExpense.id, data);
-        setExpenses(prev => prev.map(e => e.id === updated.id ? updated : e));
+        await expenseService.updateExpense(editingExpense.id, data);
       } else {
         const created = await expenseService.createVehicleExpense(vehicleId, data);
-        setExpenses(prev => [created, ...prev]);
         if (created.invoice_data) {
           const msg = created.invoice_existing
             ? t('invoice.attachedExisting', { invoiceNumber: created.invoice_data.number })
@@ -3663,6 +3705,7 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
       }
       setShowForm(false);
       setEditingExpense(null);
+      loadExpenses();
       loadSummary();
     } catch (err) {
       console.error('Expense submit error:', err);
@@ -3682,8 +3725,8 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
     try {
       setIsDeleting(true);
       await expenseService.deleteExpense(expenseToDelete.id);
-      setExpenses(prev => prev.filter(e => e.id !== expenseToDelete.id));
       setExpenseToDelete(null);
+      loadExpenses();
       loadSummary();
     } catch {
       setError(t('deleteError'));
@@ -3696,7 +3739,14 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
     <div className="space-y-4">
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base sm:text-lg font-bold text-slate-900">{t('title')}</h3>
+        <div className="flex items-center gap-2.5">
+          <h3 className="text-base sm:text-lg font-bold text-slate-900">{t('title')}</h3>
+          {totalCount > 0 && (
+            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full tabular-nums">
+              {totalCount}
+            </span>
+          )}
+        </div>
         <button
           onClick={() => { setEditingExpense(null); setShowForm(true); }}
           className="flex items-center gap-1.5 px-3 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors flex-shrink-0"
@@ -3733,11 +3783,79 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
         </div>
       )}
 
-      <ExpenseFilters filters={filters} onChange={setFilters} categories={categories} showSearch={false} />
+      <ExpenseFilters filters={filters} onChange={(f) => { setFilters(f); setPage(1); }} categories={categories} showSearch={false} />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <ExpenseTable expenses={expenses} onEdit={handleEdit} onDelete={(expense) => setExpenseToDelete(expense)} onView={setViewingExpense} isLoading={loading} />
+
+      {/* Pagination */}
+      {!loading && totalCount > 0 && (() => {
+        const PAGE_SIZE = 15;
+        const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+        if (totalPages <= 1) return null;
+
+        const getVisiblePages = () => {
+          const pages: (number | 'ellipsis')[] = [];
+          if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+            return pages;
+          }
+          pages.push(1);
+          if (page > 3) pages.push('ellipsis');
+          const start = Math.max(2, page - 1);
+          const end = Math.min(totalPages - 1, page + 1);
+          for (let i = start; i <= end; i++) pages.push(i);
+          if (page < totalPages - 2) pages.push('ellipsis');
+          pages.push(totalPages);
+          return pages;
+        };
+
+        return totalPages > 1 ? (
+          <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-xl">
+            <p className="text-xs text-slate-500 font-medium">
+              {t('pagination.showing', {
+                from: (page - 1) * PAGE_SIZE + 1,
+                to: Math.min(page * PAGE_SIZE, totalCount),
+                total: totalCount,
+              })}
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {getVisiblePages().map((p, i) =>
+                p === 'ellipsis' ? (
+                  <span key={`e${i}`} className="px-1.5 text-slate-400 text-xs">...</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`min-w-[32px] h-8 rounded-lg text-xs font-bold transition-all ${
+                      p === page
+                        ? 'bg-[#2D8B7E] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ) : null;
+      })()}
 
       <ExpenseDetailModal
         expense={viewingExpense}
