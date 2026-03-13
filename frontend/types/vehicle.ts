@@ -31,6 +31,19 @@ export interface OwnerHistoryRecord {
   created_by: number | null;
 }
 
+export interface InspectionLinkedExpense {
+  id: string;
+  amount: string;
+  official_cost: string;
+  additional_cost: string;
+  payment_method: 'CASH' | 'CASHLESS';
+  receipt: string | null;
+  registration_certificate: string | null;
+  invoice_number: string | null;
+  invoice_file: string | null;
+  expense_date: string;
+}
+
 export interface TechnicalInspection {
   id: number;
   inspection_date: string;
@@ -39,6 +52,7 @@ export interface TechnicalInspection {
   report: string | null;
   notes: string;
   created_at: string;
+  linked_expense: InspectionLinkedExpense | null;
 }
 
 export type VehicleStatus =
