@@ -26,7 +26,7 @@ interface RegulationPlan {
   entries: RegulationPlanEntry[];
 }
 
-const S3_BASE = 'https://fdmanagerstorage.s3.eu-central-1.amazonaws.com/static';
+const FONT_BASE = '/fonts';
 
 const LABELS: Record<PdfLang, {
   title: string;
@@ -154,8 +154,8 @@ let fontCache: { regular: string; bold: string } | null = null;
 async function loadFonts(): Promise<{ regular: string; bold: string }> {
   if (fontCache) return fontCache;
   const [regular, bold] = await Promise.all([
-    fetchAsBase64(`${S3_BASE}/fonts/Roboto-Regular.ttf`),
-    fetchAsBase64(`${S3_BASE}/fonts/Roboto-Bold.ttf`),
+    fetchAsBase64(`${FONT_BASE}/Roboto-Regular.ttf`),
+    fetchAsBase64(`${FONT_BASE}/Roboto-Bold.ttf`),
   ]);
   fontCache = { regular, bold };
   return fontCache;
