@@ -253,14 +253,27 @@
       "done": "Wykonane"
     },
     "months": {
-      "jan": "Styczeń", "feb": "Luty", "mar": "Marzec",
-      "apr": "Kwiecień", "may": "Maj", "jun": "Czerwiec",
-      "jul": "Lipiec", "aug": "Sierpień", "sep": "Wrzesień",
-      "oct": "Październik", "nov": "Listopad", "dec": "Grudzień"
+      "jan": "Styczeń",
+      "feb": "Luty",
+      "mar": "Marzec",
+      "apr": "Kwiecień",
+      "may": "Maj",
+      "jun": "Czerwiec",
+      "jul": "Lipiec",
+      "aug": "Sierpień",
+      "sep": "Wrzesień",
+      "oct": "Październik",
+      "nov": "Listopad",
+      "dec": "Grudzień"
     },
     "days": {
-      "mon": "Pon", "tue": "Wt", "wed": "Śr",
-      "thu": "Czw", "fri": "Pt", "sat": "Sob", "sun": "Nd"
+      "mon": "Pon",
+      "tue": "Wt",
+      "wed": "Śr",
+      "thu": "Czw",
+      "fri": "Pt",
+      "sat": "Sob",
+      "sun": "Nd"
     },
     "panel": {
       "title": "Zdarzenia na dzień",
@@ -380,6 +393,9 @@
       "zeroKmConfirm": "Zapisz mimo to",
       "planView": "Plan",
       "historyView": "Historia",
+      "printPdf": "Drukuj PDF",
+      "pdfLanguage": "Język dokumentu",
+      "pdfUnit": "Jednostka odległości",
       "history": {
         "filters": "Filtry",
         "from": "Od",
@@ -425,7 +441,28 @@
       "overdue": "Przeterminowany {days} dni",
       "noData": "Przegląd: —",
       "nextInspectionDate": "Data następnego przeglądu",
-      "registeredAt": "Zarejestrowano"
+      "registeredAt": "Zarejestrowano",
+      "detail": {
+        "detailTitle": "Szczegóły przeglądu",
+        "expenseSection": "Wydatek",
+        "officialCost": "Koszt oficjalny",
+        "additionalCost": "Dodatkowe koszty",
+        "totalAmount": "Suma",
+        "paymentMethod": "Metoda płatności",
+        "cash": "Gotówka",
+        "cashless": "Bezgotówkowa",
+        "invoice": "Faktura",
+        "receipt": "Paragon",
+        "downloadInvoice": "Pobierz fakturę",
+        "downloadReceipt": "Pobierz paragon",
+        "noExpense": "Brak wydatku",
+        "expenseDate": "Data wydatku",
+        "viewFile": "Zobacz plik",
+        "editTitle": "Edytuj przegląd",
+        "removeReport": "Usuń dowód",
+        "changeReport": "Zmień dowód",
+        "downloadCertificate": "Pobierz dowód rejestracyjny"
+      }
     },
     "owners": {
       "title": "Właściciele",
@@ -481,6 +518,9 @@
     "deleteConfirmMessage": "Czy na pewno chcesz usunąć ten wydatek? Tej operacji nie można cofnąć.",
     "deleteError": "Nie udało się usunąć wydatku",
     "loadError": "Nie udało się załadować wydatków",
+    "pagination": {
+      "showing": "{from}–{to} z {total}"
+    },
     "types": {
       "FUEL": "Paliwo",
       "SERVICE": "Serwis/Naprawa",
@@ -539,7 +579,8 @@
       "clientPercent": "Procent klienta",
       "approvalStatus": "Status zatwierdzenia",
       "splitMismatch": "Suma nie zgadza się",
-      "noDriverWarning": "Brak przypisanego kierowcy do pojazdu. Przypisz kierowcę, aby wybrać typ płatności \"Klient\"."
+      "noDriverWarning": "Brak przypisanego kierowcy do pojazdu. Przypisz kierowcę, aby wybrać typ płatności \"Klient\".",
+      "certificate": "Dowód rejestracyjny"
     },
     "detail": {
       "title": "Szczegóły wydatku",
