@@ -12,7 +12,7 @@ import { ExpenseDetailModal } from '@/components/expense/ExpenseDetailModal';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { expenseService } from '@/services/expense';
 import { vehicleService } from '@/services/vehicle';
-import { Plus, X, Menu } from 'lucide-react';
+import { Plus, X, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSidebar } from './SidebarContext';
 
 export default function ExpensesPage() {
@@ -32,6 +32,9 @@ export default function ExpensesPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ExpenseFiltersType>({});
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [reloadTick, setReloadTick] = useState(0);
   const [toasts, setToasts] = useState<ToastData[]>([]);
 
   const addToast = useCallback((message: string, type: ToastData['type'] = 'success') => {
@@ -45,15 +48,24 @@ export default function ExpensesPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await expenseService.getExpenses(filters);
-      setExpenses(data);
+      const data = await expenseService.getExpenses(filters, page);
+      setExpenses(data.results);
+      setTotalCount(data.count);
     } catch (err: unknown) {
+      const status = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { status?: number } }).response?.status
+        : null;
+      if (status === 404 && page > 1) {
+        setPage(page - 1);
+        return;
+      }
       const msg = err instanceof Error ? err.message : String(err);
       setError(t('loadError') + ' ' + msg);
     } finally {
       setIsLoading(false);
     }
-  }, [filters, t]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, page, reloadTick]);
 
   const loadVehicles = useCallback(async () => {
     try {
@@ -86,9 +98,10 @@ export default function ExpensesPage() {
     try {
       setIsSubmitting(true);
       const newExpense = await expenseService.createExpense(data);
-      setExpenses(prev => [newExpense, ...prev]);
       setShowForm(false);
       setEditingExpense(null);
+      setPage(1);
+      setReloadTick(n => n + 1);
       if (newExpense.invoice_data) {
         const msg = newExpense.invoice_existing
           ? t('invoice.attachedExisting', { invoiceNumber: newExpense.invoice_data.number })
@@ -107,10 +120,10 @@ export default function ExpensesPage() {
     if (!editingExpense) return;
     try {
       setIsSubmitting(true);
-      const updated = await expenseService.updateExpense(editingExpense.id, data);
-      setExpenses(prev => prev.map(e => e.id === updated.id ? updated : e));
+      await expenseService.updateExpense(editingExpense.id, data);
       setShowForm(false);
       setEditingExpense(null);
+      setReloadTick(n => n + 1);
     } catch (err: unknown) {
       console.error('Error updating expense:', err);
       throw err;
@@ -141,8 +154,8 @@ export default function ExpensesPage() {
     try {
       setIsDeleting(true);
       await expenseService.deleteExpense(expenseToDelete.id);
-      setExpenses(prev => prev.filter(e => e.id !== expenseToDelete.id));
       setExpenseToDelete(null);
+      setReloadTick(n => n + 1);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(t('deleteError') + ': ' + msg);
@@ -150,6 +163,62 @@ export default function ExpensesPage() {
       setIsDeleting(false);
     }
   };
+
+  const PAGE_SIZE = 15;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const hasPagination = !isLoading && totalPages > 1;
+
+  const getVisiblePages = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
+    }
+    pages.push(1);
+    if (page > 3) pages.push('ellipsis');
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPages - 1, page + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (page < totalPages - 2) pages.push('ellipsis');
+    pages.push(totalPages);
+    return pages;
+  };
+
+  const renderPaginationControls = () => (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => setPage(p => Math.max(1, p - 1))}
+        disabled={page === 1}
+        className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+      {getVisiblePages().map((p, i) =>
+        p === 'ellipsis' ? (
+          <span key={`e${i}`} className="px-1.5 text-slate-400 text-xs">...</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => setPage(p)}
+            className={`min-w-[32px] h-8 rounded-lg text-xs font-bold transition-all ${
+              p === page
+                ? 'bg-[#2D8B7E] text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            {p}
+          </button>
+        )
+      )}
+      <button
+        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+        disabled={page === totalPages}
+        className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
+    </div>
+  );
 
   return (
     <div className="h-full overflow-y-auto">
@@ -178,19 +247,32 @@ export default function ExpensesPage() {
               <span className="hidden sm:inline">{t('addExpense')}</span>
             </button>
           </div>
-
         </div>
 
         {/* Filters */}
         <div className="px-4 pb-3 sm:px-6 sm:pb-4">
           <ExpenseFilters
             filters={filters}
-            onChange={setFilters}
+            onChange={(f) => { setFilters(f); setPage(1); }}
             showVehicleFilter
             vehicles={vehicles}
             categories={categories}
           />
         </div>
+
+        {/* Top pagination */}
+        {hasPagination && (
+          <div className="flex items-center justify-between px-4 pb-3 sm:px-6 sm:pb-4">
+            <p className="text-xs text-slate-500 font-medium">
+              {t('pagination.showing', {
+                from: (page - 1) * PAGE_SIZE + 1,
+                to: Math.min(page * PAGE_SIZE, totalCount),
+                total: totalCount,
+              })}
+            </p>
+            {renderPaginationControls()}
+          </div>
+        )}
       </div>
 
       {/* Error */}
@@ -209,6 +291,20 @@ export default function ExpensesPage() {
         isLoading={isLoading}
         showVehicle
       />
+
+      {/* ── Bottom Pagination ── */}
+      {hasPagination && (
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-t border-slate-200 bg-white">
+          <p className="text-xs text-slate-500 font-medium">
+            {t('pagination.showing', {
+              from: (page - 1) * PAGE_SIZE + 1,
+              to: Math.min(page * PAGE_SIZE, totalCount),
+              total: totalCount,
+            })}
+          </p>
+          {renderPaginationControls()}
+        </div>
+      )}
 
       {/* Expense Detail Modal */}
       <ExpenseDetailModal

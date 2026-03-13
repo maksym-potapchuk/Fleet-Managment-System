@@ -114,6 +114,9 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
     }
     if (name === 'payer_type' && value === 'COMPANY') {
       setClientDriver('');
+      setCompanyAmount('');
+      setClientAmount('');
+      setClientPercent('');
     }
 
     setFormData(prev => {
@@ -226,6 +229,8 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
       data.official_cost = formData.official_cost;
       if (formData.additional_cost) data.additional_cost = formData.additional_cost;
       if (formData.next_inspection_date) data.next_inspection_date = formData.next_inspection_date;
+      if (invoiceNumber) data.invoice_number = invoiceNumber;
+      if (!foundInvoice && invoiceFile) data.invoice_file = invoiceFile;
     } else if (categoryCode === 'PARTS') {
       if (formData.source_name) data.source_name = formData.source_name;
       data.supplier_type = formData.supplier_type as SupplierType;
@@ -442,6 +447,15 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
                 </span>
               </div>
             )}
+            <InvoiceInput
+              invoiceNumber={invoiceNumber}
+              onNumberChange={setInvoiceNumber}
+              foundInvoice={foundInvoice}
+              onInvoiceFound={setFoundInvoice}
+              file={invoiceFile}
+              onFileChange={setInvoiceFile}
+              disabled={isLoading}
+            />
           </div>
         );
 
