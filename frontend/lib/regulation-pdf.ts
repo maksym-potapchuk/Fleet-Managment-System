@@ -188,7 +188,6 @@ export async function generateRegulationPdf(
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const marginX = 12;
-  const cx = pageW / 2;
 
   // ── Header band (teal background strip) ──
   const bandH = 22;
