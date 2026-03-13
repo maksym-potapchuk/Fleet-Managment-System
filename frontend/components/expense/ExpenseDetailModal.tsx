@@ -3,8 +3,15 @@
 import { createElement } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Expense, ApprovalStatus } from '@/types/expense';
-import { X, Pencil, ExternalLink, FileText, Paperclip } from 'lucide-react';
+import { X, Pencil, ExternalLink, FileText, Paperclip, Image } from 'lucide-react';
 import { getCategoryIcon, getCategoryStyle, getCategoryLabel, formatDate, formatAmount } from './expense-utils';
+
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'];
+
+function isImageUrl(url: string): boolean {
+  const lower = url.split('?')[0].toLowerCase();
+  return IMAGE_EXTENSIONS.some(ext => lower.endsWith(ext));
+}
 
 interface ExpenseDetailModalProps {
   expense: Expense | null;
@@ -199,16 +206,31 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{t('detail.attachments')}</h3>
           <div className="space-y-1.5">
             {expense.receipt && (
-              <a
-                href={expense.receipt}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg px-3 py-2.5 transition-colors group"
-              >
-                <Paperclip className="w-4 h-4 text-slate-400 group-hover:text-[#2D8B7E]" />
-                <span className="text-sm text-slate-700 group-hover:text-[#2D8B7E]">{t('detail.receipt')}</span>
-                <ExternalLink className="w-3.5 h-3.5 text-slate-300 ml-auto" />
-              </a>
+              <div className="bg-slate-50 rounded-lg overflow-hidden">
+                {isImageUrl(expense.receipt) && (
+                  <a href={expense.receipt} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={expense.receipt}
+                      alt={t('detail.receipt')}
+                      className="w-full max-h-48 object-contain bg-white"
+                    />
+                  </a>
+                )}
+                <a
+                  href={expense.receipt}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 hover:bg-slate-100 px-3 py-2.5 transition-colors group"
+                >
+                  {isImageUrl(expense.receipt) ? (
+                    <Image className="w-4 h-4 text-slate-400 group-hover:text-[#2D8B7E]" />
+                  ) : (
+                    <Paperclip className="w-4 h-4 text-slate-400 group-hover:text-[#2D8B7E]" />
+                  )}
+                  <span className="text-sm text-slate-700 group-hover:text-[#2D8B7E]">{t('detail.receipt')}</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-300 ml-auto" />
+                </a>
+              </div>
             )}
             {expense.invoice_data && (
               <div className="bg-slate-50 rounded-lg px-3 py-2.5 space-y-1.5">
@@ -228,14 +250,25 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
                 {expense.invoice_data.expense_count > 1 && (
                   <p className="text-xs text-teal-600 font-medium">{expense.invoice_data.expense_count} {t('invoice.linkedExpenses')}</p>
                 )}
-                <a
-                  href={expense.invoice_data.file}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-[#2D8B7E] hover:text-[#246f65] font-medium mt-1"
-                >
-                  {t('invoice.viewFile')} <ExternalLink className="w-3 h-3" />
-                </a>
+                {expense.invoice_data.file && isImageUrl(expense.invoice_data.file) && (
+                  <a href={expense.invoice_data.file} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                    <img
+                      src={expense.invoice_data.file}
+                      alt={expense.invoice_data.number}
+                      className="w-full max-h-48 object-contain bg-white rounded-lg"
+                    />
+                  </a>
+                )}
+                {expense.invoice_data.file && (
+                  <a
+                    href={expense.invoice_data.file}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-[#2D8B7E] hover:text-[#246f65] font-medium mt-1"
+                  >
+                    {t('invoice.viewFile')} <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
               </div>
             )}
           </div>
