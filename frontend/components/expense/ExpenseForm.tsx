@@ -22,7 +22,7 @@ interface ExpenseFormProps {
   vehicleDriver?: { id: string; first_name: string; last_name: string } | null;
 }
 
-const FUEL_TYPES: FuelType[] = ['GASOLINE', 'DIESEL', 'LPG', 'ELECTRIC'];
+const FUEL_TYPES: FuelType[] = ['GASOLINE', 'DIESEL', 'LPG', 'LPG_GASOLINE', 'ELECTRIC', 'HYBRID'];
 const WASH_TYPES: WashType[] = ['EXTERIOR', 'INTERIOR', 'FULL'];
 const PAYMENT_METHODS: PaymentMethod[] = ['CASHLESS', 'CASH'];
 const PAYER_TYPES: PayerType[] = ['COMPANY', 'CLIENT'];
