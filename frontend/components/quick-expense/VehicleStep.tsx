@@ -42,7 +42,8 @@ export function VehicleStep({ vehicles, onSelect }: VehicleStepProps) {
       v =>
         (v.car_number || '').toLowerCase().includes(q) ||
         v.manufacturer.toLowerCase().includes(q) ||
-        v.model.toLowerCase().includes(q),
+        v.model.toLowerCase().includes(q) ||
+        (v.vin_number || '').toLowerCase().includes(q),
     );
   }, [vehicles, query]);
 
@@ -99,6 +100,9 @@ export function VehicleStep({ vehicles, onSelect }: VehicleStepProps) {
             <div className="flex-1 min-w-0">
               <div className="font-mono font-bold text-sm text-slate-900 tracking-wide">{vehicle.car_number || '—'}</div>
               <div className="text-xs text-slate-500 truncate">{vehicle.manufacturer} {vehicle.model} · {vehicle.year}</div>
+              {query.trim() && vehicle.vin_number?.toLowerCase().includes(query.toLowerCase()) && (
+                <div className="text-[10px] font-mono text-slate-400 truncate">VIN: {vehicle.vin_number}</div>
+              )}
             </div>
           </button>
         ))}
