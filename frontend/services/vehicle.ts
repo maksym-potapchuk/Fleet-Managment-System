@@ -131,6 +131,11 @@ export const vehicleService = {
     await api.delete(`/vehicle/${vehicleId}/photos/${photoId}/`);
   },
 
+  async setCoverPhoto(vehicleId: string, photoId: number): Promise<VehiclePhoto> {
+    const response = await api.post<VehiclePhoto>(`/vehicle/${vehicleId}/photos/${photoId}/cover/`);
+    return response.data;
+  },
+
   // Current owner
   async getCurrentOwner(vehicleId: string): Promise<VehicleOwner | null> {
     const response = await api.get<VehicleOwner | null>(`/vehicle/${vehicleId}/owner/`);

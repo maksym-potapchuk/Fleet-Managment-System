@@ -239,7 +239,8 @@
       "LPG": "Газ (LPG)",
       "LPG_GASOLINE": "Газ + Бензин",
       "ELECTRIC": "Електро",
-      "HYBRID": "Гібрид"
+      "HYBRID": "Гібрид",
+      "GAS_GASOLINE_HYBRID": "Газ + Бензин + Гібрид"
     }
   },
   "calendar": {
@@ -293,6 +294,8 @@
     "backToVehicles": "Автопарк",
     "edit": "Редагувати",
     "addPhoto": "Додати фото",
+    "setAsCover": "Встановити як обкладинку",
+    "coverPhoto": "Фото обкладинки",
     "archiveVehicle": "Архівувати",
     "archiveTitle": "Архівація автомобіля",
     "archiveMessage": "Ви впевнені, що хочете архівувати автомобіль {number}? Його можна буде відновити з архіву.",
@@ -634,9 +637,7 @@
       "GASOLINE": "Бензин",
       "DIESEL": "Дизель",
       "LPG": "Газ",
-      "LPG_GASOLINE": "Газ + Бензин",
-      "ELECTRIC": "Електро",
-      "HYBRID": "Гібрид"
+      "ELECTRIC": "Електро"
     },
     "washTypes": {
       "EXTERIOR": "Зовні",

@@ -51,9 +51,14 @@ import {
   Zap,
   GripHorizontal,
 } from 'lucide-react';
-import { Vehicle, VehicleStatus } from '@/types/vehicle';
+import { Vehicle, VehiclePhoto, VehicleStatus } from '@/types/vehicle';
 import { matchesWithLayout } from '@/lib/keyboard-layout';
 import { Link } from '@/src/i18n/routing';
+
+function getCoverPhoto(photos: VehiclePhoto[] | undefined): VehiclePhoto | undefined {
+  if (!photos || photos.length === 0) return undefined;
+  return photos.find(p => p.is_cover) ?? photos[0];
+}
 
 export type KanbanColumnConfig = {
   id: VehicleStatus;
@@ -1057,21 +1062,24 @@ const VehicleCard = memo(function VehicleCard({ vehicle, onSelect, onEdit, onArc
         </PortalDropdown>
       )}
 
-      {vehicle.photos && vehicle.photos.length > 0 && (
-        <div className={`relative ${showArrows ? '-ml-5 -mr-10' : '-mx-5'} -mt-5 mb-3 h-36 rounded-t-2xl overflow-hidden`}>
-          <img
-            src={vehicle.photos[0].image}
-            alt={vehicle.car_number || ''}
-            loading="lazy"
-            className="w-full h-full object-cover"
-          />
-          {vehicle.photos.length > 1 && (
-            <div className="absolute bottom-2 right-2 bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-              +{vehicle.photos.length - 1}
-            </div>
-          )}
-        </div>
-      )}
+      {(() => {
+        const cover = getCoverPhoto(vehicle.photos);
+        return cover ? (
+          <div className={`relative ${showArrows ? '-ml-5 -mr-10' : '-mx-5'} -mt-5 mb-3 h-36 rounded-t-2xl overflow-hidden`}>
+            <img
+              src={cover.image}
+              alt={vehicle.car_number || ''}
+              loading="lazy"
+              className="w-full h-full object-cover"
+            />
+            {vehicle.photos.length > 1 && (
+              <div className="absolute bottom-2 right-2 bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                +{vehicle.photos.length - 1}
+              </div>
+            )}
+          </div>
+        ) : null;
+      })()}
 
       <div className="relative z-10">
         {/* Title + menu */}
@@ -1259,16 +1267,19 @@ function VehicleCardOverlay({ vehicle }: { vehicle: Vehicle }) {
 
   return (
     <div className="cursor-move bg-white rounded-2xl border-2 border-[#2D8B7E]/50 shadow-2xl shadow-[#2D8B7E]/20 w-80 select-none overflow-hidden">
-      {vehicle.photos && vehicle.photos.length > 0 && (
-        <div className="relative h-36">
-          <img
-            src={vehicle.photos[0].image}
-            alt={vehicle.car_number || ''}
-            loading="lazy"
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
+      {(() => {
+        const cover = getCoverPhoto(vehicle.photos);
+        return cover ? (
+          <div className="relative h-36">
+            <img
+              src={cover.image}
+              alt={vehicle.car_number || ''}
+              loading="lazy"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : null;
+      })()}
       <div className="p-5">
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
@@ -1446,24 +1457,27 @@ const MobileVehicleCard = memo(function MobileVehicleCard({ vehicle, columns, on
     <div data-vehicle-id={vehicle.id} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
 
       {/* Photo thumbnail */}
-      {vehicle.photos && vehicle.photos.length > 0 && (
-        <div
-          onClick={onSelect}
-          className="relative h-28 cursor-pointer select-none"
-        >
-          <img
-            src={vehicle.photos[0].image}
-            alt={vehicle.car_number || ''}
-            loading="lazy"
-            className="w-full h-full object-cover"
-          />
-          {vehicle.photos.length > 1 && (
-            <div className="absolute bottom-1.5 right-2 bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-              +{vehicle.photos.length - 1}
-            </div>
-          )}
-        </div>
-      )}
+      {(() => {
+        const cover = getCoverPhoto(vehicle.photos);
+        return cover ? (
+          <div
+            onClick={onSelect}
+            className="relative h-28 cursor-pointer select-none"
+          >
+            <img
+              src={cover.image}
+              alt={vehicle.car_number || ''}
+              loading="lazy"
+              className="w-full h-full object-cover"
+            />
+            {vehicle.photos.length > 1 && (
+              <div className="absolute bottom-1.5 right-2 bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                +{vehicle.photos.length - 1}
+              </div>
+            )}
+          </div>
+        ) : null;
+      })()}
 
       {/* Main card body — tap anywhere to view vehicle details */}
       <div

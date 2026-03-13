@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams } from 'next/navigation';
 import { useRouter } from '@/src/i18n/routing';
 import {
@@ -37,6 +38,7 @@ import {
   ArrowRight,
   Printer,
   Receipt,
+  Star,
 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import api from '@/lib/api';
@@ -168,7 +170,7 @@ export default function VehicleWorkspacePage() {
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('service');
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('expenses');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -178,7 +180,9 @@ export default function VehicleWorkspacePage() {
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
   const [deletingPhotoId, setDeletingPhotoId] = useState<number | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [settingCover, setSettingCover] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoStripRef = useRef<HTMLDivElement>(null);
 
   // Quick mileage update
   const [showMileageInput, setShowMileageInput] = useState(false);
@@ -206,6 +210,8 @@ export default function VehicleWorkspacePage() {
   const [showFuelPicker, setShowFuelPicker] = useState(false);
   const [savingFuel, setSavingFuel] = useState(false);
   const fuelPickerRef = useRef<HTMLDivElement>(null);
+  const fuelBtnRef = useRef<HTMLButtonElement>(null);
+  const [fuelDropPos, setFuelDropPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
   const loadVehicle = useCallback(async () => {
     try {
@@ -278,16 +284,31 @@ export default function VehicleWorkspacePage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [showDriverPicker]);
 
-  // Close fuel picker on outside click
+  // Close fuel picker on outside click or scroll
+  const fuelDropRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!showFuelPicker) return;
     const handler = (e: MouseEvent) => {
-      if (fuelPickerRef.current && !fuelPickerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        fuelPickerRef.current && !fuelPickerRef.current.contains(target) &&
+        fuelDropRef.current && !fuelDropRef.current.contains(target)
+      ) {
         setShowFuelPicker(false);
       }
     };
+    const scrollHandler = () => {
+      if (fuelBtnRef.current) {
+        const rect = fuelBtnRef.current.getBoundingClientRect();
+        setFuelDropPos({ top: rect.bottom + 4, left: rect.left });
+      }
+    };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    window.addEventListener('scroll', scrollHandler, true);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      window.removeEventListener('scroll', scrollHandler, true);
+    };
   }, [showFuelPicker]);
 
   const handleDriverAssign = async (driverId: string | null) => {
@@ -368,6 +389,19 @@ export default function VehicleWorkspacePage() {
     }
   };
 
+  const handleSetCover = async (photoId: number) => {
+    if (!vehicle) return;
+    setSettingCover(true);
+    try {
+      await vehicleService.setCoverPhoto(vehicle.id, photoId);
+      await loadVehicle();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSettingCover(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
@@ -407,11 +441,11 @@ export default function VehicleWorkspacePage() {
   const fuelLabel = (type: FuelType | null) => type ? tVehicles(`fuelTypes.${type}`) : '—';
 
   const tabs: { id: WorkspaceTab; label: string; icon: typeof Wrench; secondary?: boolean }[] = [
+    { id: 'expenses',   label: t('tabs.expenses'),   icon: DollarSign },
     { id: 'service',    label: t('tabs.service'),    icon: Wrench },
     { id: 'equipment',  label: t('tabs.equipment'),  icon: Package },
     { id: 'regulation', label: t('tabs.regulation'), icon: ScrollText },
     { id: 'inspection', label: t('tabs.inspection'), icon: ShieldCheck },
-    { id: 'expenses',   label: t('tabs.expenses'),   icon: DollarSign },
     { id: 'history',    label: t('tabs.history'),    icon: History, secondary: true },
   ];
 
@@ -439,36 +473,76 @@ export default function VehicleWorkspacePage() {
           </button>
         </div>
 
-        {/* ── Photos (compact strip) ── */}
+        {/* ── Photos (gallery with cover selection) ── */}
         {(() => {
           const photos = vehicle.photos ?? [];
           const safeIdx = photos.length > 0 ? Math.min(activePhotoIdx, photos.length - 1) : 0;
+          const canScroll = photos.length > 4;
+          const scrollStrip = (dir: 'left' | 'right') => {
+            if (!photoStripRef.current) return;
+            photoStripRef.current.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' });
+          };
           return (
             <>
               {photos.length > 0 && (
-                <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
-                  {photos.map((photo, idx) => (
-                    <div key={photo.id} className="relative group/thumb flex-shrink-0">
+                <div className="mb-4 relative group/gallery">
+                  {canScroll && (
+                    <>
                       <button
-                        onClick={() => { setActivePhotoIdx(idx); setLightboxIdx(idx); }}
-                        className={`w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden border-2 transition-all ${
-                          idx === safeIdx ? 'border-[#2D8B7E] shadow-md' : 'border-slate-200 hover:border-slate-300'
-                        }`}
+                        onClick={() => scrollStrip('left')}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 hover:bg-white border border-slate-200 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover/gallery:opacity-100 transition-opacity"
                       >
-                        <img src={photo.image} alt="" className="w-full h-full object-cover" />
+                        <ChevronLeft className="w-4 h-4 text-slate-600" />
                       </button>
                       <button
-                        onClick={() => handlePhotoDelete(photo.id)}
-                        disabled={deletingPhotoId === photo.id}
-                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-all disabled:opacity-60 shadow-sm"
+                        onClick={() => scrollStrip('right')}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 hover:bg-white border border-slate-200 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover/gallery:opacity-100 transition-opacity"
                       >
-                        {deletingPhotoId === photo.id
-                          ? <div className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />
-                          : <X className="w-3 h-3" />}
+                        <ChevronRight className="w-4 h-4 text-slate-600" />
                       </button>
-                    </div>
-                  ))}
-                  {(
+                    </>
+                  )}
+                  <div
+                    ref={photoStripRef}
+                    className="flex items-center gap-2 overflow-x-auto pb-0.5 scroll-smooth"
+                    style={{ scrollbarWidth: 'none' }}
+                  >
+                    {photos.map((photo, idx) => (
+                      <div key={photo.id} className="relative group/thumb flex-shrink-0">
+                        <button
+                          onClick={() => { setActivePhotoIdx(idx); setLightboxIdx(idx); }}
+                          className={`w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden border-2 transition-all ${
+                            idx === safeIdx ? 'border-[#2D8B7E] shadow-md' : photo.is_cover ? 'border-amber-400 shadow-sm' : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <img src={photo.image} alt="" className="w-full h-full object-cover" />
+                        </button>
+                        {photo.is_cover && (
+                          <div className="absolute -top-1 -left-1 w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center shadow-sm" title={t('coverPhoto')}>
+                            <Star className="w-3 h-3 text-white fill-white" />
+                          </div>
+                        )}
+                        {!photo.is_cover && (
+                          <button
+                            onClick={() => handleSetCover(photo.id)}
+                            disabled={settingCover}
+                            className="absolute -top-1 -left-1 w-5 h-5 bg-amber-400 hover:bg-amber-500 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover/thumb:opacity-100 transition-all disabled:opacity-60"
+                            title={t('setAsCover')}
+                          >
+                            <Star className="w-3 h-3 text-white" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handlePhotoDelete(photo.id)}
+                          disabled={deletingPhotoId === photo.id}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-all disabled:opacity-60 shadow-sm"
+                        >
+                          {deletingPhotoId === photo.id
+                            ? <div className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />
+                            : <X className="w-3 h-3" />}
+                        </button>
+                      </div>
+                    ))}
                     <button
                       onClick={() => photoInputRef.current?.click()}
                       disabled={uploadingPhoto}
@@ -478,7 +552,7 @@ export default function VehicleWorkspacePage() {
                         ? <div className="w-4 h-4 border-2 border-[#2D8B7E] border-t-transparent rounded-full animate-spin" />
                         : <Plus className="w-5 h-5 text-slate-400" />}
                     </button>
-                  )}
+                  </div>
                 </div>
               )}
               <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
@@ -550,9 +624,16 @@ export default function VehicleWorkspacePage() {
               {parseFloat(vehicle.cost).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PLN
             </span>
           </div>
-          <div className="relative" ref={fuelPickerRef}>
+          <div ref={fuelPickerRef}>
             <button
-              onClick={() => setShowFuelPicker(v => !v)}
+              ref={fuelBtnRef}
+              onClick={() => {
+                if (!showFuelPicker && fuelBtnRef.current) {
+                  const rect = fuelBtnRef.current.getBoundingClientRect();
+                  setFuelDropPos({ top: rect.bottom + 4, left: rect.left });
+                }
+                setShowFuelPicker(v => !v);
+              }}
               disabled={savingFuel}
               className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-3 py-2 hover:border-amber-400/50 hover:bg-amber-50/50 transition-all group cursor-pointer text-left w-full disabled:opacity-60 min-w-0"
             >
@@ -566,14 +647,18 @@ export default function VehicleWorkspacePage() {
               </span>
               <Pencil className="w-3 h-3 text-slate-300 group-hover:text-amber-500 transition-colors ml-auto" />
             </button>
-            {showFuelPicker && (
-              <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden sm:min-w-[180px]">
+            {showFuelPicker && createPortal(
+              <div
+                ref={fuelDropRef}
+                className="fixed z-[9999] bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden w-max min-w-[200px]"
+                style={{ top: fuelDropPos.top, left: fuelDropPos.left }}
+              >
                 <div className="max-h-48 overflow-y-auto">
-                  {([null, 'GASOLINE', 'DIESEL', 'LPG', 'LPG_GASOLINE', 'ELECTRIC', 'HYBRID'] as (FuelType | null)[]).map(ft => (
+                  {([null, 'GASOLINE', 'DIESEL', 'LPG', 'LPG_GASOLINE', 'ELECTRIC', 'HYBRID', 'GAS_GASOLINE_HYBRID'] as (FuelType | null)[]).map(ft => (
                     <button
                       key={ft ?? 'none'}
                       onClick={() => handleFuelChange(ft)}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors whitespace-nowrap ${
                         vehicle.fuel_type === ft ? 'bg-amber-50 text-amber-600 font-semibold' : ft === null ? 'text-slate-400 italic' : 'text-slate-700'
                       }`}
                     >
@@ -581,7 +666,8 @@ export default function VehicleWorkspacePage() {
                     </button>
                   ))}
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
           <div className="relative" ref={driverPickerRef}>
@@ -775,61 +861,92 @@ export default function VehicleWorkspacePage() {
 
       {/* ── Tab Content ── */}
       <div className="flex-1 p-3 sm:p-4 md:p-6">
+        {activeTab === 'expenses'   && <ExpensesTab  vehicleId={vehicle.id} vehicleDriver={vehicle.driver} />}
         {activeTab === 'service'    && <ServiceTab    vehicleId={vehicle.id} />}
         {activeTab === 'equipment'  && <EquipmentTab  vehicleId={vehicle.id} />}
         {activeTab === 'regulation' && <RegulationTab vehicleId={vehicle.id} carNumber={vehicle.car_number ?? ''} initialKm={vehicle.initial_km} distanceUnit={vehicle.distance_unit ?? 'km'} />}
         {activeTab === 'history'    && <HistoryTab    vehicleId={vehicle.id} onMileageChange={loadVehicle} distanceUnit={vehicle.distance_unit ?? 'km'} />}
         {activeTab === 'inspection' && <InspectionTab vehicleId={vehicle.id} onInspectionChange={loadVehicle} />}
-        {activeTab === 'expenses'   && <ExpensesTab  vehicleId={vehicle.id} vehicleDriver={vehicle.driver} />}
       </div>
 
       {/* Lightbox */}
-      {lightboxIdx !== null && vehicle && (vehicle.photos ?? []).length > 0 && (
-        <div
-          className="fixed inset-0 bg-black/92 z-50 flex items-center justify-center p-4"
-          onClick={() => setLightboxIdx(null)}
-        >
-          <button
-            className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+      {lightboxIdx !== null && vehicle && (vehicle.photos ?? []).length > 0 && (() => {
+        const lbPhotos = vehicle.photos ?? [];
+        const currentPhoto = lbPhotos[lightboxIdx];
+        return (
+          <div
+            className="fixed inset-0 bg-black/92 z-50 flex items-center justify-center p-4"
             onClick={() => setLightboxIdx(null)}
           >
-            <X className="w-5 h-5 text-white" />
-          </button>
-          {(vehicle.photos ?? []).length > 1 && (
-            <>
-              <button
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
-                onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + (vehicle.photos ?? []).length) % (vehicle.photos ?? []).length); }}
-              >
-                <ArrowLeft className="w-5 h-5 text-white" />
-              </button>
-              <button
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors rotate-180"
-                onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx + 1) % (vehicle.photos ?? []).length); }}
-              >
-                <ArrowLeft className="w-5 h-5 text-white" />
-              </button>
-            </>
-          )}
-          <img
-            src={(vehicle.photos ?? [])[lightboxIdx].image}
-            alt={`Photo ${lightboxIdx + 1}`}
-            className="max-w-full max-h-full rounded-xl object-contain shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-          {(vehicle.photos ?? []).length > 1 && (
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5">
-              {(vehicle.photos ?? []).map((_, i) => (
+            {/* Top bar: counter + set cover */}
+            <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10" onClick={(e) => e.stopPropagation()}>
+              <span className="text-white/70 text-sm font-medium">{lightboxIdx + 1} / {lbPhotos.length}</span>
+              <div className="flex items-center gap-2">
+                {currentPhoto && !currentPhoto.is_cover && (
+                  <button
+                    onClick={() => handleSetCover(currentPhoto.id)}
+                    disabled={settingCover}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-amber-500/80 text-white text-sm font-semibold rounded-full transition-colors disabled:opacity-50"
+                  >
+                    <Star className="w-4 h-4" />
+                    {t('setAsCover')}
+                  </button>
+                )}
+                {currentPhoto?.is_cover && (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/80 text-white text-sm font-semibold rounded-full">
+                    <Star className="w-4 h-4 fill-white" />
+                    {t('coverPhoto')}
+                  </span>
+                )}
                 <button
-                  key={i}
-                  onClick={(e) => { e.stopPropagation(); setLightboxIdx(i); }}
-                  className={`rounded-full transition-all ${i === lightboxIdx ? 'w-4 h-2 bg-white' : 'w-2 h-2 bg-white/40 hover:bg-white/70'}`}
-                />
-              ))}
+                  className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+                  onClick={() => setLightboxIdx(null)}
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-      )}
+            {lbPhotos.length > 1 && (
+              <>
+                <button
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+                  onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + lbPhotos.length) % lbPhotos.length); }}
+                >
+                  <ArrowLeft className="w-5 h-5 text-white" />
+                </button>
+                <button
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors rotate-180"
+                  onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx + 1) % lbPhotos.length); }}
+                >
+                  <ArrowLeft className="w-5 h-5 text-white" />
+                </button>
+              </>
+            )}
+            <img
+              src={currentPhoto.image}
+              alt={`Photo ${lightboxIdx + 1}`}
+              className="max-w-full max-h-full rounded-xl object-contain shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            {/* Bottom thumbnails */}
+            {lbPhotos.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/50 backdrop-blur-sm rounded-xl p-2 max-w-[80vw] overflow-x-auto" onClick={(e) => e.stopPropagation()} style={{ scrollbarWidth: 'none' }}>
+                {lbPhotos.map((p, i) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setLightboxIdx(i)}
+                    className={`w-12 h-12 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all ${
+                      i === lightboxIdx ? 'border-white scale-110' : p.is_cover ? 'border-amber-400/70 opacity-60 hover:opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={p.image} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Edit modal */}
       <VehicleModal
