@@ -39,7 +39,7 @@ const COLORS: { value: string; key: string; hex: string }[] = [
   { value: 'Бордовий', key: 'burgundy', hex: '#881337' },
 ];
 
-const FUEL_VALUES: FuelType[] = ['GASOLINE', 'DIESEL', 'LPG', 'LPG_GASOLINE', 'ELECTRIC', 'HYBRID'];
+const FUEL_VALUES: FuelType[] = ['GASOLINE', 'DIESEL', 'LPG', 'LPG_GASOLINE', 'ELECTRIC', 'HYBRID', 'GAS_GASOLINE_HYBRID'];
 
 const inputBase = 'w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] transition-all text-sm';
 const inputEmpty = `${inputBase} bg-slate-50 border-slate-200 text-slate-400`;

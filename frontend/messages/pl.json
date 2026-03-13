@@ -239,7 +239,8 @@
       "LPG": "LPG",
       "LPG_GASOLINE": "LPG + Benzyna",
       "ELECTRIC": "Elektryczny",
-      "HYBRID": "Hybryda"
+      "HYBRID": "Hybryda",
+      "GAS_GASOLINE_HYBRID": "Gaz + Benzyna + Hybryda"
     }
   },
   "calendar": {
@@ -293,6 +294,8 @@
     "backToVehicles": "Flota",
     "edit": "Edytuj",
     "addPhoto": "Dodaj zdjęcie",
+    "setAsCover": "Ustaw jako okładkę",
+    "coverPhoto": "Zdjęcie okładkowe",
     "archiveVehicle": "Archiwizuj",
     "archiveTitle": "Archiwizacja pojazdu",
     "archiveMessage": "Czy na pewno chcesz archiwizować pojazd {number}? Można go później przywrócić z archiwum.",
@@ -634,9 +637,7 @@
       "GASOLINE": "Benzyna",
       "DIESEL": "Diesel",
       "LPG": "LPG",
-      "LPG_GASOLINE": "LPG + Benzyna",
-      "ELECTRIC": "Elektryczny",
-      "HYBRID": "Hybryda"
+      "ELECTRIC": "Elektryczny"
     },
     "washTypes": {
       "EXTERIOR": "Zewnątrz",

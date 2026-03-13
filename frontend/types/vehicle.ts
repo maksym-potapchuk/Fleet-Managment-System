@@ -3,6 +3,7 @@
 export interface VehiclePhoto {
   id: number;
   image: string; // absolute URL
+  is_cover: boolean;
   uploaded_at: string;
 }
 
@@ -78,7 +79,7 @@ export type ManufacturerChoice =
   | 'Audi'
   | 'Tesla';
 
-export type FuelType = 'GASOLINE' | 'DIESEL' | 'LPG' | 'LPG_GASOLINE' | 'ELECTRIC' | 'HYBRID';
+export type FuelType = 'GASOLINE' | 'DIESEL' | 'LPG' | 'LPG_GASOLINE' | 'ELECTRIC' | 'HYBRID' | 'GAS_GASOLINE_HYBRID';
 
 export interface Vehicle {
   id: string; // UUID

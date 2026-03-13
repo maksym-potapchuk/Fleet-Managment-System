@@ -239,7 +239,8 @@
       "LPG": "LPG",
       "LPG_GASOLINE": "LPG + Gasoline",
       "ELECTRIC": "Electric",
-      "HYBRID": "Hybrid"
+      "HYBRID": "Hybrid",
+      "GAS_GASOLINE_HYBRID": "Gas + Gasoline + Hybrid"
     }
   },
   "calendar": {
@@ -293,6 +294,8 @@
     "backToVehicles": "Fleet",
     "edit": "Edit",
     "addPhoto": "Add photo",
+    "setAsCover": "Set as cover",
+    "coverPhoto": "Cover photo",
     "archiveVehicle": "Archive",
     "archiveTitle": "Archive vehicle",
     "archiveMessage": "Are you sure you want to archive vehicle {number}? It can be restored later from the archive.",
@@ -634,9 +637,7 @@
       "GASOLINE": "Gasoline",
       "DIESEL": "Diesel",
       "LPG": "LPG",
-      "LPG_GASOLINE": "LPG + Gasoline",
-      "ELECTRIC": "Electric",
-      "HYBRID": "Hybrid"
+      "ELECTRIC": "Electric"
     },
     "washTypes": {
       "EXTERIOR": "Exterior",
