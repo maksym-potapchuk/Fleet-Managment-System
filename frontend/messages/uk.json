@@ -634,7 +634,9 @@
       "GASOLINE": "Бензин",
       "DIESEL": "Дизель",
       "LPG": "Газ",
-      "ELECTRIC": "Електро"
+      "LPG_GASOLINE": "Газ + Бензин",
+      "ELECTRIC": "Електро",
+      "HYBRID": "Гібрид"
     },
     "washTypes": {
       "EXTERIOR": "Зовні",

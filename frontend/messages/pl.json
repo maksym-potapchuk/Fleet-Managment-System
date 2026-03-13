@@ -634,7 +634,9 @@
       "GASOLINE": "Benzyna",
       "DIESEL": "Diesel",
       "LPG": "LPG",
-      "ELECTRIC": "Elektryczny"
+      "LPG_GASOLINE": "LPG + Benzyna",
+      "ELECTRIC": "Elektryczny",
+      "HYBRID": "Hybryda"
     },
     "washTypes": {
       "EXTERIOR": "Zewnątrz",

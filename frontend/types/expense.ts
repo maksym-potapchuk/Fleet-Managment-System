@@ -24,7 +24,7 @@ export type SystemCategoryCode =
 
 // ── Enums ──
 
-export type FuelType = 'GASOLINE' | 'DIESEL' | 'LPG' | 'ELECTRIC';
+export type FuelType = 'GASOLINE' | 'DIESEL' | 'LPG' | 'LPG_GASOLINE' | 'ELECTRIC' | 'HYBRID';
 export type WashType = 'EXTERIOR' | 'INTERIOR' | 'FULL';
 export type PaymentMethod = 'CASH' | 'CASHLESS';
 export type PayerType = 'COMPANY' | 'CLIENT';

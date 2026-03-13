@@ -14,7 +14,9 @@ const FUEL_TYPES: { value: FuelType; short: string }[] = [
   { value: 'GASOLINE', short: 'B' },
   { value: 'DIESEL', short: 'D' },
   { value: 'LPG', short: 'G' },
+  { value: 'LPG_GASOLINE', short: 'L+B' },
   { value: 'ELECTRIC', short: 'E' },
+  { value: 'HYBRID', short: 'H' },
 ];
 
 const WASH_TYPES: { value: WashType; short: string }[] = [
