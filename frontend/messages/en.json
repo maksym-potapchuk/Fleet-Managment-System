@@ -253,14 +253,27 @@
       "done": "Done"
     },
     "months": {
-      "jan": "January", "feb": "February", "mar": "March",
-      "apr": "April", "may": "May", "jun": "June",
-      "jul": "July", "aug": "August", "sep": "September",
-      "oct": "October", "nov": "November", "dec": "December"
+      "jan": "January",
+      "feb": "February",
+      "mar": "March",
+      "apr": "April",
+      "may": "May",
+      "jun": "June",
+      "jul": "July",
+      "aug": "August",
+      "sep": "September",
+      "oct": "October",
+      "nov": "November",
+      "dec": "December"
     },
     "days": {
-      "mon": "Mon", "tue": "Tue", "wed": "Wed",
-      "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun"
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
     },
     "panel": {
       "title": "Events for the day",
@@ -380,6 +393,9 @@
       "zeroKmConfirm": "Save anyway",
       "planView": "Plan",
       "historyView": "History",
+      "printPdf": "Print PDF",
+      "pdfLanguage": "Document language",
+      "pdfUnit": "Distance unit",
       "history": {
         "filters": "Filters",
         "from": "From",
@@ -425,7 +441,28 @@
       "overdue": "Overdue {days} days",
       "noData": "Inspection: —",
       "nextInspectionDate": "Next inspection date",
-      "registeredAt": "Registered"
+      "registeredAt": "Registered",
+      "detail": {
+        "detailTitle": "Inspection details",
+        "expenseSection": "Expense",
+        "officialCost": "Official cost",
+        "additionalCost": "Additional costs",
+        "totalAmount": "Total amount",
+        "paymentMethod": "Payment method",
+        "cash": "Cash",
+        "cashless": "Cashless",
+        "invoice": "Invoice",
+        "receipt": "Receipt",
+        "downloadInvoice": "Download invoice",
+        "downloadReceipt": "Download receipt",
+        "noExpense": "No expense",
+        "expenseDate": "Expense date",
+        "viewFile": "View file",
+        "editTitle": "Edit inspection",
+        "removeReport": "Remove certificate",
+        "changeReport": "Change certificate",
+        "downloadCertificate": "Download certificate"
+      }
     },
     "owners": {
       "title": "Owners",
@@ -481,6 +518,9 @@
     "deleteConfirmMessage": "Are you sure you want to delete this expense? This action cannot be undone.",
     "deleteError": "Failed to delete expense",
     "loadError": "Failed to load expenses",
+    "pagination": {
+      "showing": "{from}–{to} of {total}"
+    },
     "types": {
       "FUEL": "Fuel",
       "SERVICE": "Service/Repair",
@@ -539,7 +579,8 @@
       "clientPercent": "Client percent",
       "approvalStatus": "Approval status",
       "splitMismatch": "Sum mismatch",
-      "noDriverWarning": "No driver assigned to this vehicle. Assign a driver to select \"Client\" payer type."
+      "noDriverWarning": "No driver assigned to this vehicle. Assign a driver to select \"Client\" payer type.",
+      "certificate": "Registration certificate"
     },
     "detail": {
       "title": "Expense details",
