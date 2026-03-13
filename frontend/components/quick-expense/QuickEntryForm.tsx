@@ -203,7 +203,6 @@ export function QuickEntryForm({
   const [officialCost, setOfficialCost] = useState(editingEntry?.official_cost || '');
   const [additionalCost, setAdditionalCost] = useState(editingEntry?.additional_cost || '');
   const [nextInspectionDate, setNextInspectionDate] = useState(editingEntry?.next_inspection_date || '');
-
   const handleInspectionDateChange = (value: string) => {
     setInspectionDate(value);
     if (code === 'INSPECTION' && value && !editingEntry?.next_inspection_date) {
@@ -248,6 +247,9 @@ export function QuickEntryForm({
       }
     } else {
       setClientDriver('');
+      setCompanyAmount('');
+      setClientAmount('');
+      setClientPercent('');
     }
     setPayerType(val);
   }, [vehicleDriver]);
@@ -370,6 +372,8 @@ export function QuickEntryForm({
       entry.additional_cost = additionalCost;
       entry.inspection_date = inspectionDate || expenseDate;
       if (nextInspectionDate) entry.next_inspection_date = nextInspectionDate;
+      if (invoiceNumber) entry.invoice_number = invoiceNumber;
+      if (!foundInvoice && invoiceFile) entry.invoice_file = invoiceFile;
     } else if (code === 'SERVICE') {
       if (selectedService) entry.service = selectedService;
       entry.service_items = serviceItems.filter(i => i.name.trim());
@@ -721,6 +725,15 @@ export function QuickEntryForm({
                   </span>
                 </div>
               )}
+              <InvoiceInput
+                invoiceNumber={invoiceNumber}
+                onNumberChange={setInvoiceNumber}
+                foundInvoice={foundInvoice}
+                onInvoiceFound={setFoundInvoice}
+                file={invoiceFile}
+                onFileChange={setInvoiceFile}
+                disabled={false}
+              />
             </>
           )}
 

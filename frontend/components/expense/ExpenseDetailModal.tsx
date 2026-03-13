@@ -15,9 +15,9 @@ interface ExpenseDetailModalProps {
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   if (!value) return null;
   return (
-    <div className="flex justify-between items-start gap-4 py-2 border-b border-slate-100 last:border-0">
-      <span className="text-sm text-slate-500 shrink-0">{label}</span>
-      <span className="text-sm font-medium text-slate-900 text-right">{value}</span>
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-0.5 sm:gap-6 py-2 border-b border-slate-100 last:border-0">
+      <span className="text-xs sm:text-sm text-slate-500 shrink-0">{label}</span>
+      <span className="text-sm font-medium text-slate-900 sm:text-right break-words min-w-0">{value}</span>
     </div>
   );
 }

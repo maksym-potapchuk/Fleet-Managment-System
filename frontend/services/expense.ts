@@ -27,18 +27,18 @@ function buildFormData(data: Record<string, unknown>): FormData {
   return formData;
 }
 
-function buildQueryString(filters?: ExpenseFilters): string {
-  if (!filters) return '';
+function buildQueryString(filters?: ExpenseFilters, page?: number): string {
   const params = new URLSearchParams();
-  if (filters.category_code) params.append('category_code', filters.category_code);
-  if (filters.vehicle) params.append('vehicle', filters.vehicle);
-  if (filters.date_from) params.append('date_from', filters.date_from);
-  if (filters.date_to) params.append('date_to', filters.date_to);
-  if (filters.min_amount !== undefined) params.append('min_amount', String(filters.min_amount));
-  if (filters.max_amount !== undefined) params.append('max_amount', String(filters.max_amount));
-  if (filters.payment_method) params.append('payment_method', filters.payment_method);
-  if (filters.payer_type) params.append('payer_type', filters.payer_type);
-  if (filters.search) params.append('search', filters.search);
+  if (filters?.category_code) params.append('category_code', filters.category_code);
+  if (filters?.vehicle) params.append('vehicle', filters.vehicle);
+  if (filters?.date_from) params.append('date_from', filters.date_from);
+  if (filters?.date_to) params.append('date_to', filters.date_to);
+  if (filters?.min_amount !== undefined) params.append('min_amount', String(filters.min_amount));
+  if (filters?.max_amount !== undefined) params.append('max_amount', String(filters.max_amount));
+  if (filters?.payment_method) params.append('payment_method', filters.payment_method);
+  if (filters?.payer_type) params.append('payer_type', filters.payer_type);
+  if (filters?.search) params.append('search', filters.search);
+  if (page && page > 1) params.append('page', String(page));
   const qs = params.toString();
   return qs ? `?${qs}` : '';
 }
@@ -50,19 +50,20 @@ export const expenseService = {
     return Array.isArray(data) ? data : (data as { results: ExpenseCategory[] }).results ?? [];
   },
 
-  async getExpenses(filters?: ExpenseFilters): Promise<Expense[]> {
-    const url = `/expense/${buildQueryString(filters)}`;
+  async getExpenses(filters?: ExpenseFilters, page = 1): Promise<PaginatedExpenseResponse> {
+    const url = `/expense/${buildQueryString(filters, page)}`;
     const response = await api.get<PaginatedExpenseResponse>(url);
-    return response.data.results;
+    return response.data;
   },
 
   async getVehicleExpenses(
     vehicleId: string,
     filters?: ExpenseFilters,
-  ): Promise<Expense[]> {
-    const url = `/vehicle/${vehicleId}/expenses/${buildQueryString(filters)}`;
+    page = 1,
+  ): Promise<PaginatedExpenseResponse> {
+    const url = `/vehicle/${vehicleId}/expenses/${buildQueryString(filters, page)}`;
     const response = await api.get<PaginatedExpenseResponse>(url);
-    return response.data.results;
+    return response.data;
   },
 
   async getVehicleExpenseSummary(vehicleId: string): Promise<ExpenseSummary> {
@@ -177,6 +178,8 @@ export const expenseService = {
             data.additional_cost = entry.additional_cost;
             data.inspection_date = entry.inspection_date || entry.expense_date;
             if (entry.next_inspection_date) data.next_inspection_date = entry.next_inspection_date;
+            if (entry.invoice_number) data.invoice_number = entry.invoice_number;
+            if (entry.invoice_file) data.invoice_file = entry.invoice_file;
           } else if (code === 'SERVICE') {
             if (entry.service) data.service = entry.service;
             if (entry.service_items?.length) {

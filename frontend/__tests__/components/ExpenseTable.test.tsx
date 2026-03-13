@@ -44,6 +44,7 @@ const makeExpense = (overrides: Partial<Expense> = {}): Expense => ({
   official_cost: null,
   additional_cost: null,
   next_inspection_date: null,
+  registration_certificate: null,
   source_name: null,
   parts: [],
   supplier_type: null,

@@ -113,6 +113,7 @@ export interface Expense {
   official_cost: string | null;
   additional_cost: string | null;
   next_inspection_date: string | null;
+  registration_certificate: string | null;
   // PARTS
   source_name: string | null;
   supplier_type: SupplierType | null;
