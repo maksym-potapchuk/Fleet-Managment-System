@@ -11,6 +11,7 @@ import {
   CalendarClock,
   Check,
   Menu,
+  ShieldCheck,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/src/i18n/routing';
@@ -27,8 +28,20 @@ export interface CalendarServicePlan {
   created_at: string;
 }
 
+export interface CalendarInspection {
+  id: number;
+  vehicle: string;
+  vehicle_car_number: string;
+  planned_at: string;
+}
+
+export type CalendarEvent =
+  | (CalendarServicePlan & { _type: 'plan' })
+  | (CalendarInspection & { _type: 'inspection' });
+
 interface CalendarViewProps {
   plans?: CalendarServicePlan[];
+  inspections?: CalendarInspection[];
   loading?: boolean;
   onPlanUpdate: (updated: CalendarServicePlan) => void;
   onOpenSidebar?: () => void;
@@ -61,7 +74,7 @@ function formatLabel(dateStr: string) {
 
 // ── Root ──────────────────────────────────────────────────────────────────────
 
-export function CalendarView({ plans = [], loading, onPlanUpdate, onOpenSidebar }: CalendarViewProps) {
+export function CalendarView({ plans = [], inspections = [], loading, onPlanUpdate, onOpenSidebar }: CalendarViewProps) {
   const t = useTranslations('calendar');
   const [currentDate, setCurrentDate] = useState(() => new Date(TODAY.getFullYear(), TODAY.getMonth(), 1));
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
@@ -83,14 +96,18 @@ export function CalendarView({ plans = [], loading, onPlanUpdate, onOpenSidebar 
     t('days.thu'), t('days.fri'), t('days.sat'), t('days.sun'),
   ];
 
-  const plansByDate = useMemo(() => {
-    const map: Record<string, CalendarServicePlan[]> = {};
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, CalendarEvent[]> = {};
     plans.forEach((plan) => {
       const key = plan.planned_at.split('T')[0];
-      (map[key] ??= []).push(plan);
+      (map[key] ??= []).push({ ...plan, _type: 'plan' });
+    });
+    inspections.forEach((insp) => {
+      const key = insp.planned_at.split('T')[0];
+      (map[key] ??= []).push({ ...insp, _type: 'inspection' });
     });
     return map;
-  }, [plans]);
+  }, [plans, inspections]);
 
   const days = useMemo(() => {
     const firstDay = getFirstDayOfMonth(year, month);
@@ -100,7 +117,7 @@ export function CalendarView({ plans = [], loading, onPlanUpdate, onOpenSidebar 
     return grid;
   }, [year, month]);
 
-  const selectedPlans = activeDate ? (plansByDate[activeDate] ?? []) : [];
+  const selectedEvents = activeDate ? (eventsByDate[activeDate] ?? []) : [];
 
   return (
     <>
@@ -189,7 +206,7 @@ export function CalendarView({ plans = [], loading, onPlanUpdate, onOpenSidebar 
                   if (!date) return <div key={`empty-${idx}`} className="bg-white" />;
 
                   const dateStr = toDateStr(date);
-                  const dayPlans = plansByDate[dateStr] ?? [];
+                  const dayEvents = eventsByDate[dateStr] ?? [];
                   const isToday = date.toDateString() === TODAY_STR;
                   const isSelected = dateStr === selectedDate;
                   const isHovered = dateStr === hoveredDate;
@@ -226,23 +243,26 @@ export function CalendarView({ plans = [], loading, onPlanUpdate, onOpenSidebar 
                         `}>
                           {date.getDate()}
                         </span>
-                        {dayPlans.length > 0 && (
+                        {dayEvents.length > 0 && (
                           <span className="bg-slate-100 text-slate-500 text-[9px] font-bold px-1 py-0.5 rounded-md hidden sm:block">
-                            {dayPlans.length}
+                            {dayEvents.length}
                           </span>
                         )}
                       </div>
 
                       {/* Colored dots */}
-                      {dayPlans.length > 0 && (
+                      {dayEvents.length > 0 && (
                         <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap mt-0.5">
-                          {dayPlans.slice(0, 4).map(plan => {
-                            const isOverdue = !plan.is_done && new Date(plan.planned_at) < TODAY && !isToday;
-                            const color = plan.is_done ? 'bg-emerald-400' : isOverdue ? 'bg-red-400' : 'bg-blue-400';
-                            return <div key={plan.id} className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${color}`} />;
+                          {dayEvents.slice(0, 4).map(ev => {
+                            if (ev._type === 'inspection') {
+                              return <div key={`insp-${ev.id}`} className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-400" />;
+                            }
+                            const isOverdue = !ev.is_done && new Date(ev.planned_at) < TODAY && !isToday;
+                            const color = ev.is_done ? 'bg-emerald-400' : isOverdue ? 'bg-red-400' : 'bg-blue-400';
+                            return <div key={ev.id} className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${color}`} />;
                           })}
-                          {dayPlans.length > 4 && (
-                            <span className="text-[9px] font-bold text-slate-400 hidden sm:inline">+{dayPlans.length - 4}</span>
+                          {dayEvents.length > 4 && (
+                            <span className="text-[9px] font-bold text-slate-400 hidden sm:inline">+{dayEvents.length - 4}</span>
                           )}
                         </div>
                       )}
@@ -254,8 +274,10 @@ export function CalendarView({ plans = [], loading, onPlanUpdate, onOpenSidebar 
           </div>
 
           {/* ── Legend bar ── */}
-          <div className="shrink-0 flex items-center justify-center gap-4 md:gap-6 px-4 md:px-5 py-2 md:py-2.5 bg-white border border-t-0 border-slate-200 rounded-b-3xl shadow-sm">
+          <div className="shrink-0 flex items-center justify-center gap-3 md:gap-5 px-4 md:px-5 py-2 md:py-2.5 bg-white border border-t-0 border-slate-200 rounded-b-3xl shadow-sm">
             <LegendDot color="bg-blue-400"    label={t('legend.planned')} />
+            <div className="w-px h-3 bg-slate-200" />
+            <LegendDot color="bg-amber-400"   label={t('legend.inspection')} />
             <div className="w-px h-3 bg-slate-200" />
             <LegendDot color="bg-red-400"     label={t('legend.overdue')} />
             <div className="w-px h-3 bg-slate-200" />
@@ -266,7 +288,7 @@ export function CalendarView({ plans = [], loading, onPlanUpdate, onOpenSidebar 
         {/* ── Desktop Day Panel — always visible on md+ ── */}
         <DayPanel
           dateStr={activeDate}
-          plans={selectedPlans}
+          events={selectedEvents}
           pinned={!!selectedDate}
           onClose={() => setSelectedDate(null)}
           onPlanUpdate={onPlanUpdate}
@@ -277,7 +299,7 @@ export function CalendarView({ plans = [], loading, onPlanUpdate, onOpenSidebar 
       {selectedDate && (
         <MobileDaySheet
           dateStr={selectedDate}
-          plans={plansByDate[selectedDate] ?? []}
+          events={eventsByDate[selectedDate] ?? []}
           onClose={() => setSelectedDate(null)}
           onPlanUpdate={onPlanUpdate}
         />
@@ -290,13 +312,13 @@ export function CalendarView({ plans = [], loading, onPlanUpdate, onOpenSidebar 
 
 function DayPanel({
   dateStr,
-  plans,
+  events,
   pinned,
   onClose,
   onPlanUpdate,
 }: {
   dateStr: string | null;
-  plans: CalendarServicePlan[];
+  events: CalendarEvent[];
   pinned: boolean;
   onClose: () => void;
   onPlanUpdate: (updated: CalendarServicePlan) => void;
@@ -325,14 +347,14 @@ function DayPanel({
         )}
       </div>
 
-      {/* Plans list */}
+      {/* Events list */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {!dateStr ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-300 text-sm text-center gap-3 py-16">
             <CalendarIcon className="w-10 h-10 opacity-40" />
             <p className="font-semibold">{t('panel.hint')}</p>
           </div>
-        ) : plans.length === 0 ? (
+        ) : events.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-slate-400 text-sm font-medium text-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
               <CalendarIcon className="w-6 h-6 opacity-40" />
@@ -340,10 +362,13 @@ function DayPanel({
             <p className="font-semibold text-slate-400">{t('panel.noPlans')}</p>
           </div>
         ) : (
-          plans.map((plan) => {
-            const overdue = !plan.is_done && new Date(plan.planned_at) < TODAY;
+          events.map((ev) => {
+            if (ev._type === 'inspection') {
+              return <InspectionCard key={`insp-${ev.id}`} inspection={ev} />;
+            }
+            const overdue = !ev.is_done && new Date(ev.planned_at) < TODAY;
             return (
-              <PlanCard key={plan.id} plan={plan} overdue={overdue} onPlanUpdate={onPlanUpdate} />
+              <PlanCard key={ev.id} plan={ev} overdue={overdue} onPlanUpdate={onPlanUpdate} />
             );
           })
         )}
@@ -356,12 +381,12 @@ function DayPanel({
 
 function MobileDaySheet({
   dateStr,
-  plans,
+  events,
   onClose,
   onPlanUpdate,
 }: {
   dateStr: string;
-  plans: CalendarServicePlan[];
+  events: CalendarEvent[];
   onClose: () => void;
   onPlanUpdate: (updated: CalendarServicePlan) => void;
 }) {
@@ -398,9 +423,9 @@ function MobileDaySheet({
           </button>
         </div>
 
-        {/* Plans list */}
+        {/* Events list */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {plans.length === 0 ? (
+          {events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-sm text-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
                 <CalendarIcon className="w-6 h-6 opacity-40" />
@@ -408,10 +433,13 @@ function MobileDaySheet({
               <p className="font-semibold">{t('panel.noPlans')}</p>
             </div>
           ) : (
-            plans.map((plan) => {
-              const overdue = !plan.is_done && new Date(plan.planned_at) < TODAY;
+            events.map((ev) => {
+              if (ev._type === 'inspection') {
+                return <InspectionCard key={`insp-${ev.id}`} inspection={ev} />;
+              }
+              const overdue = !ev.is_done && new Date(ev.planned_at) < TODAY;
               return (
-                <PlanCard key={plan.id} plan={plan} overdue={overdue} onPlanUpdate={onPlanUpdate} />
+                <PlanCard key={ev.id} plan={ev} overdue={overdue} onPlanUpdate={onPlanUpdate} />
               );
             })
           )}
@@ -532,6 +560,39 @@ function PlanCard({
             {t('panel.reschedule')}
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Inspection Card ──────────────────────────────────────────────────────────
+
+function InspectionCard({ inspection }: { inspection: CalendarInspection }) {
+  const t = useTranslations('calendar');
+  const router = useRouter();
+
+  return (
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 overflow-hidden">
+      <div className="flex items-center justify-between px-3 pt-3 pb-2">
+        <span className="text-sm font-black text-slate-800 tracking-wide">{inspection.vehicle_car_number}</span>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+          {t('legend.inspection')}
+        </span>
+      </div>
+
+      <div className="px-3 pb-3 flex items-center gap-2">
+        <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+        <p className="text-sm font-bold text-slate-800 leading-snug">{t('panel.inspectionTitle')}</p>
+      </div>
+
+      <div className="flex items-center gap-2 px-3 py-2.5 border-t border-white/40">
+        <button
+          onClick={() => router.push(`/vehicles/${inspection.vehicle}`)}
+          className="flex items-center gap-1.5 text-xs font-bold text-slate-600 px-3 py-2 rounded-xl bg-white/80 border border-slate-200 hover:bg-white hover:border-slate-300 active:scale-95 transition-all"
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+          {t('panel.goToVehicle')}
+        </button>
       </div>
     </div>
   );
