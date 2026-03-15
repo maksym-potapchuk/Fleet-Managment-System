@@ -34,7 +34,8 @@ export function VehicleAutocomplete({
         return (
           (v.car_number && matchesWithLayout(v.car_number, query)) ||
           matchesWithLayout(v.manufacturer, query) ||
-          matchesWithLayout(v.model, query)
+          matchesWithLayout(v.model, query) ||
+          (v.vin_number && matchesWithLayout(v.vin_number, query))
         );
       })
     : vehicles;
@@ -140,11 +141,16 @@ export function VehicleAutocomplete({
                   <Car className={`w-3.5 h-3.5 ${v.id === value ? 'text-teal-600' : 'text-slate-500'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="font-mono font-semibold tracking-wide">{v.car_number || '—'}</span>
-                  <span className="text-slate-400 mx-1.5">·</span>
-                  <span className="text-slate-500">{v.manufacturer} {v.model}</span>
-                  <span className="text-slate-400 mx-1.5">·</span>
-                  <span className="text-slate-400 text-xs">{v.year}</span>
+                  <div>
+                    <span className="font-mono font-semibold tracking-wide">{v.car_number || '—'}</span>
+                    <span className="text-slate-400 mx-1.5">·</span>
+                    <span className="text-slate-500">{v.manufacturer} {v.model}</span>
+                    <span className="text-slate-400 mx-1.5">·</span>
+                    <span className="text-slate-400 text-xs">{v.year}</span>
+                  </div>
+                  {v.vin_number && (
+                    <p className="text-xs text-slate-500 font-mono font-semibold tracking-widest truncate select-all">{v.vin_number}</p>
+                  )}
                 </div>
               </button>
             ))

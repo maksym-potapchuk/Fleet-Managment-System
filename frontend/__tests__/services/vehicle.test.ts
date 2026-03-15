@@ -199,12 +199,20 @@ describe('vehicleService.permanentlyDeleteVehicle', () => {
 // ─── updateVehicleStatus ─────────────────────────────────────────────────────
 
 describe('vehicleService.updateVehicleStatus', () => {
-  it('PATCHes /vehicle/{id}/ with only the new status', async () => {
+  it('PATCHes /vehicle/{id}/ with only the new status when no position given', async () => {
     mockedApi.patch.mockResolvedValue({ data: { id: 'v1', status: 'LEASING' } });
 
     await vehicleService.updateVehicleStatus('v1', 'LEASING');
 
     expect(mockedApi.patch).toHaveBeenCalledWith('/vehicle/v1/', { status: 'LEASING' });
+  });
+
+  it('includes status_position in payload when provided', async () => {
+    mockedApi.patch.mockResolvedValue({ data: { id: 'v1', status: 'RENT', status_position: 500 } });
+
+    await vehicleService.updateVehicleStatus('v1', 'RENT', 500);
+
+    expect(mockedApi.patch).toHaveBeenCalledWith('/vehicle/v1/', { status: 'RENT', status_position: 500 });
   });
 
   it('re-throws the error so the caller can handle it', async () => {

@@ -99,19 +99,18 @@ export const vehicleService = {
   },
 
   // Update vehicle status (for Kanban drag & drop)
-  async updateVehicleStatus(id: string, status: string): Promise<Vehicle> {
+  async updateVehicleStatus(id: string, status: string, statusPosition?: number): Promise<Vehicle> {
     try {
-      const response = await api.patch<Vehicle>(`/vehicle/${id}/`, { status });
+      const payload: Record<string, unknown> = { status };
+      if (statusPosition !== undefined) payload.status_position = statusPosition;
+      const response = await api.patch<Vehicle>(`/vehicle/${id}/`, payload);
       return response.data;
     } catch (error: unknown) {
-      const logDetail =
-        error &&
-        typeof error === 'object' &&
-        'response' in error &&
-        (error as { response?: { data?: unknown } }).response?.data;
+      const axiosErr = error as { response?: { status?: number; data?: unknown } };
       console.error(
         'Error updating vehicle status:',
-        logDetail ?? (error instanceof Error ? error.message : String(error))
+        axiosErr?.response?.status ?? 'no status',
+        JSON.stringify(axiosErr?.response?.data) ?? (error instanceof Error ? error.message : String(error))
       );
       throw error;
     }

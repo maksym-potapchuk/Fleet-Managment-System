@@ -120,7 +120,7 @@ export function ExpenseTable({ expenses, onEdit, onDelete, onView, isLoading = f
               <div className="flex items-center gap-2 text-xs text-slate-500 mb-1 flex-wrap">
                 {showVehicle && expense.vehicle_vin_number && (
                   <>
-                    <span className="font-mono font-semibold text-slate-400">{expense.vehicle_vin_number}</span>
+                    <span className="font-mono font-semibold text-slate-500 tracking-wider">{expense.vehicle_vin_number}</span>
                     <span className="text-slate-300">·</span>
                   </>
                 )}
@@ -183,7 +183,7 @@ export function ExpenseTable({ expenses, onEdit, onDelete, onView, isLoading = f
                         {expense.vehicle_car_number}
                       </div>
                       {expense.vehicle_vin_number && (
-                        <div className="text-[10px] font-mono font-semibold text-slate-400 mt-0.5">{expense.vehicle_vin_number}</div>
+                        <div className="text-xs font-mono font-semibold text-slate-500 tracking-widest mt-0.5">{expense.vehicle_vin_number}</div>
                       )}
                     </td>
                   )}

@@ -319,8 +319,8 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] sm:max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
@@ -403,7 +403,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
                       {t('manufacturer')} <span className="text-red-400">*</span>
@@ -506,7 +506,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">
                       {t('fuelType')}
@@ -743,7 +743,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
                   </div>
 
                   {totalPhotos > 0 && (
-                    <div className="grid grid-cols-5 gap-2 mb-3">
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
                       {existingPhotos.map(photo => (
                         <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden group border border-slate-200">
                           <img

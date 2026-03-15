@@ -1,9 +1,17 @@
+import type { Viewport } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing, type Locale } from '@/src/i18n/routing';
 import { AuthProvider } from '@/contexts/AuthContext';
 import '../globals.css';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
