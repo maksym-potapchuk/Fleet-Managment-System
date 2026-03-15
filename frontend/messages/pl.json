@@ -172,6 +172,7 @@
     "moveUp": "Przesuń w górę",
     "moveDown": "Przesuń w dół",
     "moveToPosition": "Wybierz pozycję",
+    "changeStatus": "Wybierz nowy status",
     "archiveConfirm": "Archiwizować pojazd {number}?",
     "archiveSuccess": "Pojazd zarchiwizowany",
     "archiveError": "Nie udało się zarchiwizować pojazdu",
@@ -240,7 +241,7 @@
       "LPG_GASOLINE": "LPG + Benzyna",
       "ELECTRIC": "Elektryczny",
       "HYBRID": "Hybryda",
-      "GAS_GASOLINE_HYBRID": "Gaz + Benzyna + Hybryda"
+      "GAS_GASOLINE_HYBRID": "LPG + Benzyna + Hybryda"
     }
   },
   "calendar": {
@@ -250,6 +251,7 @@
     "loading": "Ładowanie...",
     "legend": {
       "planned": "Zaplanowane",
+      "inspection": "Przegląd tech.",
       "overdue": "Przeterminowane",
       "done": "Wykonane"
     },
@@ -285,7 +287,8 @@
       "pinned": "Przypięto",
       "preview": "Podgląd",
       "hint": "Najedź na datę, aby zobaczyć zdarzenia",
-      "cancel": "Anuluj"
+      "cancel": "Anuluj",
+      "inspectionTitle": "Przegląd techniczny"
     }
   },
   "vehicleWorkspace": {
@@ -661,7 +664,10 @@
       "createdNew": "Faktura {invoiceNumber} — dodana do bazy"
     },
     "summary": {
-      "title": "Podsumowanie wydatków"
+      "title": "Podsumowanie wydatków",
+      "button": "Podsumowanie",
+      "noData": "Brak wydatków",
+      "ofTotal": "z łącznej kwoty"
     },
     "filters": {
       "search": "Szukaj",

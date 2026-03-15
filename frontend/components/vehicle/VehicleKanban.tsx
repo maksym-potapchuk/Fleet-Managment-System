@@ -168,7 +168,6 @@ export function VehicleKanban({
   const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>(initialFilters?.manufacturers ?? []);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeDragType, setActiveDragType] = useState<'vehicle' | 'column' | null>(null);
-  const [mobileActiveStatus, setMobileActiveStatus] = useState<VehicleStatus | 'ALL'>(initialFilters?.mobileTab ?? 'ALL');
 
   // Sync filter changes to parent (for URL persistence)
   useEffect(() => {
@@ -177,9 +176,9 @@ export function VehicleKanban({
       statuses: selectedStatuses,
       driver: driverFilter,
       manufacturers: selectedManufacturers,
-      mobileTab: mobileActiveStatus,
+      mobileTab: 'ALL',
     });
-  }, [debouncedSearch, selectedStatuses, driverFilter, selectedManufacturers, mobileActiveStatus]);
+  }, [debouncedSearch, selectedStatuses, driverFilter, selectedManufacturers]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -421,10 +420,7 @@ export function VehicleKanban({
     await onReorderVehicles(items);
   }, [vehicles, filteredVehicles, onReorderVehicles]);
 
-  const mobileDisplayedVehicles = useMemo(() => {
-    if (mobileActiveStatus === 'ALL') return filteredVehicles;
-    return filteredVehicles.filter(v => v.status === mobileActiveStatus);
-  }, [filteredVehicles, mobileActiveStatus]);
+  const hasActiveStatusFilter = selectedStatuses.length > 0;
 
   const visibleColumns = useMemo(() => {
     const hasActiveFilters = debouncedSearch || selectedStatuses.length > 0 || driverFilter !== 'all' || selectedManufacturers.length > 0;
@@ -448,7 +444,7 @@ export function VehicleKanban({
             {onOpenSidebar && (
               <button
                 onClick={onOpenSidebar}
-                className="flex items-center justify-center w-10 h-10 bg-white border-2 border-slate-200 rounded-xl hover:border-[#2D8B7E]/50 hover:bg-slate-50 transition-all shadow-sm hover:shadow-md active:scale-95 flex-shrink-0"
+                className="flex items-center justify-center w-11 h-11 bg-white border-2 border-slate-200 rounded-xl hover:border-[#2D8B7E]/50 hover:bg-slate-50 transition-all shadow-sm hover:shadow-md active:scale-95 flex-shrink-0"
                 title="Відкрити меню"
               >
                 <Menu className="w-5 h-5 text-slate-700" />
@@ -623,48 +619,52 @@ export function VehicleKanban({
         </div>
       </div>
 
-      {/* ── Mobile Status Tabs ── */}
+      {/* ── Mobile Status Chips ── */}
       <div className="md:hidden flex-shrink-0 bg-white/90 border-b border-slate-200/50 shadow-sm">
-        <div className="flex gap-1.5 px-3 py-2.5 overflow-x-auto scrollbar-hide -mx-px">
-          <button
-            onClick={() => setMobileActiveStatus('ALL')}
-            className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
-              mobileActiveStatus === 'ALL'
-                ? 'bg-slate-800 text-white shadow-md'
-                : 'bg-slate-100 text-slate-600 active:bg-slate-200'
-            }`}
-          >
-            {t('filters.allDrivers')} · {filteredVehicles.length}
-          </button>
+        <div className="flex flex-wrap gap-1 px-3 py-2">
           {KANBAN_COLUMNS.map(col => {
-            const count = filteredVehicles.filter(v => v.status === col.id).length;
-            if (count === 0) return null;
+            const isSelected = selectedStatuses.includes(col.id);
+            const count = vehicles.filter(v => v.status === col.id).length;
             return (
               <button
                 key={col.id}
-                onClick={() => setMobileActiveStatus(col.id)}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all border ${
-                  mobileActiveStatus === col.id
-                    ? `${col.bgColor} ${col.color} ${col.borderColor} shadow-md`
-                    : 'bg-slate-100 text-slate-600 border-transparent active:bg-slate-200'
+                onClick={() => {
+                  if (isSelected) {
+                    setSelectedStatuses(prev => prev.filter(s => s !== col.id));
+                  } else {
+                    setSelectedStatuses(prev => [...prev, col.id]);
+                  }
+                }}
+                className={`px-1.5 py-1 rounded-md text-[10px] font-bold transition-all border ${
+                  isSelected
+                    ? `${col.bgColor} ${col.color} ${col.borderColor}`
+                    : 'bg-slate-100 text-slate-500 border-transparent active:bg-slate-200'
                 }`}
               >
-                {col.title} · {count}
+                {col.title} {count}
               </button>
             );
           })}
+          {hasActiveStatusFilter && (
+            <button
+              onClick={() => setSelectedStatuses([])}
+              className="px-1.5 py-1 rounded-md text-[10px] font-bold text-red-500 bg-red-50 border border-red-200 active:bg-red-100 transition-all"
+            >
+              <X className="w-3 h-3 inline -mt-0.5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* ── Mobile Vehicle List (virtualized) ── */}
       <MobileVehicleList
-        vehicles={mobileDisplayedVehicles}
+        vehicles={filteredVehicles}
         columns={KANBAN_COLUMNS}
         onSelectVehicle={onSelectVehicle}
         onEditVehicle={onEditVehicle}
         onArchiveVehicle={onArchiveVehicle}
         onUpdateStatus={onUpdateStatus}
-        onReorderVehicles={mobileActiveStatus !== 'ALL' ? onReorderVehicles : undefined}
+        onReorderVehicles={hasActiveStatusFilter && selectedStatuses.length === 1 ? onReorderVehicles : undefined}
         handleMoveVehicle={handleMoveVehicle}
         handleMoveToPosition={handleMoveToPosition}
         emptyLabel={t('empty')}
@@ -1091,7 +1091,7 @@ const VehicleCard = memo(function VehicleCard({ vehicle, onSelect, onEdit, onArc
                 <span className="ml-1.5 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md align-middle">{t('temporaryPlate')}</span>
               )}
             </h4>
-            <p className="text-[10px] text-slate-400 font-mono tracking-wide truncate">{vehicle.vin_number}</p>
+            <p className="text-xs text-slate-600 font-mono font-semibold tracking-widest truncate select-all">{vehicle.vin_number}</p>
             <p className="text-sm text-slate-500 mt-0.5 font-medium truncate">
               {vehicle.manufacturer} {vehicle.model} {vehicle.year && <><span className="text-slate-400">&middot;</span> {vehicle.year}</>}
             </p>
@@ -1284,7 +1284,7 @@ function VehicleCardOverlay({ vehicle }: { vehicle: Vehicle }) {
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
             <h4 className="text-lg font-bold text-slate-900 tracking-tight">{vehicle.car_number || t('noPlate')}</h4>
-            <p className="text-[10px] text-slate-400 font-mono tracking-wide truncate">{vehicle.vin_number}</p>
+            <p className="text-xs text-slate-600 font-mono font-semibold tracking-widest truncate select-all">{vehicle.vin_number}</p>
             <p className="text-sm text-slate-500 mt-0.5 font-medium truncate">
               {vehicle.manufacturer} {vehicle.model} {vehicle.year && <><span className="text-slate-400">&middot;</span> {vehicle.year}</>}
             </p>
@@ -1492,7 +1492,7 @@ const MobileVehicleCard = memo(function MobileVehicleCard({ vehicle, columns, on
                 <span className="ml-1.5 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md align-middle">{t('temporaryPlate')}</span>
               )}
             </h4>
-            <p className="text-[10px] text-slate-400 font-mono tracking-wide truncate">{vehicle.vin_number}</p>
+            <p className="text-xs text-slate-600 font-mono font-semibold tracking-widest truncate select-all">{vehicle.vin_number}</p>
             <p className="text-sm text-slate-500 font-medium mt-0.5">
               {vehicle.manufacturer} {vehicle.model} {vehicle.year && <>· {vehicle.year}</>}
             </p>
@@ -1669,29 +1669,29 @@ const MobileVehicleCard = memo(function MobileVehicleCard({ vehicle, columns, on
         </>
       )}
 
-      {/* Status picker — bottom sheet (most mobile-native pattern) */}
+      {/* Status picker — bottom sheet with scrollable compact list */}
       {showStatusPicker && (
         <div className="fixed inset-0 z-50">
           <div
             className="absolute inset-0 bg-black/35 backdrop-blur-[2px]"
             onClick={() => setShowStatusPicker(false)}
           />
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl animate-slide-up">
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl animate-slide-up max-h-[60vh] flex flex-col">
             {/* Drag handle — tap to close */}
             <button
               onClick={() => setShowStatusPicker(false)}
-              className="w-full flex justify-center pt-3 pb-1 cursor-pointer"
+              className="w-full flex justify-center pt-3 pb-1 cursor-pointer shrink-0"
               aria-label="Close"
             >
               <div className="w-10 h-1.5 rounded-full bg-slate-300" />
             </button>
             {/* Sheet header */}
-            <div className="flex items-center justify-between px-5 pt-2 pb-4">
+            <div className="flex items-center justify-between px-5 pt-2 pb-3 shrink-0">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
                   {vehicle.car_number || t('noPlate')}
                 </p>
-                <p className="text-sm font-bold text-slate-700">Оберіть новий статус</p>
+                <p className="text-sm font-bold text-slate-700">{t('changeStatus')}</p>
               </div>
               <button
                 onClick={() => setShowStatusPicker(false)}
@@ -1701,23 +1701,24 @@ const MobileVehicleCard = memo(function MobileVehicleCard({ vehicle, columns, on
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
-            {/* Status grid 2-column */}
-            <div className="grid grid-cols-2 gap-2.5 px-4 pb-8">
-              {columns.map(col => (
-                <button
-                  key={col.id}
-                  onClick={() => { onUpdateStatus(vehicle.id, col.id); setShowStatusPicker(false); }}
-                  className={`flex items-center gap-2.5 p-3.5 rounded-2xl text-sm font-bold border transition-all active:scale-95 ${
-                    vehicle.status === col.id
-                      ? `${col.bgColor} ${col.color} ${col.borderColor} ring-2 ring-offset-1 ring-current/20`
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${col.bgColor.replace('-50', '-500')}`} />
-                  <span className="truncate">{col.title}</span>
-                  {vehicle.status === col.id && <span className="ml-auto text-xs">✓</span>}
-                </button>
-              ))}
+            {/* Status list — scrollable */}
+            <div className="overflow-y-auto px-4 pb-6">
+              <div className="grid grid-cols-3 gap-1.5">
+                {columns.map(col => (
+                  <button
+                    key={col.id}
+                    onClick={() => { onUpdateStatus(vehicle.id, col.id); setShowStatusPicker(false); }}
+                    className={`flex items-center gap-1.5 px-2.5 py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                      vehicle.status === col.id
+                        ? `${col.bgColor} ${col.color} ${col.borderColor} ring-2 ring-offset-1 ring-current/20`
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${col.bgColor.replace('-50', '-500')}`} />
+                    <span className="truncate">{col.title}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

@@ -101,11 +101,20 @@ function VehiclesPageContent() {
     const previousVehicles = vehiclesRef.current;
 
     try {
+      const currentVehicles = vehiclesRef.current;
+      const positionsInTarget = currentVehicles.filter(v => v.status === newStatus).map(v => v.status_position);
+      const minPos = positionsInTarget.length > 0 ? Math.min(...positionsInTarget) : 1000;
+      const topPosition = Math.max(0, minPos - 1000);
+
       setVehicles(prev =>
-        prev.map(v => (v.id === vehicleId ? { ...v, status: newStatus, updated_at: new Date().toISOString() } : v))
+        prev.map(v =>
+          v.id === vehicleId
+            ? { ...v, status: newStatus, status_position: topPosition, updated_at: new Date().toISOString() }
+            : v,
+        ),
       );
 
-      await vehicleService.updateVehicleStatus(vehicleId, newStatus);
+      await vehicleService.updateVehicleStatus(vehicleId, newStatus, topPosition);
     } catch (err: unknown) {
       console.error('❌ Failed to update vehicle status:', err);
 

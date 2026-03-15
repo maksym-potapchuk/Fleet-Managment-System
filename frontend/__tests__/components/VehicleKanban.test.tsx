@@ -337,6 +337,33 @@ describe('VehicleKanban – handleDragEnd', () => {
   });
 });
 
+// ─── Card ordering within columns ───────────────────────────────────────────
+// Cards moved to a new column must appear at the TOP (lowest status_position).
+
+describe('VehicleKanban – card ordering after status change', () => {
+  it('renders moved vehicle at the top of the target column (lowest status_position first)', () => {
+    const movedVehicle = makeVehicle({
+      id: 'v-moved',
+      car_number: 'MM0001AA',
+      status: 'READY',
+      status_position: -1000,
+    });
+    const existingVehicle = makeVehicle({
+      id: 'v-existing',
+      car_number: 'EX0001AA',
+      status: 'READY',
+      status_position: 1000,
+    });
+
+    render(<VehicleKanban {...defaultProps} vehicles={[existingVehicle, movedVehicle]} />);
+
+    const allCards = screen.getAllByText(/MM0001AA|EX0001AA/);
+    const firstCard = allCards[0];
+
+    expect(firstCard.textContent).toContain('MM0001AA');
+  });
+});
+
 // ─── Arrow reorder buttons ───────────────────────────────────────────────────
 
 describe('VehicleKanban – arrow reorder buttons', () => {

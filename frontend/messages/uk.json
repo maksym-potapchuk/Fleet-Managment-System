@@ -172,6 +172,7 @@
     "moveUp": "Перемістити вгору",
     "moveDown": "Перемістити вниз",
     "moveToPosition": "Обрати позицію",
+    "changeStatus": "Оберіть новий статус",
     "archiveConfirm": "Архівувати автомобіль {number}?",
     "archiveSuccess": "Автомобіль архівовано",
     "archiveError": "Не вдалося архівувати автомобіль",
@@ -240,7 +241,7 @@
       "LPG_GASOLINE": "Газ + Бензин",
       "ELECTRIC": "Електро",
       "HYBRID": "Гібрид",
-      "GAS_GASOLINE_HYBRID": "Газ + Бензин + Гібрид"
+      "GAS_GASOLINE_HYBRID": "LPG + Бензин + Гібрид"
     }
   },
   "calendar": {
@@ -250,6 +251,7 @@
     "loading": "Завантаження...",
     "legend": {
       "planned": "Заплановано",
+      "inspection": "Тех. огляд",
       "overdue": "Прострочено",
       "done": "Виконано"
     },
@@ -285,7 +287,8 @@
       "pinned": "Закріплено",
       "preview": "Перегляд",
       "hint": "Наведіть на дату щоб переглянути події",
-      "cancel": "Скасувати"
+      "cancel": "Скасувати",
+      "inspectionTitle": "Технічний огляд"
     }
   },
   "vehicleWorkspace": {
@@ -661,7 +664,10 @@
       "createdNew": "Фактура {invoiceNumber} — додана в базу"
     },
     "summary": {
-      "title": "Підсумок витрат"
+      "title": "Підсумок витрат",
+      "button": "Підсумок",
+      "noData": "Витрат ще немає",
+      "ofTotal": "від загальної суми"
     },
     "filters": {
       "search": "Пошук",

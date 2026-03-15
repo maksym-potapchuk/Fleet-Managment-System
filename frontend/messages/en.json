@@ -172,6 +172,7 @@
     "moveUp": "Move up",
     "moveDown": "Move down",
     "moveToPosition": "Choose position",
+    "changeStatus": "Choose new status",
     "archiveConfirm": "Archive vehicle {number}?",
     "archiveSuccess": "Vehicle archived",
     "archiveError": "Failed to archive vehicle",
@@ -240,7 +241,7 @@
       "LPG_GASOLINE": "LPG + Gasoline",
       "ELECTRIC": "Electric",
       "HYBRID": "Hybrid",
-      "GAS_GASOLINE_HYBRID": "Gas + Gasoline + Hybrid"
+      "GAS_GASOLINE_HYBRID": "LPG + Gasoline + Hybrid"
     }
   },
   "calendar": {
@@ -250,6 +251,7 @@
     "loading": "Loading...",
     "legend": {
       "planned": "Planned",
+      "inspection": "Tech inspection",
       "overdue": "Overdue",
       "done": "Done"
     },
@@ -285,7 +287,8 @@
       "pinned": "Pinned",
       "preview": "Preview",
       "hint": "Hover over a date to see events",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "inspectionTitle": "Technical inspection"
     }
   },
   "vehicleWorkspace": {
@@ -661,7 +664,10 @@
       "createdNew": "Invoice {invoiceNumber} — added to database"
     },
     "summary": {
-      "title": "Expense summary"
+      "title": "Expense summary",
+      "button": "Summary",
+      "noData": "No expenses yet",
+      "ofTotal": "of total"
     },
     "filters": {
       "search": "Search",
