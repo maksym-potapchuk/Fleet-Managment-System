@@ -1,0 +1,50 @@
+server:
+  http_listen_port: 9080
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      # Only collect logs from backend and frontend containers
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*backend.*|.*frontend.*|.*nginx.*"
+        action: keep
+      # Use container name as label
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/?(.*)"
+        target_label: container
+      # Extract compose service name
+      - source_labels: ["__meta_docker_container_label_com_docker_compose_service"]
+        target_label: service
+    pipeline_stages:
+      # Parse Django structured logs: [2026-03-15 22:35:18] INFO    account.views | Message
+      - regex:
+          expression: '^\[(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]\s+(?P<level>\w+)\s+(?P<logger>[^\s|]+)\s*\|\s*(?P<message>.*)$'
+      - labels:
+          level:
+          logger:
+      # Parse gunicorn access logs: IP - - [date] "METHOD /path HTTP/1.x" STATUS SIZE
+      - regex:
+          expression: '^[\d.]+ - - \[.+\] "(?P<method>\w+) (?P<path>[^\s]+) HTTP/[\d.]+" (?P<status>\d+) (?P<bytes>\d+)'
+      - labels:
+          method:
+          status:
+      # Map status codes to levels for access logs without Django level
+      - match:
+          selector: '{service="backend"} |~ "HTTP/[\\d.]+ [45]\\d{2}"'
+          stages:
+            - regex:
+                expression: 'HTTP/[\d.]+" (?P<status>\d+)'
+            - template:
+                source: level
+                template: '{{ if ge (atoi .status) 500 }}ERROR{{ else if ge (atoi .status) 400 }}WARN{{ else }}INFO{{ end }}'
+            - labels:
+                level:

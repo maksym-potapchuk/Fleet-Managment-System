@@ -268,10 +268,10 @@ monitoring-down:
 >$(COMPOSE_MON) down
 
 monitoring-restart:
->$(COMPOSE_MON) restart prometheus grafana node-exporter redis-exporter
+>$(COMPOSE_MON) restart prometheus grafana node-exporter redis-exporter loki promtail
 
 monitoring-logs:
->$(COMPOSE_MON) logs -f prometheus grafana node-exporter redis-exporter
+>$(COMPOSE_MON) logs -f prometheus grafana node-exporter redis-exporter loki promtail
 
 prod-monitoring-up:
 >$(COMPOSE_PROD_MON) up -d
@@ -280,7 +280,7 @@ prod-monitoring-down:
 >$(COMPOSE_PROD_MON) down
 
 prod-monitoring-logs:
->$(COMPOSE_PROD_MON) logs -f prometheus grafana node-exporter redis-exporter
+>$(COMPOSE_PROD_MON) logs -f prometheus grafana node-exporter redis-exporter loki promtail
 
 # ── Lint & Test ──────────────────────────────────────────────
 
