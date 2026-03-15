@@ -25,26 +25,27 @@ scrape_configs:
       - source_labels: ["__meta_docker_container_label_com_docker_compose_service"]
         target_label: service
     pipeline_stages:
-      # Parse Django structured logs: [2026-03-15 22:35:18] INFO    account.views | Message
+      # 1. Parse Django structured logs: [2026-03-15 22:35:18] INFO    account.views | Message
       - regex:
           expression: '^\[(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]\s+(?P<level>\w+)\s+(?P<logger>[^\s|]+)\s*\|\s*(?P<message>.*)$'
       - labels:
           level:
           logger:
-      # Parse gunicorn access logs: IP - - [date] "METHOD /path HTTP/1.x" STATUS SIZE
+      # 2. Parse gunicorn access logs: IP - - [date] "METHOD /path HTTP/1.x" STATUS SIZE
       - regex:
-          expression: '^[\d.]+ - - \[.+\] "(?P<method>\w+) (?P<path>[^\s]+) HTTP/[\d.]+" (?P<status>\d+) (?P<bytes>\d+)'
+          expression: '^[\d.]+ - - \[.+\] "(?P<method>\w+) (?P<path>[^\s]+) HTTP/[\d.]+" (?P<status_code>\d+) (?P<bytes>\d+)'
       - labels:
           method:
-          status:
-      # Map status codes to levels for access logs without Django level
-      - match:
-          selector: '{service="backend"} |~ "HTTP/[\\d.]+ [45]\\d{2}"'
-          stages:
-            - regex:
-                expression: 'HTTP/[\d.]+" (?P<status>\d+)'
-            - template:
-                source: level
-                template: '{{ if ge (atoi .status) 500 }}ERROR{{ else if ge (atoi .status) 400 }}WARN{{ else }}INFO{{ end }}'
-            - labels:
-                level:
+      # 3. Set level based on status code for access logs (where level wasn't set by Django parser)
+      - template:
+          source: level
+          template: >-
+            {{ if .level }}{{ .level }}{{ else if .status_code }}{{ if ge (atoi .status_code) 500 }}error{{ else if ge (atoi .status_code) 400 }}warning{{ else }}info{{ end }}{{ else }}info{{ end }}
+      - labels:
+          level:
+      # 4. Normalize level to lowercase
+      - template:
+          source: level
+          template: '{{ ToLower .level }}'
+      - labels:
+          level:
