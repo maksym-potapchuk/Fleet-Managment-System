@@ -39,6 +39,7 @@ import {
   Printer,
   Receipt,
   Star,
+  PieChart,
 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import api from '@/lib/api';
@@ -3750,6 +3751,7 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ExpenseFiltersType>({});
@@ -3864,41 +3866,106 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
             </span>
           )}
         </div>
-        <button
-          onClick={() => { setEditingExpense(null); setShowForm(true); }}
-          className="flex items-center gap-1.5 px-3 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors flex-shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">{t('addExpense')}</span>
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {summary && parseFloat(summary.total) > 0 && (
+            <button
+              onClick={() => setShowSummary(s => !s)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-shrink-0 ${
+                showSummary
+                  ? 'bg-[#2D8B7E] text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <PieChart className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('summary.button')}</span>
+            </button>
+          )}
+          <button
+            onClick={() => { setEditingExpense(null); setShowForm(true); }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">{t('addExpense')}</span>
+          </button>
+        </div>
       </div>
 
-      {summary && parseFloat(summary.total) > 0 && (
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-slate-700">{t('summary.title')}</span>
-            <span className="text-base font-bold text-[#2D8B7E] tabular-nums">
-              {parseFloat(summary.total).toLocaleString('pl-PL', { maximumFractionDigits: 0 })} PLN
-            </span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {summary.categories.map((cat) => (
-              <div
-                key={cat.code || cat.name}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 bg-slate-50 border border-slate-100"
-              >
-                <span className="text-base" style={cat.color ? { color: cat.color } : undefined}>{cat.icon}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-slate-500 truncate">{cat.name}</p>
-                  <p className="text-sm font-bold text-slate-800 tabular-nums">
-                    {parseFloat(cat.total).toLocaleString('pl-PL', { maximumFractionDigits: 0 })}
-                  </p>
+      {showSummary && summary && parseFloat(summary.total) > 0 && (() => {
+        const total = parseFloat(summary.total);
+        const sorted = [...summary.categories].sort((a, b) => parseFloat(b.total) - parseFloat(a.total));
+
+        // Build donut chart segments
+        const RADIUS = 60;
+        const STROKE = 16;
+        const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+        let offset = 0;
+        const segments = sorted.map((cat) => {
+          const pct = total > 0 ? parseFloat(cat.total) / total : 0;
+          const dashLen = pct * CIRCUMFERENCE;
+          const seg = { ...cat, pct, dashLen, dashOffset: -offset };
+          offset += dashLen;
+          return seg;
+        });
+
+        return (
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex flex-col sm:flex-row gap-5 sm:gap-8 items-center">
+              {/* Donut chart */}
+              <div className="relative shrink-0">
+                <svg width="160" height="160" viewBox="0 0 160 160" className="transform -rotate-90">
+                  {/* Background circle */}
+                  <circle cx="80" cy="80" r={RADIUS} fill="none" stroke="#f1f5f9" strokeWidth={STROKE} />
+                  {/* Category segments */}
+                  {segments.map((seg) => (
+                    <circle
+                      key={seg.code || seg.name}
+                      cx="80"
+                      cy="80"
+                      r={RADIUS}
+                      fill="none"
+                      stroke={seg.color || '#94a3b8'}
+                      strokeWidth={STROKE}
+                      strokeDasharray={`${seg.dashLen} ${CIRCUMFERENCE - seg.dashLen}`}
+                      strokeDashoffset={seg.dashOffset}
+                      strokeLinecap="round"
+                      className="transition-all duration-500"
+                    />
+                  ))}
+                </svg>
+                {/* Center total */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-lg font-black text-slate-900 tabular-nums leading-tight">
+                    {total.toLocaleString('pl-PL', { maximumFractionDigits: 0 })}
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-400">zł</span>
                 </div>
               </div>
-            ))}
+
+              {/* Category legend + bars */}
+              <div className="flex-1 w-full space-y-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('summary.title')}</p>
+                {sorted.map((cat) => {
+                  const catTotal = parseFloat(cat.total);
+                  const pct = total > 0 ? (catTotal / total) * 100 : 0;
+
+                  return (
+                    <div key={cat.code || cat.name} className="flex items-center gap-2.5">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color || '#94a3b8' }} />
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 truncate flex-1">{cat.name}</span>
+                      <span className="text-xs font-semibold text-slate-400 tabular-nums shrink-0">
+                        {pct.toFixed(0)}%
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-800 tabular-nums shrink-0">
+                        {catTotal.toLocaleString('pl-PL', { maximumFractionDigits: 0 })} zł
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <ExpenseFilters filters={filters} onChange={(f) => { setFilters(f); setPage(1); }} categories={categories} showSearch={false} />
 
