@@ -59,8 +59,10 @@ const otherCategory: ExpenseCategory = {
 const categories = [fuelCategory, otherCategory];
 
 describe('ExpenseForm – fuel type multi-toggle', () => {
-  let onSubmit: ReturnType<typeof vi.fn>;
-  let onCancel: ReturnType<typeof vi.fn>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let onSubmit: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let onCancel: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
