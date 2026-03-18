@@ -129,6 +129,14 @@ export function ExpenseTable({ expenses, onEdit, onDelete, onView, isLoading = f
                 <span>{t(`paymentMethods.${expense.payment_method}`)}</span>
                 <span className="text-slate-300">·</span>
                 <span>{t(`payerTypes.${expense.payer_type}`)}</span>
+                {expense.edited_by && (
+                  <>
+                    <span className="text-slate-300">·</span>
+                    <span className="font-semibold" style={{ color: expense.edited_by.color || '#9097A0' }}>
+                      {expense.edited_by.username}
+                    </span>
+                  </>
+                )}
               </div>
 
               {/* Actions */}
@@ -211,8 +219,10 @@ export function ExpenseTable({ expenses, onEdit, onDelete, onView, isLoading = f
                   </td>
                   <td className="px-5 py-3.5">
                     <span className="text-sm text-slate-600">{formatDate(expense.expense_date, locale)}</span>
-                    {expense.created_by && (
-                      <div className="text-[10px] text-slate-400 mt-0.5">{expense.created_by.username}</div>
+                    {expense.edited_by && (
+                      <div className="text-[10px] font-semibold mt-0.5" style={{ color: expense.edited_by.color || '#9097A0' }}>
+                        {expense.edited_by.username}
+                      </div>
                     )}
                   </td>
                   <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>

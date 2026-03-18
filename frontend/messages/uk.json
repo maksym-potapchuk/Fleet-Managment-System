@@ -633,6 +633,7 @@
       "receipt": "Чек",
       "invoices": "Фактури",
       "createdBy": "Додав",
+      "editedBy": "Редагував",
       "createdAt": "Створено",
       "updatedAt": "Оновлено"
     },

@@ -277,8 +277,11 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
 
       {/* Meta */}
       <div className="text-xs text-slate-400 space-y-1 pt-3 border-t border-slate-100">
+        {expense.edited_by && (
+          <p>{t('detail.editedBy')}: <span className="font-semibold" style={{ color: expense.edited_by.color || '#9097A0' }}>{expense.edited_by.username}</span></p>
+        )}
         {expense.created_by && (
-          <p>{t('detail.createdBy')}: <span className="text-slate-600 font-medium">{expense.created_by.username}</span></p>
+          <p>{t('detail.createdBy')}: <span className="font-semibold" style={{ color: expense.created_by.color || '#9097A0' }}>{expense.created_by.username}</span></p>
         )}
         <p>{t('detail.createdAt')}: {formatDate(expense.created_at, locale)}</p>
         <p>{t('detail.updatedAt')}: {formatDate(expense.updated_at, locale)}</p>

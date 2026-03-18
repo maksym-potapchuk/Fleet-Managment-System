@@ -18,7 +18,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto delete-superuser db-dump db-seed db-reset dump seed seed-defaults seed-categories create-reg-schema force-reg-schema prod-force-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-reg-schema drop-vehicles trello-lists import-trello import-trello-dry import-trello-all import-trello-all-dry import-trello-reposition lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
+.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto delete-superuser db-dump db-seed db-reset dump seed seed-defaults seed-categories create-reg-schema force-reg-schema prod-force-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-reg-schema drop-vehicles trello-lists import-trello import-trello-dry import-trello-all import-trello-all-dry import-trello-reposition set-user-color prod-set-user-color lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
 
 help:
 >@echo "Available commands:"
@@ -68,6 +68,8 @@ help:
 >@echo "  make assign-regulation CAR=AA6601BB - Assign (fill) default regulation for vehicle"
 >@echo "  make drop-reg-schema             - Delete default regulation schema + all vehicle regulation data"
 >@echo "  make drop-vehicles               - Delete ALL vehicles from the database (with confirmation)"
+>@echo "  make set-user-color USERNAME=x COLOR=#E53E3E - Set user display color (dev)"
+>@echo "  make prod-set-user-color USERNAME=x COLOR=#E53E3E - Set user display color (prod)"
 >@echo "  make delete-superuser EMAIL=x    - Delete superuser by email"
 >@echo "  make trello-lists                - Show available Trello lists with indices"
 >@echo "  make import-trello N=0           - Import vehicles from Trello list by index"
@@ -231,6 +233,12 @@ drop-vehicles:
 
 delete-superuser:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py shell -c "from account.models import User; u = User.objects.filter(email='$(EMAIL)', is_superuser=True); print(f'Deleted {u.count()} superuser(s)') if u.exists() else print('No superuser found with that email'); u.delete()"
+
+set-user-color:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py shell -c "from account.models import User; u = User.objects.get(username='$(USERNAME)'); u.color = '$(COLOR)'; u.save(update_fields=['color']); print(f'{u.username} → {u.color}')"
+
+prod-set-user-color:
+>$(COMPOSE_PROD) exec $(BACKEND_SERVICE) python manage.py shell -c "from account.models import User; u = User.objects.get(username='$(USERNAME)'); u.color = '$(COLOR)'; u.save(update_fields=['color']); print(f'{u.username} → {u.color}')"
 
 drop-reg-schema:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py drop_reg_schema --force

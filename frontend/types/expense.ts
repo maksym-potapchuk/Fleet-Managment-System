@@ -123,7 +123,8 @@ export interface Expense {
   invoice_data: Invoice | null;
   invoice_existing?: boolean;
   // Meta
-  created_by: { id: string; username: string; email: string } | null;
+  created_by: { id: string; username: string; email: string; color: string } | null;
+  edited_by: { id: string; username: string; email: string; color: string } | null;
   created_at: string;
   updated_at: string;
 }

@@ -614,6 +614,7 @@
       "receipt": "Paragon",
       "invoices": "Faktury",
       "createdBy": "Dodał",
+      "editedBy": "Edytował",
       "createdAt": "Utworzono",
       "updatedAt": "Zaktualizowano"
     },

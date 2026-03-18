@@ -614,6 +614,7 @@
       "receipt": "Receipt",
       "invoices": "Invoices",
       "createdBy": "Created by",
+      "editedBy": "Edited by",
       "createdAt": "Created",
       "updatedAt": "Updated"
     },
