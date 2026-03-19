@@ -20,6 +20,7 @@ export type SystemCategoryCode =
   | 'INSPECTION'
   | 'ACCESSORIES'
   | 'DOCUMENTS'
+  | 'PARKING'
   | 'OTHER';
 
 // ── Enums ──
@@ -95,6 +96,7 @@ export interface Expense {
   client_driver: string | null;
   client_driver_name: string | null;
   approval_status: ApprovalStatus | null;
+  exclude_from_cost: boolean;
   // FUEL
   fuel_types: FuelType[];
   // SERVICE
@@ -143,6 +145,7 @@ export interface CreateExpenseData {
   company_amount?: string | number;
   client_amount?: string | number;
   client_driver?: string;
+  exclude_from_cost?: boolean;
   // FUEL
   fuel_types?: FuelType[];
   // SERVICE
@@ -182,6 +185,7 @@ export interface ExpenseFilters {
   payer_type?: string;
   approval_status?: string;
   search?: string;
+  ordering?: string;
 }
 
 export interface PaginatedExpenseResponse {
@@ -216,6 +220,7 @@ export interface QuickExpenseEntry {
   company_amount?: string;
   client_amount?: string;
   client_driver?: string;
+  exclude_from_cost?: boolean;
   // FUEL
   fuel_types?: FuelType[];
   receipt?: File;
@@ -255,6 +260,7 @@ export interface ExpenseCategorySummary {
 
 export interface ExpenseSummary {
   total: string;
+  excluded_total: string;
   categories: ExpenseCategorySummary[];
 }
 

@@ -536,6 +536,7 @@
       "INSPECTION": "Техогляд",
       "ACCESSORIES": "Аксесуари",
       "DOCUMENTS": "Документи",
+      "PARKING": "Паркінг",
       "OTHER": "Інше"
     },
     "fields": {
@@ -586,6 +587,8 @@
       "approvalStatus": "Статус",
       "splitMismatch": "Сума не збігається",
       "noDriverWarning": "До транспорту не призначено водія. Призначте водія, щоб обрати тип оплати \"Клієнт\".",
+      "excludeFromCost": "Не враховувати в собівартість авто (оплата повністю за рахунок клієнта)",
+      "excludeFromCostYes": "Так",
       "certificate": "Свідоцтво про реєстрацію"
     },
     "approvalStatuses": {
@@ -668,7 +671,9 @@
       "title": "Підсумок витрат",
       "button": "Підсумок",
       "noData": "Витрат ще немає",
-      "ofTotal": "від загальної суми"
+      "ofTotal": "від загальної суми",
+      "excludedFromCost": "Є витрати на {amount} zł, які не враховані в собівартість (оплата за рахунок клієнта)",
+      "excludedLabel": "Не входить у собівартість"
     },
     "filters": {
       "search": "Пошук",
@@ -679,7 +684,8 @@
       "allPayerTypes": "Всі платники",
       "dateFrom": "Від",
       "dateTo": "До",
-      "clearAll": "Очистити фільтри"
+      "clearAll": "Очистити фільтри",
+      "sortAmount": "Сума"
     }
   },
   "vehicleModal": {

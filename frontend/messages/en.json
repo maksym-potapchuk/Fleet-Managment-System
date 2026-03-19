@@ -536,6 +536,7 @@
       "INSPECTION": "Technical inspection",
       "ACCESSORIES": "Accessories",
       "DOCUMENTS": "Documents",
+      "PARKING": "Parking",
       "OTHER": "Other"
     },
     "fields": {
@@ -586,6 +587,8 @@
       "approvalStatus": "Approval status",
       "splitMismatch": "Sum mismatch",
       "noDriverWarning": "No driver assigned to this vehicle. Assign a driver to select \"Client\" payer type.",
+      "excludeFromCost": "Exclude from vehicle cost (fully paid by client)",
+      "excludeFromCostYes": "Yes",
       "certificate": "Registration certificate"
     },
     "detail": {
@@ -668,7 +671,9 @@
       "title": "Expense summary",
       "button": "Summary",
       "noData": "No expenses yet",
-      "ofTotal": "of total"
+      "ofTotal": "of total",
+      "excludedFromCost": "There are expenses of {amount} zł not included in vehicle cost (fully paid by client)",
+      "excludedLabel": "Not included in cost"
     },
     "filters": {
       "search": "Search",
@@ -679,7 +684,8 @@
       "allPayerTypes": "All payers",
       "dateFrom": "From",
       "dateTo": "To",
-      "clearAll": "Clear filters"
+      "clearAll": "Clear filters",
+      "sortAmount": "Amount"
     }
   },
   "vehicleModal": {

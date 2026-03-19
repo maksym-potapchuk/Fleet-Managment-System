@@ -5,7 +5,7 @@ import { QuickExpenseEntry } from '@/types/expense';
 import { formatDate } from '@/components/expense/expense-utils';
 import {
   Fuel, Wrench, Package, Shield, Droplets, AlertTriangle, MoreHorizontal,
-  Pencil, Trash2, Plus, Car,
+  Pencil, Trash2, Plus, Car, CircleParking,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -17,6 +17,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   droplets: Droplets,
   'alert-triangle': AlertTriangle,
   'more-horizontal': MoreHorizontal,
+  'circle-parking': CircleParking,
 };
 
 const COLOR_STYLES: Record<string, { bg: string; text: string }> = {
@@ -27,6 +28,7 @@ const COLOR_STYLES: Record<string, { bg: string; text: string }> = {
   '#06B6D4': { bg: 'bg-cyan-50', text: 'text-cyan-600' },
   '#EF4444': { bg: 'bg-red-50', text: 'text-red-600' },
   '#64748B': { bg: 'bg-slate-100', text: 'text-slate-600' },
+  '#14B8A6': { bg: 'bg-teal-50', text: 'text-teal-600' },
 };
 
 function getDetail(entry: QuickExpenseEntry, tExpenses: (key: string) => string): string {

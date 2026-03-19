@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { ExpenseFilters as ExpenseFiltersType, ExpenseCategory } from '@/types/expense';
 import { Vehicle } from '@/types/vehicle';
-import { X, ChevronDown, Search } from 'lucide-react';
+import { X, ChevronDown, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface ExpenseFiltersProps {
   filters: ExpenseFiltersType;
@@ -36,7 +36,7 @@ export function ExpenseFilters({ filters, onChange, showVehicleFilter = false, s
     }, 400);
   };
 
-  const hasActiveFilters = filters.category_code || filters.vehicle || filters.date_from || filters.date_to || filters.payment_method || filters.payer_type || filters.search;
+  const hasActiveFilters = filters.category_code || filters.vehicle || filters.date_from || filters.date_to || filters.payment_method || filters.payer_type || filters.search || filters.ordering;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -132,6 +132,29 @@ export function ExpenseFilters({ filters, onChange, showVehicleFilter = false, s
           className={`${dateClass} w-full sm:w-auto min-w-[130px]${!filters.date_to ? ' date-empty' : ''}`}
         />
       </div>
+
+      {/* Sort by amount */}
+      <button
+        onClick={() => {
+          const current = filters.ordering;
+          const next = current === 'amount' ? '-amount' : current === '-amount' ? undefined : 'amount';
+          onChange({ ...filters, ordering: next });
+        }}
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+          filters.ordering?.includes('amount')
+            ? 'bg-[#2D8B7E]/10 text-[#2D8B7E] border border-[#2D8B7E]/30'
+            : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-slate-300'
+        }`}
+      >
+        {filters.ordering === 'amount' ? (
+          <ArrowUp className="w-3.5 h-3.5" />
+        ) : filters.ordering === '-amount' ? (
+          <ArrowDown className="w-3.5 h-3.5" />
+        ) : (
+          <ArrowUpDown className="w-3.5 h-3.5" />
+        )}
+        {t('filters.sortAmount')}
+      </button>
 
       {/* Clear */}
       {hasActiveFilters && (

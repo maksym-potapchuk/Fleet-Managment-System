@@ -1741,10 +1741,6 @@ function RegulationTab({ vehicleId, carNumber, initialKm, distanceUnit }: { vehi
           if (!isNaN(everyKm) && everyKm > 0) {
             entry.every_km = toKm(everyKm, distanceUnit);
           }
-          const notifyKm = parseInt(notifyKmInputs[item.id] || '', 10);
-          if (!isNaN(notifyKm) && notifyKm >= 0) {
-            entry.notify_before_km = toKm(notifyKm, distanceUnit);
-          }
           // If user typed a custom "next" value, send override
           const nextDisplay = parseInt(nextKmInputs[item.id] || '', 10);
           if (!isNaN(nextDisplay) && nextDisplay > 0) {
@@ -1771,7 +1767,6 @@ function RegulationTab({ vehicleId, carNumber, initialKm, distanceUnit }: { vehi
             title_uk: ce.title_uk || ce.title,
             title_en: ce.title_en || ce.title,
             every_km: toKm(parseInt(ce.every_km, 10), distanceUnit),
-            notify_before_km: toKm(parseInt(ce.notify_before_km || '500', 10), distanceUnit),
             last_done_km: lastDone,
           };
           await api.post(`/fleet/vehicles/${vehicleId}/regulation/entries/`, cePayload);
@@ -1835,15 +1830,13 @@ function RegulationTab({ vehicleId, carNumber, initialKm, distanceUnit }: { vehi
 
   const editEntry = async (entryId: number) => {
     const everyDisplay = parseInt(editForm.every_km, 10);
-    const notifyDisplay = parseInt(editForm.notify_before_km, 10);
     if (isNaN(everyDisplay) || everyDisplay <= 0) return;
-    if (isNaN(notifyDisplay) || notifyDisplay < 0) return;
     setEditLoading(true);
     try {
       const res = await api.patch<RegulationPlanEntry>(
         `/fleet/vehicles/${vehicleId}/regulation/entries/${entryId}/`,
         (() => {
-          const payload: Record<string, number | null> = { every_km: toKm(everyDisplay, distanceUnit), notify_before_km: toKm(notifyDisplay, distanceUnit) };
+          const payload: Record<string, number | null> = { every_km: toKm(everyDisplay, distanceUnit) };
           const lastDoneDisplay = parseInt(editForm.last_done_km, 10);
           if (!isNaN(lastDoneDisplay) && lastDoneDisplay >= 0) {
             payload.last_done_km = toKm(lastDoneDisplay, distanceUnit);
@@ -1877,14 +1870,12 @@ function RegulationTab({ vehicleId, carNumber, initialKm, distanceUnit }: { vehi
       }
 
       const everyKmVal = toKm(parseInt(addForm.every_km, 10), distanceUnit);
-      const notifyKmVal = toKm(parseInt(addForm.notify_before_km || '500', 10), distanceUnit);
       const payload: Record<string, string | number | null> = {
         title: title_uk || addForm.title,
         title_pl,
         title_uk: title_uk || addForm.title,
         title_en,
         every_km: everyKmVal,
-        notify_before_km: notifyKmVal,
         last_done_km: toKm(parseInt(addForm.last_done_km || '0', 10), distanceUnit),
       };
 
@@ -2078,16 +2069,6 @@ function RegulationTab({ vehicleId, carNumber, initialKm, distanceUnit }: { vehi
                       min="1"
                       value={addForm.every_km}
                       onChange={e => setAddForm(prev => ({ ...prev, every_km: e.target.value }))}
-                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNotifyBefore', { unit: unitLabel(distanceUnit) })}</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={addForm.notify_before_km}
-                      onChange={e => setAddForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
                       className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
@@ -2289,19 +2270,6 @@ function RegulationTab({ vehicleId, carNumber, initialKm, distanceUnit }: { vehi
                         />
                         <span className="text-xs text-slate-400 font-medium">{unitLabel(distanceUnit)}</span>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <ArrowRight className="w-4 h-4 text-blue-400/60 flex-shrink-0" />
-                        <span className="text-xs text-slate-500 font-medium flex-shrink-0">{t('entryNotifyBefore', { unit: unitLabel(distanceUnit) })}:</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={editForm.notify_before_km}
-                          onChange={e => setEditForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
-                          onKeyDown={e => { if (e.key === 'Enter') editEntry(entry.id); if (e.key === 'Escape') setEditingId(null); }}
-                          className="w-24 sm:w-32 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2.5 sm:px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-300/30 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <span className="text-xs text-slate-400 font-medium">{unitLabel(distanceUnit)}</span>
-                      </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => editEntry(entry.id)}
@@ -2489,17 +2457,6 @@ function RegulationTab({ vehicleId, carNumber, initialKm, distanceUnit }: { vehi
                     />
                   </div>
                   <div className="w-[calc(50%-4px)] md:flex-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('entryNotifyBefore', { unit: unitLabel(distanceUnit) })}</p>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder={String(distanceUnit === 'mi' && item.notify_before_mi != null ? item.notify_before_mi : toDisplayUnit(item.notify_before_km, distanceUnit))}
-                      value={notifyKmInputs[item.id] ?? ''}
-                      onChange={e => setNotifyKmInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
-                      className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
-                  <div className="w-[calc(50%-4px)] md:flex-1">
                     <p className="text-[10px] font-bold text-[#2D8B7E]/70 uppercase tracking-widest mb-0.5">{t('next')}</p>
                     <input
                       type="number"
@@ -2617,16 +2574,6 @@ function RegulationTab({ vehicleId, carNumber, initialKm, distanceUnit }: { vehi
                 min="1"
                 value={customForm.every_km}
                 onChange={e => setCustomForm(prev => ({ ...prev, every_km: e.target.value }))}
-                className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{t('entryNotifyBefore', { unit: unitLabel(distanceUnit) })}</label>
-              <input
-                type="number"
-                min="0"
-                value={customForm.notify_before_km}
-                onChange={e => setCustomForm(prev => ({ ...prev, notify_before_km: e.target.value }))}
                 className="w-full text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
@@ -3963,6 +3910,28 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
                 })}
               </div>
             </div>
+
+            {/* Excluded from cost notice */}
+            {parseFloat(summary.excluded_total) > 0 && (
+              <div className="mt-4 flex items-center gap-3 px-4 py-3 bg-orange-50 border border-orange-200 rounded-xl">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-100 shrink-0">
+                  <span className="text-orange-500 text-sm font-bold">!</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-orange-800">
+                    {t('summary.excludedLabel')}
+                  </p>
+                  <p className="text-xs text-orange-600 mt-0.5">
+                    {t('summary.excludedFromCost', {
+                      amount: parseFloat(summary.excluded_total).toLocaleString('pl-PL', { maximumFractionDigits: 0 }),
+                    })}
+                  </p>
+                </div>
+                <span className="text-sm font-bold text-orange-700 tabular-nums shrink-0">
+                  {parseFloat(summary.excluded_total).toLocaleString('pl-PL', { maximumFractionDigits: 0 })} zł
+                </span>
+              </div>
+            )}
           </div>
         );
       })()}

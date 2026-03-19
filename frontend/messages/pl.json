@@ -536,6 +536,7 @@
       "INSPECTION": "Przegląd techniczny",
       "ACCESSORIES": "Akcesoria",
       "DOCUMENTS": "Dokumenty",
+      "PARKING": "Parking",
       "OTHER": "Inne"
     },
     "fields": {
@@ -586,6 +587,8 @@
       "approvalStatus": "Status zatwierdzenia",
       "splitMismatch": "Suma nie zgadza się",
       "noDriverWarning": "Brak przypisanego kierowcy do pojazdu. Przypisz kierowcę, aby wybrać typ płatności \"Klient\".",
+      "excludeFromCost": "Nie wliczaj w koszt własny pojazdu (opłata w całości po stronie klienta)",
+      "excludeFromCostYes": "Tak",
       "certificate": "Dowód rejestracyjny"
     },
     "detail": {
@@ -668,7 +671,9 @@
       "title": "Podsumowanie wydatków",
       "button": "Podsumowanie",
       "noData": "Brak wydatków",
-      "ofTotal": "z łącznej kwoty"
+      "ofTotal": "z łącznej kwoty",
+      "excludedFromCost": "Istnieją wydatki na {amount} zł, które nie są wliczone w koszt własny (opłata po stronie klienta)",
+      "excludedLabel": "Nie wliczone w koszt własny"
     },
     "filters": {
       "search": "Szukaj",
@@ -679,7 +684,8 @@
       "allPayerTypes": "Wszyscy płatnicy",
       "dateFrom": "Od",
       "dateTo": "Do",
-      "clearAll": "Wyczyść filtry"
+      "clearAll": "Wyczyść filtry",
+      "sortAmount": "Kwota"
     }
   },
   "vehicleModal": {

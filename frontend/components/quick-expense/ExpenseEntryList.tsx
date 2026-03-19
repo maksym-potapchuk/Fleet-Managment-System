@@ -3,7 +3,7 @@
 import { QuickExpenseEntry } from '@/types/expense';
 import {
   Fuel, Wrench, Package, Shield, Droplets, AlertTriangle, MoreHorizontal,
-  FileText, ShoppingBag,
+  FileText, ShoppingBag, CircleParking,
   Pencil, Trash2,
   type LucideIcon,
 } from 'lucide-react';
@@ -18,6 +18,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'more-horizontal': MoreHorizontal,
   'file-text': FileText,
   'shopping-bag': ShoppingBag,
+  'circle-parking': CircleParking,
 };
 
 const COLOR_STYLES: Record<string, { bg: string; text: string }> = {
@@ -30,6 +31,7 @@ const COLOR_STYLES: Record<string, { bg: string; text: string }> = {
   '#64748B': { bg: 'bg-slate-100', text: 'text-slate-600' },
   '#EC4899': { bg: 'bg-pink-50', text: 'text-pink-600' },
   '#6366F1': { bg: 'bg-indigo-50', text: 'text-indigo-600' },
+  '#14B8A6': { bg: 'bg-teal-50', text: 'text-teal-600' },
 };
 
 function getDetail(entry: QuickExpenseEntry, tExpenses: (key: string) => string): string {

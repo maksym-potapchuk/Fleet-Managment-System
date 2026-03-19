@@ -163,6 +163,7 @@ export function QuickEntryForm({
 
   // ── Cost splitting ──
   const [clientDriver, setClientDriver] = useState(editingEntry?.client_driver || '');
+  const [excludeFromCost, setExcludeFromCost] = useState(editingEntry?.exclude_from_cost || false);
   const [splitMode, setSplitMode] = useState<'PLN' | '%'>('PLN');
   const [companyAmount, setCompanyAmount] = useState(editingEntry?.company_amount || '');
   const [clientAmount, setClientAmount] = useState(editingEntry?.client_amount || '');
@@ -189,6 +190,9 @@ export function QuickEntryForm({
   }, []);
 
   const fuelTotal = fuelEntries.reduce((sum, fe) => sum + (parseFloat(fe.amount) || 0), 0);
+
+  // ── PARKING ──
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   // ── WASHING ──
   const [washType, setWashType] = useState<WashType | undefined>(editingEntry?.wash_type);
@@ -250,6 +254,7 @@ export function QuickEntryForm({
       setCompanyAmount('');
       setClientAmount('');
       setClientPercent('');
+      setExcludeFromCost(false);
     }
     setPayerType(val);
   }, [vehicleDriver]);
@@ -390,6 +395,8 @@ export function QuickEntryForm({
       if (!foundInvoice && invoiceFile) entry.invoice_file = invoiceFile;
     } else if (code === 'OTHER') {
       if (expenseFor) entry.expense_for = expenseFor;
+    } else if (code === 'PARKING') {
+      if (receiptFile) entry.receipt = receiptFile;
     }
 
     // Cost splitting
@@ -397,6 +404,7 @@ export function QuickEntryForm({
       entry.company_amount = companyAmount;
       entry.client_amount = clientAmount;
       if (clientDriver) entry.client_driver = clientDriver;
+      if (excludeFromCost) entry.exclude_from_cost = true;
     }
 
     onAdd(entry);
@@ -540,6 +548,19 @@ export function QuickEntryForm({
                   </span>
                 </div>
               )}
+
+              {/* Exclude from vehicle cost */}
+              <label className="flex items-start gap-2.5 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={excludeFromCost}
+                  onChange={(e) => setExcludeFromCost(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500/30 cursor-pointer"
+                />
+                <span className="text-xs text-amber-800 group-hover:text-amber-900 select-none leading-snug">
+                  {tExpenses('fields.excludeFromCost')}
+                </span>
+              </label>
             </div>
           )}
 
@@ -1009,6 +1030,11 @@ export function QuickEntryForm({
                 className={inputClasses}
               />
             </div>
+          )}
+
+          {/* ── PARKING ── */}
+          {code === 'PARKING' && (
+            <FileInput label={tExpenses('fields.receipt')} onChange={setReceiptFile} />
           )}
 
           {/* Date */}

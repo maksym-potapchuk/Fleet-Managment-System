@@ -3,7 +3,7 @@
 import { ExpenseCategory } from '@/types/expense';
 import {
   Fuel, Wrench, Package, Shield, Droplets, AlertTriangle, MoreHorizontal,
-  FileText, ShoppingBag,
+  FileText, ShoppingBag, CircleParking,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -17,6 +17,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'more-horizontal': MoreHorizontal,
   'file-text': FileText,
   'shopping-bag': ShoppingBag,
+  'circle-parking': CircleParking,
 };
 
 const QUICK_CATEGORY_ORDER: Record<string, number> = {
@@ -29,6 +30,7 @@ const QUICK_CATEGORY_ORDER: Record<string, number> = {
   ACCESSORIES: 7,
   FINES: 8,
   SERVICE: 9,
+  PARKING: 10,
 };
 
 const COLOR_STYLES: Record<string, { bg: string; text: string; border: string; activeBorder: string }> = {
@@ -41,6 +43,7 @@ const COLOR_STYLES: Record<string, { bg: string; text: string; border: string; a
   '#64748B': { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200', activeBorder: 'border-slate-500' },
   '#EC4899': { bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-200', activeBorder: 'border-pink-500' },
   '#6366F1': { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-200', activeBorder: 'border-indigo-500' },
+  '#14B8A6': { bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-200', activeBorder: 'border-teal-500' },
 };
 
 function getIcon(iconName: string): LucideIcon {

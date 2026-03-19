@@ -111,6 +111,13 @@ function ModalContent({ expense, onClose, onEdit }: { expense: Expense; onClose:
                 </span>
               } />
             )}
+            {expense.exclude_from_cost && (
+              <DetailRow label={t('fields.excludeFromCost')} value={
+                <span className="inline-block text-xs font-bold px-2 py-0.5 rounded-md bg-orange-100 text-orange-700">
+                  {t('fields.excludeFromCostYes')}
+                </span>
+              } />
+            )}
           </>
         )}
         {expense.expense_for && (

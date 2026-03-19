@@ -38,6 +38,7 @@ function buildQueryString(filters?: ExpenseFilters, page?: number): string {
   if (filters?.payment_method) params.append('payment_method', filters.payment_method);
   if (filters?.payer_type) params.append('payer_type', filters.payer_type);
   if (filters?.search) params.append('search', filters.search);
+  if (filters?.ordering) params.append('ordering', filters.ordering);
   if (page && page > 1) params.append('page', String(page));
   const qs = params.toString();
   return qs ? `?${qs}` : '';
@@ -148,6 +149,7 @@ export const expenseService = {
               data.client_amount = clientAmt;
               data.company_amount = Math.round((entryTotal - clientAmt) * 100) / 100;
               if (entry.client_driver) data.client_driver = entry.client_driver;
+              if (entry.exclude_from_cost) data.exclude_from_cost = true;
             } else {
               // COMPANY payer: amount = full amount
               data.amount = fe.amount || '0';
@@ -168,6 +170,7 @@ export const expenseService = {
             if (entry.company_amount) data.company_amount = entry.company_amount;
             if (entry.client_amount) data.client_amount = entry.client_amount;
             if (entry.client_driver) data.client_driver = entry.client_driver;
+            if (entry.exclude_from_cost) data.exclude_from_cost = true;
           } else {
             // COMPANY payer: amount = full amount
             data.amount = entry.amount || '0';
@@ -206,6 +209,8 @@ export const expenseService = {
             if (entry.invoice_file) data.invoice_file = entry.invoice_file;
           } else if (code === 'OTHER') {
             if (entry.expense_for) data.expense_for = entry.expense_for;
+          } else if (code === 'PARKING') {
+            if (entry.receipt) data.receipt = entry.receipt;
           } else if (code === 'WASHING') {
             data.wash_type = entry.wash_type;
           } else if (code === 'FINES') {

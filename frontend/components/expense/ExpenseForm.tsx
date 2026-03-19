@@ -73,6 +73,7 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [fleetServices, setFleetServices] = useState<Service[]>([]);
   const [clientDriver, setClientDriver] = useState(initialData?.client_driver || '');
+  const [excludeFromCost, setExcludeFromCost] = useState(initialData?.exclude_from_cost || false);
   const [splitMode, setSplitMode] = useState<'PLN' | '%'>('PLN');
   const [companyAmount, setCompanyAmount] = useState(initialData?.company_amount || '');
   const [clientAmount, setClientAmount] = useState(initialData?.client_amount || '');
@@ -117,6 +118,7 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
       setCompanyAmount('');
       setClientAmount('');
       setClientPercent('');
+      setExcludeFromCost(false);
     }
 
     setFormData(prev => {
@@ -245,6 +247,8 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
       if (!foundInvoice && invoiceFile) data.invoice_file = invoiceFile;
     } else if (categoryCode === 'OTHER') {
       if (formData.expense_for) data.expense_for = formData.expense_for;
+    } else if (categoryCode === 'PARKING') {
+      if (receiptFile) data.receipt = receiptFile;
     }
 
     // Amounts: CLIENT → split (company_amount + client_amount), COMPANY → amount
@@ -252,6 +256,7 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
       data.company_amount = companyAmount;
       data.client_amount = clientAmount;
       if (clientDriver) data.client_driver = clientDriver;
+      if (excludeFromCost) data.exclude_from_cost = true;
     } else if (!isAutoAmountCategory) {
       data.amount = formData.amount;
     }
@@ -593,6 +598,11 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
           </div>
         );
 
+      case 'PARKING':
+        return (
+          <FileInput label={t('fields.receipt')} onChange={setReceiptFile} disabled={isLoading} />
+        );
+
       default:
         return null;
     }
@@ -764,6 +774,20 @@ export function ExpenseForm({ onSubmit, onCancel, categories, initialData, isLoa
               </span>
             </div>
           )}
+
+          {/* Exclude from vehicle cost */}
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={excludeFromCost}
+              onChange={(e) => setExcludeFromCost(e.target.checked)}
+              disabled={isLoading}
+              className="mt-0.5 w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500/30 cursor-pointer"
+            />
+            <span className="text-sm text-amber-800 group-hover:text-amber-900 select-none leading-snug">
+              {t('fields.excludeFromCost')}
+            </span>
+          </label>
         </div>
       )}
 

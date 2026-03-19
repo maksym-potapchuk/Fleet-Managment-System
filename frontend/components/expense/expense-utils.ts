@@ -1,6 +1,6 @@
 import {
   Fuel, Wrench, Package, Shield,
-  Droplets, AlertTriangle, MoreHorizontal,
+  Droplets, AlertTriangle, MoreHorizontal, CircleParking,
   type LucideIcon,
 } from 'lucide-react';
 import { Expense } from '@/types/expense';
@@ -13,6 +13,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   droplets: Droplets,
   'alert-triangle': AlertTriangle,
   'more-horizontal': MoreHorizontal,
+  'circle-parking': CircleParking,
 };
 
 export function getCategoryIcon(iconName: string): LucideIcon {
@@ -27,6 +28,7 @@ export const COLOR_STYLES: Record<string, { bg: string; text: string; border: st
   '#06B6D4': { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' },
   '#EF4444': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
   '#64748B': { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' },
+  '#14B8A6': { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
 };
 
 export function getCategoryStyle(color: string) {
