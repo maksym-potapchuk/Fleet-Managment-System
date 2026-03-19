@@ -18,7 +18,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto delete-superuser db-dump db-seed db-reset dump seed seed-defaults seed-categories create-reg-schema force-reg-schema prod-force-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-reg-schema drop-vehicles trello-lists import-trello import-trello-dry import-trello-all import-trello-all-dry import-trello-reposition set-user-color prod-set-user-color lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
+.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto delete-superuser db-dump db-seed db-reset dump seed seed-defaults seed-categories create-reg-schema force-reg-schema prod-force-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-reg-schema drop-vehicles reset-vehicle-reg prod-reset-vehicle-reg trello-lists import-trello import-trello-dry import-trello-all import-trello-all-dry import-trello-reposition set-user-color prod-set-user-color lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
 
 help:
 >@echo "Available commands:"
@@ -68,6 +68,8 @@ help:
 >@echo "  make assign-regulation CAR=AA6601BB - Assign (fill) default regulation for vehicle"
 >@echo "  make drop-reg-schema             - Delete default regulation schema + all vehicle regulation data"
 >@echo "  make drop-vehicles               - Delete ALL vehicles from the database (with confirmation)"
+>@echo "  make reset-vehicle-reg CAR=AA6601BB - Reset mileage + regulation for vehicle"
+>@echo "  make prod-reset-vehicle-reg CAR=AA6601BB - Same on prod"
 >@echo "  make set-user-color USERNAME=x COLOR=#E53E3E - Set user display color (dev)"
 >@echo "  make prod-set-user-color USERNAME=x COLOR=#E53E3E - Set user display color (prod)"
 >@echo "  make delete-superuser EMAIL=x    - Delete superuser by email"
@@ -239,6 +241,12 @@ set-user-color:
 
 prod-set-user-color:
 >$(COMPOSE_PROD) exec $(BACKEND_SERVICE) python manage.py shell -c "from account.models import User; u = User.objects.get(username='$(USERNAME)'); u.color = '$(COLOR)'; u.save(update_fields=['color']); print(f'{u.username} → {u.color}')"
+
+reset-vehicle-reg:
+>$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py reset_vehicle_regulation $(CAR) --force
+
+prod-reset-vehicle-reg:
+>$(COMPOSE_PROD) exec $(BACKEND_SERVICE) python manage.py reset_vehicle_regulation $(CAR) --force
 
 drop-reg-schema:
 >$(COMPOSE) exec $(BACKEND_SERVICE) python manage.py drop_reg_schema --force
