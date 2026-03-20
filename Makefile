@@ -18,7 +18,7 @@ SU_USERNAME ?= admin
 SU_EMAIL ?= admin@example.com
 SU_PASSWORD ?= admin12345
 
-.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto delete-superuser db-dump db-seed db-reset dump seed seed-defaults seed-categories create-reg-schema force-reg-schema prod-force-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-reg-schema drop-vehicles reset-vehicle-reg prod-reset-vehicle-reg trello-lists import-trello import-trello-dry import-trello-all import-trello-all-dry import-trello-reposition set-user-color prod-set-user-color lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
+.PHONY: help up down restart build build-bot prod prod-build prod-down prod-up docker-clean docker-nuke docker-purge ps logs logs-backend logs-frontend logs-nginx logs-bot logs-db shell-backend shell-frontend shell-db migrate makemigrations createsuperuser createsuperuser-auto delete-superuser db-dump db-seed db-reset dump seed seed-defaults seed-categories create-reg-schema force-reg-schema prod-force-reg-schema create-driver-vehicle create-driver-vehicle-force show-regulation assign-regulation drop-reg-schema drop-vehicles reset-vehicle-reg prod-reset-vehicle-reg trello-lists import-trello import-trello-dry import-trello-all import-trello-all-dry import-trello-reposition set-user-color prod-set-user-color lint-fix lint-check lint-fix-backend lint-fix-frontend lint-check-backend lint-check-frontend test test-backend test-frontend pre-push monitoring-up monitoring-down monitoring-restart monitoring-logs
 
 help:
 >@echo "Available commands:"
@@ -40,6 +40,7 @@ help:
 >@echo "  make prod-up             - Start prod stack only, no rebuild (up -d)"
 >@echo "  make docker-clean        - Stop all, remove containers, volumes, orphans"
 >@echo "  make docker-nuke         - Full clean: containers, volumes, images, build cache"
+>@echo "  make docker-purge        - Nuclear: nuke + all unused images, volumes, networks, cache"
 >@echo "  make ps                  - Show container status"
 >@echo "  make logs                - Show all logs"
 >@echo "  make logs-backend        - Show backend logs"
@@ -139,6 +140,10 @@ docker-nuke:
 >$(COMPOSE) down -v --remove-orphans --rmi all
 >docker builder prune -f
 >@echo "Docker nuked: containers, volumes, images, build cache removed."
+
+docker-purge: docker-nuke
+>docker system prune -a --volumes -f
+>@echo "Docker purged: all unused images, volumes, networks, and cache removed."
 
 ps:
 >$(COMPOSE) ps
