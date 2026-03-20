@@ -12,9 +12,63 @@ import { QuickEntryForm } from './QuickEntryForm';
 import { ExpenseEntryList } from './ExpenseEntryList';
 import { ReviewStep } from './ReviewStep';
 import { SubmissionProgress } from './SubmissionProgress';
+import { ExitDraftDialog } from './ExitDraftDialog';
 import { useSidebar } from '@/app/[locale]/quick-expenses/SidebarContext';
 import { useRouter } from '@/src/i18n/routing';
-import { Menu, ChevronLeft, ArrowLeft, Zap } from 'lucide-react';
+import { Menu, ChevronLeft, ArrowLeft, Zap, FileText } from 'lucide-react';
+
+// ── Draft persistence (IndexedDB) ──
+
+import { get, set, del } from 'idb-keyval';
+
+const DRAFT_KEY = 'fleet:quick-expenses:draft';
+const DRAFT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface DraftData {
+  vehicleId: string;
+  vehicleLabel: string;
+  entries: QuickExpenseEntry[];
+  savedAt: number;
+  expiresAt: number;
+}
+
+async function saveDraftToIDB(state: WizardState): Promise<void> {
+  if (!state.vehicleId || state.entries.length === 0) return;
+  const now = Date.now();
+  const draft: DraftData = {
+    vehicleId: state.vehicleId,
+    vehicleLabel: state.vehicleLabel,
+    entries: state.entries,
+    savedAt: now,
+    expiresAt: now + DRAFT_TTL_MS,
+  };
+  try { await set(DRAFT_KEY, draft); } catch { /* quota */ }
+}
+
+async function loadDraftFromIDB(): Promise<DraftData | null> {
+  try {
+    const draft = await get<DraftData>(DRAFT_KEY);
+    if (!draft?.vehicleId || !draft.entries?.length) return null;
+    if (Date.now() > draft.expiresAt) {
+      await del(DRAFT_KEY);
+      return null;
+    }
+    return draft;
+  } catch { return null; }
+}
+
+async function clearDraftFromIDB(): Promise<void> {
+  try { await del(DRAFT_KEY); } catch { /* noop */ }
+}
+
+function formatDraftTimeLeft(expiresAt: number, t: (key: string) => string): string {
+  const diff = expiresAt - Date.now();
+  if (diff <= 0) return '';
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  if (hours > 0) return t('draft.ttlHours').replace('__hours__', String(hours));
+  return t('draft.ttlMinutes').replace('__minutes__', String(minutes));
+}
 
 // ── State ──
 
@@ -46,7 +100,8 @@ type WizardAction =
   | { type: 'UPDATE_RESULT'; result: QuickExpenseResult }
   | { type: 'SUBMISSION_DONE' }
   | { type: 'RETRY_FAILED' }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  | { type: 'RESTORE_DRAFT'; vehicleId: string; vehicleLabel: string; entries: QuickExpenseEntry[] };
 
 const initialState: WizardState = {
   step: 'vehicle',
@@ -107,6 +162,8 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     }
     case 'RESET':
       return initialState;
+    case 'RESTORE_DRAFT':
+      return { ...initialState, step: 'review', vehicleId: action.vehicleId, vehicleLabel: action.vehicleLabel, entries: action.entries };
     default:
       return state;
   }
@@ -160,6 +217,11 @@ export function QuickExpenseWizard() {
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
+  // Draft state
+  const [draftBanner, setDraftBanner] = useState<DraftData | null>(null);
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
+  const [pendingExitAction, setPendingExitAction] = useState<(() => void) | null>(null);
+
   useEffect(() => {
     let ignore = false;
     Promise.all([vehicleService.getVehicles(), expenseService.getCategories()])
@@ -173,6 +235,16 @@ export function QuickExpenseWizard() {
       .finally(() => { if (!ignore) setIsLoadingData(false); });
     return () => { ignore = true; };
   }, []);
+
+  // Load draft on mount
+  useEffect(() => {
+    loadDraftFromIDB().then(draft => { if (draft) setDraftBanner(draft); });
+  }, []);
+
+  // Clear draft after successful submission
+  useEffect(() => {
+    if (state.step === 'done') { clearDraftFromIDB(); }
+  }, [state.step]);
 
   const handleSubmit = useCallback(async () => {
     if (!state.vehicleId) return;
@@ -190,9 +262,54 @@ export function QuickExpenseWizard() {
 
   const canGoBack = state.step === 'add' || state.step === 'review';
 
+  const hasUnsavedEntries = state.entries.length > 0 && state.step !== 'done' && state.step !== 'submitting';
+
+  const tryExit = useCallback((exitAction: () => void) => {
+    if (hasUnsavedEntries) {
+      setPendingExitAction(() => exitAction);
+      setExitDialogOpen(true);
+    } else {
+      exitAction();
+    }
+  }, [hasUnsavedEntries]);
+
+  const handleExitConfirm = useCallback(async () => {
+    await clearDraftFromIDB();
+    setExitDialogOpen(false);
+    pendingExitAction?.();
+    setPendingExitAction(null);
+  }, [pendingExitAction]);
+
+  const handleSaveDraftAndExit = useCallback(async () => {
+    await saveDraftToIDB(state);
+    setExitDialogOpen(false);
+    pendingExitAction?.();
+    setPendingExitAction(null);
+  }, [state, pendingExitAction]);
+
+  const handleExitCancel = useCallback(() => {
+    setExitDialogOpen(false);
+    setPendingExitAction(null);
+  }, []);
+
+  const handleRestoreDraft = useCallback(async () => {
+    if (!draftBanner) return;
+    dispatch({ type: 'RESTORE_DRAFT', vehicleId: draftBanner.vehicleId, vehicleLabel: draftBanner.vehicleLabel, entries: draftBanner.entries });
+    setDraftBanner(null);
+    await clearDraftFromIDB();
+  }, [draftBanner]);
+
+  const handleDismissDraft = useCallback(async () => {
+    setDraftBanner(null);
+    await clearDraftFromIDB();
+  }, []);
+
   const handleBack = () => {
-    if (state.step === 'review') dispatch({ type: 'BACK_TO_ADD' });
-    else if (state.step === 'add') dispatch({ type: 'BACK_TO_VEHICLE' });
+    if (state.step === 'review') {
+      dispatch({ type: 'BACK_TO_ADD' });
+    } else if (state.step === 'add') {
+      tryExit(() => dispatch({ type: 'BACK_TO_VEHICLE' }));
+    }
   };
 
   const showForm = state.activeCategoryId || state.editingIndex !== null;
@@ -201,6 +318,13 @@ export function QuickExpenseWizard() {
   // Resolve driver from selected vehicle
   const selectedVehicle = vehicles.find(v => v.id === state.vehicleId);
   const vehicleDriver = selectedVehicle?.driver ?? null;
+
+  // Draft info for VehicleStep card
+  const draftInfo = draftBanner ? {
+    vehicleLabel: draftBanner.vehicleLabel,
+    entryCount: draftBanner.entries.length,
+    timeLeft: formatDraftTimeLeft(draftBanner.expiresAt, t),
+  } : null;
 
   return (
     <div className="flex h-screen flex-col bg-slate-50 overflow-x-hidden">
@@ -216,7 +340,7 @@ export function QuickExpenseWizard() {
                 <ChevronLeft className="h-5 w-5" />
               </button>
             ) : (
-              <button onClick={() => router.push('/dashboard')} className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 active:scale-95">
+              <button onClick={() => tryExit(() => router.push('/dashboard'))} className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 active:scale-95">
                 <ArrowLeft className="h-5 w-5" />
               </button>
             )}
@@ -227,10 +351,23 @@ export function QuickExpenseWizard() {
               <h1 className="text-lg font-bold text-slate-900 truncate">{t('title')}</h1>
             </div>
           </div>
+          {/* Draft button in header */}
+          {state.step === 'vehicle' && draftBanner && (
+            <button
+              onClick={handleRestoreDraft}
+              className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 rounded-xl border border-amber-200 bg-amber-50 text-sm font-medium text-amber-700 transition hover:bg-amber-100 active:scale-95"
+            >
+              <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
+              <span className="hidden sm:inline">{t('draft.cardTitle')}</span>
+              <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded-full bg-amber-200 text-xs font-bold text-amber-800">
+                {draftBanner.entries.length}
+              </span>
+            </button>
+          )}
           {/* Desktop: vehicle pill in header */}
           {state.step === 'add' && state.vehicleLabel && (
             <button
-              onClick={() => dispatch({ type: 'BACK_TO_VEHICLE' })}
+              onClick={() => tryExit(() => dispatch({ type: 'BACK_TO_VEHICLE' }))}
               className="hidden lg:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-50 border border-teal-200 text-sm font-medium text-teal-700 transition hover:bg-teal-100 active:scale-95"
             >
               <span className="font-mono font-semibold text-xs">{state.vehicleLabel}</span>
@@ -256,6 +393,9 @@ export function QuickExpenseWizard() {
                 <VehicleStep
                   vehicles={vehicles}
                   onSelect={(vehicleId, label) => dispatch({ type: 'SET_VEHICLE', vehicleId, label })}
+                  draft={draftInfo}
+                  onRestoreDraft={handleRestoreDraft}
+                  onDismissDraft={handleDismissDraft}
                 />
               </div>
             )}
@@ -265,7 +405,7 @@ export function QuickExpenseWizard() {
                 {/* Mobile-only vehicle pill */}
                 <div className="flex-shrink-0 px-4 pt-4 pb-2 max-w-lg mx-auto w-full lg:hidden">
                   <button
-                    onClick={() => dispatch({ type: 'BACK_TO_VEHICLE' })}
+                    onClick={() => tryExit(() => dispatch({ type: 'BACK_TO_VEHICLE' }))}
                     className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-sm font-medium text-teal-700 transition hover:bg-teal-100 active:scale-95"
                   >
                     <span className="font-mono font-semibold text-xs">{state.vehicleLabel}</span>
@@ -431,6 +571,14 @@ export function QuickExpenseWizard() {
           </>
         )}
       </div>
+
+      <ExitDraftDialog
+        isOpen={exitDialogOpen}
+        onContinue={handleExitCancel}
+        onExit={handleExitConfirm}
+        onSaveDraft={handleSaveDraftAndExit}
+        t={t}
+      />
     </div>
   );
 }

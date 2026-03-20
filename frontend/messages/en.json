@@ -790,6 +790,21 @@
       "retryFailed": "Retry failed",
       "done": "Done",
       "goToExpenses": "View expenses"
+    },
+    "draft": {
+      "exitTitle": "Exit quick expenses?",
+      "exitMessage": "You have unsaved expenses. What would you like to do?",
+      "ttlNote": "Draft is stored for 24 hours",
+      "saveDraftAndExit": "Save draft and exit",
+      "exitWithout": "Exit without saving",
+      "continue": "Continue editing",
+      "cardTitle": "Saved draft",
+      "entries": "__count__ expenses",
+      "found": "Draft: __vehicle__ — __count__ expenses",
+      "restore": "Restore",
+      "dismiss": "Discard",
+      "ttlHours": "__hours__h remaining",
+      "ttlMinutes": "__minutes__m remaining"
     }
   }
 }

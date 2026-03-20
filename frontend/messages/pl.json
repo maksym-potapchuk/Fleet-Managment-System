@@ -790,6 +790,21 @@
       "retryFailed": "Ponów nieudane",
       "done": "Gotowe",
       "goToExpenses": "Zobacz wydatki"
+    },
+    "draft": {
+      "exitTitle": "Wyjść z szybkich wydatków?",
+      "exitMessage": "Masz niezapisane wydatki. Co chcesz zrobić?",
+      "ttlNote": "Szkic jest przechowywany przez 24 godziny",
+      "saveDraftAndExit": "Zapisz szkic i wyjdź",
+      "exitWithout": "Wyjdź bez zapisywania",
+      "continue": "Kontynuuj wypełnianie",
+      "cardTitle": "Zapisany szkic",
+      "entries": "__count__ wydatków",
+      "found": "Szkic: __vehicle__ — __count__ wydatków",
+      "restore": "Przywróć",
+      "dismiss": "Usuń",
+      "ttlHours": "Pozostało __hours__ godz",
+      "ttlMinutes": "Pozostało __minutes__ min"
     }
   }
 }

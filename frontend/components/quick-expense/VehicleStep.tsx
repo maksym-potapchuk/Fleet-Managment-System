@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Vehicle } from '@/types/vehicle';
-import { Car, Search, Clock } from 'lucide-react';
+import { Car, Search, Clock, FileText, Trash2 } from 'lucide-react';
 
 const RECENT_KEY = 'fleet:quick-expenses:recent-vehicles';
 const MAX_RECENT = 5;
@@ -25,12 +25,21 @@ function saveRecentVehicleId(vehicleId: string) {
   } catch { /* noop */ }
 }
 
+export interface DraftInfo {
+  vehicleLabel: string;
+  entryCount: number;
+  timeLeft: string;
+}
+
 interface VehicleStepProps {
   vehicles: Vehicle[];
   onSelect: (vehicleId: string, label: string) => void;
+  draft?: DraftInfo | null;
+  onRestoreDraft?: () => void;
+  onDismissDraft?: () => void;
 }
 
-export function VehicleStep({ vehicles, onSelect }: VehicleStepProps) {
+export function VehicleStep({ vehicles, onSelect, draft, onRestoreDraft, onDismissDraft }: VehicleStepProps) {
   const t = useTranslations('quickExpenses');
   const [query, setQuery] = useState('');
   const [recentIds] = useState<string[]>(() => getRecentVehicleIds());
@@ -64,6 +73,42 @@ export function VehicleStep({ vehicles, onSelect }: VehicleStepProps) {
     <div className="flex flex-col items-center h-full p-4 w-full">
       <h2 className="text-xl font-bold text-slate-900 mb-1 text-center">{t('vehicleStep.title')}</h2>
       <p className="text-sm text-slate-500 mb-4 text-center">{t('subtitle')}</p>
+
+      {/* Draft card */}
+      {draft && onRestoreDraft && onDismissDraft && (
+        <div className="w-full max-w-sm mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 flex-shrink-0">
+              <FileText className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-900">{t('draft.cardTitle')}</p>
+              <p className="text-xs text-slate-600 mt-0.5">
+                {draft.vehicleLabel} &middot; {t('draft.entries').replace('__count__', String(draft.entryCount))}
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                <Clock className="inline h-3 w-3 mr-1 -mt-px" />
+                {draft.timeLeft}
+              </p>
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  onClick={onRestoreDraft}
+                  className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-[#2D8B7E] to-[#246f65] transition hover:brightness-105 active:scale-95"
+                >
+                  {t('draft.restore')}
+                </button>
+                <button
+                  onClick={onDismissDraft}
+                  className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium text-slate-500 transition hover:bg-amber-100 active:scale-95"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  {t('draft.dismiss')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative mb-4 w-full max-w-sm">
