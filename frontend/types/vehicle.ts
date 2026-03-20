@@ -7,31 +7,6 @@ export interface VehiclePhoto {
   uploaded_at: string;
 }
 
-export interface VehicleOwner {
-  id: number;
-  driver: {
-    id: string;
-    first_name: string;
-    last_name: string;
-  };
-  agreement_number: string;
-  assigned_at: string;
-  created_by: number | null;
-}
-
-export interface OwnerHistoryRecord {
-  id: number;
-  driver: {
-    id: string;
-    first_name: string;
-    last_name: string;
-  };
-  agreement_number: string;
-  assigned_at: string;
-  unassigned_at: string;
-  created_by: number | null;
-}
-
 export interface InspectionLinkedExpense {
   id: string;
   amount: string;

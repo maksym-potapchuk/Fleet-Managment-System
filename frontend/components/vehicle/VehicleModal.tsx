@@ -2,12 +2,10 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { X, Save, Archive, Car, Upload, Plus, UserPlus, ChevronDown } from 'lucide-react';
+import { X, Save, Archive, Car, Upload, ChevronDown } from 'lucide-react';
 import { Vehicle, CreateVehicleData, ManufacturerChoice, VehicleStatus, FuelType, VehiclePhoto } from '@/types/vehicle';
 import { toDisplayUnit, toKm, type DistanceUnit } from '@/lib/distance';
-import { Driver } from '@/types/driver';
 import { vehicleService } from '@/services/vehicle';
-import { getAllDrivers, createDriver } from '@/services/driver';
 
 interface VehicleModalProps {
   vehicle?: Vehicle | null;
@@ -51,8 +49,6 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
   const t = useTranslations('vehicleModal');
   const tStatuses = useTranslations('vehicles.statuses');
   const tFuelTypes = useTranslations('vehicles.fuelTypes');
-  const tCommon = useTranslations('common');
-
   const [formData, setFormData] = useState<FormData>({
     model: '',
     manufacturer: 'Toyota',
@@ -67,14 +63,6 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
   });
   const [kmStr, setKmStr] = useState('');
   const [distUnit, setDistUnit] = useState<DistanceUnit>('km');
-  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
-
-  // Driver state
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [driversLoading, setDriversLoading] = useState(false);
-  const [showDriverCreate, setShowDriverCreate] = useState(false);
-  const [newDriver, setNewDriver] = useState({ first_name: '', last_name: '', phone_number: '' });
-  const [creatingDriver, setCreatingDriver] = useState(false);
 
   // Photo state
   const [existingPhotos, setExistingPhotos] = useState<VehiclePhoto[]>([]);
@@ -126,7 +114,6 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
       const unit = vehicle.distance_unit ?? 'km';
       setDistUnit(unit);
       setKmStr(String(toDisplayUnit(vehicle.initial_km, unit)));
-      setSelectedDriverId(vehicle.driver?.id || null);
       setExistingPhotos(vehicle.photos || []);
     } else {
       setFormData({
@@ -143,7 +130,6 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
       });
       setDistUnit('km');
       setKmStr('');
-      setSelectedDriverId(null);
       setExistingPhotos([]);
     }
     setStagedFiles([]);
@@ -152,19 +138,7 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
       return [];
     });
     setError(null);
-    setShowDriverCreate(false);
-    setNewDriver({ first_name: '', last_name: '', phone_number: '' });
   }, [vehicle, isOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setDriversLoading(true);
-      getAllDrivers()
-        .then(setDrivers)
-        .catch(() => {})
-        .finally(() => setDriversLoading(false));
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     return () => {
@@ -204,22 +178,6 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
     }
   };
 
-  const handleCreateDriver = async () => {
-    if (!newDriver.first_name.trim() || !newDriver.last_name.trim() || !newDriver.phone_number.trim()) return;
-    setCreatingDriver(true);
-    try {
-      const created = await createDriver(newDriver);
-      setDrivers(prev => [...prev, created]);
-      setSelectedDriverId(created.id);
-      setShowDriverCreate(false);
-      setNewDriver({ first_name: '', last_name: '', phone_number: '' });
-    } catch {
-      setError(t('errorCreateDriver'));
-    } finally {
-      setCreatingDriver(false);
-    }
-  };
-
   const handleSubmit = async () => {
     setLoading(true);
     setError(null);
@@ -246,22 +204,9 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
       if (vehicle) {
         await vehicleService.updateVehicle(vehicle.id, vehicleData);
         vehicleId = vehicle.id;
-
-        const currentDriverId = vehicle.driver?.id || null;
-        if (selectedDriverId !== currentDriverId) {
-          if (selectedDriverId) {
-            await vehicleService.assignOwner(vehicleId, { driver: selectedDriverId });
-          } else {
-            await vehicleService.unassignOwner(vehicleId);
-          }
-        }
       } else {
         const created = await vehicleService.createVehicle(vehicleData);
         vehicleId = created.id;
-
-        if (selectedDriverId) {
-          await vehicleService.assignOwner(vehicleId, { driver: selectedDriverId });
-        }
       }
 
       for (const file of stagedFiles) {
@@ -616,113 +561,9 @@ export function VehicleModal({ vehicle, isOpen, onClose, onSave, onArchive }: Ve
               </div>
             )}
 
-            {/* STEP 2: Driver & Photos */}
+            {/* STEP 2: Photos */}
             {step === 2 && (
               <div className="space-y-5 py-3">
-                {/* Driver selection */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-7 h-7 rounded-lg bg-[#2D8B7E]/10 flex items-center justify-center">
-                      <UserPlus className="w-4 h-4 text-[#2D8B7E]" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700">
-                        {t('assignDriver')}
-                      </label>
-                      <p className="text-[11px] text-slate-400">{t('assignDriverHint')}</p>
-                    </div>
-                  </div>
-
-                  {!showDriverCreate ? (
-                    <>
-                      <div className="relative">
-                        <select
-                          value={selectedDriverId || ''}
-                          onChange={(e) => setSelectedDriverId(e.target.value || null)}
-                          disabled={driversLoading}
-                          className={`${selectedDriverId ? inputFilled : inputEmpty} appearance-none cursor-pointer pr-10 disabled:opacity-50`}
-                        >
-                          <option value="">
-                            {driversLoading ? t('loadingDrivers') : t('noDriver')}
-                          </option>
-                          {drivers.map(d => (
-                            <option key={d.id} value={d.id}>
-                              {d.first_name} {d.last_name} {d.phone_number ? `(${d.phone_number})` : ''}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setShowDriverCreate(true)}
-                        className="mt-2 flex items-center gap-1.5 text-sm text-[#2D8B7E] hover:text-[#246f65] font-medium transition-colors"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        {t('createNewDriver')}
-                      </button>
-                    </>
-                  ) : (
-                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                          <UserPlus className="w-4 h-4 text-[#2D8B7E]" />
-                          {t('newDriver')}
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() => setShowDriverCreate(false)}
-                          className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                          {tCommon('cancel')}
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          placeholder={t('firstName')}
-                          value={newDriver.first_name}
-                          onChange={(e) => setNewDriver({ ...newDriver, first_name: e.target.value })}
-                          className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] text-sm text-slate-800 placeholder:text-slate-400"
-                        />
-                        <input
-                          type="text"
-                          placeholder={t('lastName')}
-                          value={newDriver.last_name}
-                          onChange={(e) => setNewDriver({ ...newDriver, last_name: e.target.value })}
-                          className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] text-sm text-slate-800 placeholder:text-slate-400"
-                        />
-                      </div>
-                      <input
-                        type="text"
-                        placeholder={t('phone')}
-                        value={newDriver.phone_number}
-                        onChange={(e) => setNewDriver({ ...newDriver, phone_number: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]/30 focus:border-[#2D8B7E] text-sm text-slate-800 placeholder:text-slate-400"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleCreateDriver}
-                        disabled={creatingDriver || !newDriver.first_name.trim() || !newDriver.last_name.trim() || !newDriver.phone_number.trim()}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#2D8B7E] text-white text-sm rounded-lg hover:bg-[#246f65] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {creatingDriver ? (
-                          <>
-                            <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            {t('creating')}
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="w-4 h-4" />
-                            {t('createAndAssign')}
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
                 {/* Photos */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">

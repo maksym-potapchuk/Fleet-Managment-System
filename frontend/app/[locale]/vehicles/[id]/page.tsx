@@ -8,7 +8,7 @@ import {
   ArrowLeft,
   Car,
   User,
-  DollarSign,
+  Banknote,
   Wrench,
   Package,
   Plus,
@@ -24,7 +24,6 @@ import {
   Pencil,
   Check,
   Upload,
-  Users,
   ShieldCheck,
   FileText,
   Calendar,
@@ -47,7 +46,7 @@ import { toDisplayUnit, toKm, unitLabel, type DistanceUnit } from '@/lib/distanc
 import { generateRegulationPdf } from '@/lib/regulation-pdf';
 import { vehicleService } from '@/services/vehicle';
 import { expenseService } from '@/services/expense';
-import { Vehicle, VehicleOwner, OwnerHistoryRecord, VehicleStatus, FuelType, TechnicalInspection, MileageLog } from '@/types/vehicle';
+import { Vehicle, VehicleStatus, FuelType, TechnicalInspection, MileageLog } from '@/types/vehicle';
 import { Expense, CreateExpenseData, ExpenseCategory, ExpenseFilters as ExpenseFiltersType, ExpenseSummary } from '@/types/expense';
 import { VehicleModal } from '@/components/vehicle/VehicleModal';
 import { ExpenseTable } from '@/components/expense/ExpenseTable';
@@ -123,12 +122,6 @@ interface RegulationPlan {
   entries: RegulationPlanEntry[];
 }
 
-interface DriverOption {
-  id: string;
-  first_name: string;
-  last_name: string;
-}
-
 interface ServicePlan {
   id: number;
   vehicle: string;
@@ -199,13 +192,6 @@ export default function VehicleWorkspacePage() {
     });
   };
 
-  // Inline driver assignment
-  const [showDriverPicker, setShowDriverPicker] = useState(false);
-  const [driversList, setDriversList] = useState<DriverOption[]>([]);
-  const [driverSearch, setDriverSearch] = useState('');
-  const [savingDriver, setSavingDriver] = useState(false);
-  const driverPickerRef = useRef<HTMLDivElement>(null);
-  const driverSearchRef = useRef<HTMLInputElement>(null);
 
   // Inline fuel type picker
   const [showFuelPicker, setShowFuelPicker] = useState(false);
@@ -226,6 +212,16 @@ export default function VehicleWorkspacePage() {
     }
   }, [id]);
 
+  // Silent refresh — re-fetches vehicle data without showing loading spinner
+  const refreshVehicle = useCallback(async () => {
+    try {
+      const data = await vehicleService.getVehicle(id);
+      setVehicle(data);
+    } catch (err) {
+      console.error('Failed to refresh vehicle:', err);
+    }
+  }, [id]);
+
   const [mileageError, setMileageError] = useState('');
 
   const handleQuickMileage = async () => {
@@ -240,13 +236,14 @@ export default function VehicleWorkspacePage() {
     setMileageError('');
     setSavingMileage(true);
     try {
+      const kmValue = toKm(inputVal, unit);
       await api.post(`/vehicle/${vehicle.id}/mileage/`, {
-        km: toKm(inputVal, unit),
+        km: kmValue,
         recorded_at: new Date().toISOString().split('T')[0],
       });
+      setVehicle(prev => prev ? { ...prev, initial_km: kmValue } : prev);
       setShowMileageInput(false);
       setMileageKm('');
-      await loadVehicle();
     } catch (err) {
       console.error(err);
     } finally {
@@ -257,33 +254,6 @@ export default function VehicleWorkspacePage() {
   useEffect(() => {
     if (id) loadVehicle();
   }, [id, loadVehicle]);
-
-  // Load drivers when picker opens
-  useEffect(() => {
-    if (!showDriverPicker) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await api.get('/driver/');
-        const data = res.data;
-        if (!cancelled) setDriversList(Array.isArray(data) ? data : (data as { results: DriverOption[] }).results ?? []);
-      } catch { /* ignore */ }
-    })();
-    return () => { cancelled = true; };
-  }, [showDriverPicker]);
-
-  // Close driver picker on outside click
-  useEffect(() => {
-    if (!showDriverPicker) return;
-    const handler = (e: MouseEvent) => {
-      if (driverPickerRef.current && !driverPickerRef.current.contains(e.target as Node)) {
-        setShowDriverPicker(false);
-        setDriverSearch('');
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showDriverPicker]);
 
   // Close fuel picker on outside click or scroll
   const fuelDropRef = useRef<HTMLDivElement>(null);
@@ -312,25 +282,6 @@ export default function VehicleWorkspacePage() {
     };
   }, [showFuelPicker]);
 
-  const handleDriverAssign = async (driverId: string | null) => {
-    if (!vehicle) return;
-    setSavingDriver(true);
-    try {
-      if (driverId) {
-        await vehicleService.assignOwner(vehicle.id, { driver: driverId });
-      } else {
-        await vehicleService.unassignOwner(vehicle.id);
-      }
-      await loadVehicle();
-      setShowDriverPicker(false);
-      setDriverSearch('');
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSavingDriver(false);
-    }
-  };
-
   const handleFuelChange = async (fuelType: FuelType | null) => {
     if (!vehicle || vehicle.fuel_type === fuelType) {
       setShowFuelPicker(false);
@@ -338,8 +289,8 @@ export default function VehicleWorkspacePage() {
     }
     setSavingFuel(true);
     try {
-      await vehicleService.updateVehicle(vehicle.id, { fuel_type: fuelType });
-      await loadVehicle();
+      const updated = await vehicleService.updateVehicle(vehicle.id, { fuel_type: fuelType });
+      setVehicle(updated);
       setShowFuelPicker(false);
     } catch (err) {
       console.error(err);
@@ -368,7 +319,7 @@ export default function VehicleWorkspacePage() {
     setUploadingPhoto(true);
     try {
       await vehicleService.uploadVehiclePhoto(vehicle.id, file);
-      await loadVehicle();
+      await refreshVehicle();
     } catch (err) {
       console.error(err);
     } finally {
@@ -382,7 +333,7 @@ export default function VehicleWorkspacePage() {
     try {
       await vehicleService.deleteVehiclePhoto(vehicle.id, photoId);
       if (lightboxIdx !== null) setLightboxIdx(null);
-      await loadVehicle();
+      await refreshVehicle();
     } catch (err) {
       console.error(err);
     } finally {
@@ -395,7 +346,7 @@ export default function VehicleWorkspacePage() {
     setSettingCover(true);
     try {
       await vehicleService.setCoverPhoto(vehicle.id, photoId);
-      await loadVehicle();
+      await refreshVehicle();
     } catch (err) {
       console.error(err);
     } finally {
@@ -442,7 +393,7 @@ export default function VehicleWorkspacePage() {
   const fuelLabel = (type: FuelType | null) => type ? tVehicles(`fuelTypes.${type}`) : '—';
 
   const tabs: { id: WorkspaceTab; label: string; icon: typeof Wrench; secondary?: boolean }[] = [
-    { id: 'expenses',   label: t('tabs.expenses'),   icon: DollarSign },
+    { id: 'expenses',   label: t('tabs.expenses'),   icon: Banknote },
     { id: 'service',    label: t('tabs.service'),    icon: Wrench },
     { id: 'equipment',  label: t('tabs.equipment'),  icon: Package },
     { id: 'regulation', label: t('tabs.regulation'), icon: ScrollText },
@@ -620,9 +571,9 @@ export default function VehicleWorkspacePage() {
         {/* ── Info grid ── */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-1.5 sm:gap-2 mb-4">
           <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-3 py-2 min-w-0">
-            <DollarSign className="w-4 h-4 text-[#2D8B7E] flex-shrink-0" />
+            <span className="w-4 h-4 flex items-center justify-center text-[#2D8B7E] font-bold text-xs flex-shrink-0">zł</span>
             <span className="text-xs sm:text-sm font-bold text-[#2D8B7E] truncate">
-              {parseFloat(vehicle.cost).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PLN
+              {parseFloat(vehicle.cost).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <div ref={fuelPickerRef}>
@@ -671,66 +622,11 @@ export default function VehicleWorkspacePage() {
               document.body
             )}
           </div>
-          <div className="relative" ref={driverPickerRef}>
-            <button
-              onClick={() => { setShowDriverPicker(v => !v); setDriverSearch(''); }}
-              disabled={savingDriver}
-              className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-3 py-2 hover:border-[#2D8B7E]/50 hover:bg-[#2D8B7E]/5 transition-all group cursor-pointer text-left w-full disabled:opacity-60 min-w-0"
-            >
-              {savingDriver ? (
-                <div className="w-4 h-4 border-2 border-[#2D8B7E] border-t-transparent rounded-full animate-spin flex-shrink-0" />
-              ) : (
-                <User className="w-4 h-4 text-slate-400 group-hover:text-[#2D8B7E] transition-colors flex-shrink-0" />
-              )}
-              <span className={`text-xs sm:text-sm font-semibold truncate ${vehicle.driver ? 'text-slate-800 group-hover:text-[#2D8B7E]' : 'text-slate-400 italic'} transition-colors`}>
-                {driverName}
-              </span>
-              <Pencil className="w-3 h-3 text-slate-300 group-hover:text-[#2D8B7E] transition-colors ml-auto" />
-            </button>
-            {showDriverPicker && (
-              <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden sm:min-w-[220px]">
-                <div className="p-2 border-b border-slate-100">
-                  <div className="flex items-center gap-2 px-2 py-1.5 bg-slate-50 rounded-lg">
-                    <Search className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                    <input
-                      ref={driverSearchRef}
-                      autoFocus
-                      value={driverSearch}
-                      onChange={(e) => setDriverSearch(e.target.value)}
-                      placeholder={t('driver.searchPlaceholder')}
-                      className="flex-1 text-sm bg-transparent outline-none placeholder:text-slate-400"
-                    />
-                  </div>
-                </div>
-                <div className="max-h-48 overflow-y-auto">
-                  <button
-                    onClick={() => handleDriverAssign(null)}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${
-                      !vehicle.driver ? 'bg-[#2D8B7E]/5 text-[#2D8B7E] font-semibold' : 'text-slate-400 italic'
-                    }`}
-                  >
-                    — {tVehicles('noDriver')} —
-                  </button>
-                  {driversList
-                    .filter(d => {
-                      if (!driverSearch) return true;
-                      const q = driverSearch.toLowerCase();
-                      return `${d.first_name} ${d.last_name}`.toLowerCase().includes(q);
-                    })
-                    .map(d => (
-                      <button
-                        key={d.id}
-                        onClick={() => handleDriverAssign(d.id)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${
-                          vehicle.driver?.id === d.id ? 'bg-[#2D8B7E]/5 text-[#2D8B7E] font-semibold' : 'text-slate-700'
-                        }`}
-                      >
-                        {d.first_name} {d.last_name}
-                      </button>
-                    ))}
-                </div>
-              </div>
-            )}
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-3 py-2 min-w-0">
+            <User className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <span className={`text-xs sm:text-sm font-semibold truncate ${vehicle.driver ? 'text-slate-800' : 'text-slate-400 italic'}`}>
+              {driverName}
+            </span>
           </div>
           {showMileageInput ? (
             <div className="col-span-2 md:col-span-1">
@@ -866,8 +762,8 @@ export default function VehicleWorkspacePage() {
         {activeTab === 'service'    && <ServiceTab    vehicleId={vehicle.id} />}
         {activeTab === 'equipment'  && <EquipmentTab  vehicleId={vehicle.id} />}
         {activeTab === 'regulation' && <RegulationTab vehicleId={vehicle.id} carNumber={vehicle.car_number ?? ''} initialKm={vehicle.initial_km} distanceUnit={vehicle.distance_unit ?? 'km'} />}
-        {activeTab === 'history'    && <HistoryTab    vehicleId={vehicle.id} onMileageChange={loadVehicle} distanceUnit={vehicle.distance_unit ?? 'km'} />}
-        {activeTab === 'inspection' && <InspectionTab vehicleId={vehicle.id} onInspectionChange={loadVehicle} />}
+        {activeTab === 'history'    && <HistoryTab    vehicleId={vehicle.id} onMileageChange={refreshVehicle} distanceUnit={vehicle.distance_unit ?? 'km'} />}
+        {activeTab === 'inspection' && <InspectionTab vehicleId={vehicle.id} onInspectionChange={refreshVehicle} />}
       </div>
 
       {/* Lightbox */}
@@ -954,7 +850,7 @@ export default function VehicleWorkspacePage() {
         vehicle={vehicle}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        onSave={loadVehicle}
+        onSave={refreshVehicle}
         onArchive={() => router.push('/vehicles')}
       />
 
@@ -2882,332 +2778,15 @@ function RegulationHistoryPanel({ vehicleId, distanceUnit }: { vehicleId: string
 }
 
 // ─────────────────────────────────────────────
-// Owners Tab
+// Owners Tab (read-only — data from external deal service)
 // ─────────────────────────────────────────────
 
-function DriverSearchSelect({ drivers, value, onChange, placeholder }: {
-  drivers: DriverOption[];
-  value: string;
-  onChange: (id: string) => void;
-  placeholder: string;
-}) {
-  const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const filtered = drivers.filter(d => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return `${d.first_name} ${d.last_name}`.toLowerCase().includes(q);
-  });
-
-  const selected = drivers.find(d => d.id === value);
-
-  return (
-    <div ref={ref} className="relative">
-      <div
-        className="flex items-center w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm bg-white cursor-pointer focus-within:ring-2 focus-within:ring-[#2D8B7E] focus-within:border-[#2D8B7E] transition-all"
-        onClick={() => setOpen(true)}
-      >
-        <Search className="w-4 h-4 text-slate-400 mr-2 flex-shrink-0" />
-        {open ? (
-          <input
-            autoFocus
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={placeholder}
-            className="flex-1 outline-none bg-transparent text-sm placeholder:text-slate-400"
-            onFocus={() => setOpen(true)}
-          />
-        ) : (
-          <span className={`flex-1 truncate ${selected ? 'text-slate-900' : 'text-slate-400'}`}>
-            {selected ? `${selected.first_name} ${selected.last_name}` : placeholder}
-          </span>
-        )}
-        {value && !open && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onChange(''); setSearch(''); }}
-            className="ml-1 p-0.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        )}
-        <ChevronDown className={`w-4 h-4 text-slate-400 ml-1 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </div>
-      {open && (
-        <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <div className="px-3 py-3 text-sm text-slate-400 text-center">{placeholder}</div>
-          ) : (
-            filtered.map(d => (
-              <button
-                key={d.id}
-                onClick={() => { onChange(d.id); setSearch(''); setOpen(false); }}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${
-                  d.id === value ? 'bg-[#2D8B7E]/5 text-[#2D8B7E] font-semibold' : 'text-slate-700'
-                }`}
-              >
-                {d.first_name} {d.last_name}
-              </button>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function OwnersTab({ vehicleId }: { vehicleId: string }) {
-  const t = useTranslations('vehicleWorkspace.owners');
-  const [currentOwner, setCurrentOwner] = useState<VehicleOwner | null>(null);
-  const [history, setHistory] = useState<OwnerHistoryRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [drivers, setDrivers] = useState<DriverOption[]>([]);
-  const [showAdd, setShowAdd] = useState(false);
-  const [selectedDriver, setSelectedDriver] = useState('');
-  const [agreementNumber, setAgreementNumber] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [unassigning, setUnassigning] = useState(false);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [ownerData, historyData, driversRes] = await Promise.all([
-        vehicleService.getCurrentOwner(vehicleId),
-        vehicleService.getOwnershipHistory(vehicleId),
-        api.get('/driver/'),
-      ]);
-      setCurrentOwner(ownerData);
-      setHistory(historyData);
-      const driverData = driversRes.data;
-      setDrivers(Array.isArray(driverData) ? driverData : (driverData as { results: DriverOption[] }).results ?? []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [vehicleId]);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  const handleAssign = async () => {
-    if (!selectedDriver) return;
-    setSaving(true);
-    try {
-      await vehicleService.assignOwner(vehicleId, {
-        driver: selectedDriver,
-        agreement_number: agreementNumber.trim(),
-      });
-      setShowAdd(false);
-      setSelectedDriver('');
-      setAgreementNumber('');
-      await loadData();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleUnassign = async () => {
-    setUnassigning(true);
-    try {
-      await vehicleService.unassignOwner(vehicleId);
-      await loadData();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setUnassigning(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-4 border-[#2D8B7E] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-black text-slate-900">{t('title')}</h2>
-          <p className="text-sm text-slate-500 mt-0.5 font-medium">{t('subtitle')}</p>
-        </div>
-        <button
-          onClick={() => { setShowAdd(v => !v); setSelectedDriver(''); setAgreementNumber(''); }}
-          className="flex items-center gap-2 bg-gradient-to-r from-[#2D8B7E] to-[#248B7B] text-white px-4 py-2 rounded-xl hover:shadow-lg hover:shadow-[#2D8B7E]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shadow-md text-sm font-bold"
-        >
-          <Plus className="w-4 h-4" strokeWidth={3} />
-          {t('add')}
-        </button>
-      </div>
-
-      {showAdd && (
-        <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-          <DriverSearchSelect
-            drivers={drivers}
-            value={selectedDriver}
-            onChange={setSelectedDriver}
-            placeholder={t('selectDriver')}
-          />
-          <input
-            type="text"
-            placeholder={t('agreementPlaceholder')}
-            value={agreementNumber}
-            onChange={(e) => setAgreementNumber(e.target.value)}
-            className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2D8B7E]"
-          />
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={() => setShowAdd(false)}
-              className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors"
-            >
-              {t('cancel')}
-            </button>
-            <button
-              onClick={handleAssign}
-              disabled={!selectedDriver || saving}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-bold bg-[#2D8B7E] text-white rounded-xl hover:bg-[#246f65] disabled:opacity-50 transition-colors"
-            >
-              {saving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-              {t('save')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Current owner */}
-      {currentOwner && (
-        <div className="mb-6">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">{t('current')}</h3>
-          <div className="flex items-center justify-between p-4 rounded-2xl border bg-emerald-50 border-emerald-200">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-emerald-100">
-                <User className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-slate-900 truncate">
-                  {currentOwner.driver.first_name} {currentOwner.driver.last_name}
-                </p>
-                {currentOwner.agreement_number && (
-                  <p className="text-xs text-slate-500 mt-0.5 truncate">
-                    {t('agreement')}: {currentOwner.agreement_number}
-                  </p>
-                )}
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {new Date(currentOwner.assigned_at).toLocaleDateString()} — <span className="text-emerald-600 font-semibold">{t('current')}</span>
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleUnassign}
-              disabled={unassigning}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:border-red-300 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 transition-all flex-shrink-0 ml-3"
-            >
-              {unassigning && (
-                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              )}
-              {t('close')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* History */}
-      {history.length === 0 && !currentOwner ? (
-        <div className="flex flex-col items-center justify-center py-24 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400">
-          <Users className="w-12 h-12 mb-3 opacity-30" />
-          <p className="font-semibold text-sm">{t('empty')}</p>
-          <p className="text-xs mt-1">{t('emptyDesc')}</p>
-        </div>
-      ) : history.length > 0 && (
-        <div>
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">{t('title')}</h3>
-          <div className="space-y-3">
-            {history.map((record) => (
-              <div
-                key={record.id}
-                className="flex items-center justify-between p-4 rounded-2xl border bg-white border-slate-200"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-slate-100">
-                    <User className="w-5 h-5 text-slate-400" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-900 truncate">
-                      {record.driver.first_name} {record.driver.last_name}
-                    </p>
-                    {record.agreement_number && (
-                      <p className="text-xs text-slate-500 mt-0.5 truncate">
-                        {t('agreement')}: {record.agreement_number}
-                      </p>
-                    )}
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {new Date(record.assigned_at).toLocaleDateString()} — {new Date(record.unassigned_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
-// History Tab (wrapper with sub-tabs: Owners / Mileage)
+// History Tab (Mileage only — driver ownership managed by external deal service)
 // ══════════════════════════════════════════════════════════════════════════════
-
-type HistorySubTab = 'owners' | 'mileage';
 
 function HistoryTab({ vehicleId, onMileageChange, distanceUnit }: { vehicleId: string; onMileageChange: () => void; distanceUnit: DistanceUnit }) {
-  const t = useTranslations('vehicleWorkspace');
-  const [subTab, setSubTab] = useState<HistorySubTab>('owners');
-
-  const subTabs: { id: HistorySubTab; label: string; icon: typeof Users }[] = [
-    { id: 'owners',  label: t('tabs.owners'),  icon: Users },
-    { id: 'mileage', label: t('tabs.mileage'), icon: Gauge },
-  ];
-
-  return (
-    <div>
-      <div className="flex gap-1 mb-5">
-        {subTabs.map(st => {
-          const Icon = st.icon;
-          const isActive = subTab === st.id;
-          return (
-            <button
-              key={st.id}
-              onClick={() => setSubTab(st.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                isActive
-                  ? 'bg-slate-800 text-white shadow-md'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
-              }`}
-            >
-              <Icon className="w-4 h-4" strokeWidth={isActive ? 2.5 : 2} />
-              {st.label}
-            </button>
-          );
-        })}
-      </div>
-      {subTab === 'owners'  && <OwnersTab  vehicleId={vehicleId} />}
-      {subTab === 'mileage' && <MileageTab vehicleId={vehicleId} onMileageChange={onMileageChange} distanceUnit={distanceUnit} />}
-    </div>
-  );
+  return <MileageTab vehicleId={vehicleId} onMileageChange={onMileageChange} distanceUnit={distanceUnit} />;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -3523,7 +3102,7 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
             {latest.linked_expense && (
               <span className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg ml-0 sm:ml-2">
                 <Receipt className="w-3 h-3" />
-                {Number(latest.linked_expense.amount).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} PLN
+                {Number(latest.linked_expense.amount).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł
               </span>
             )}
           </div>
@@ -3648,7 +3227,7 @@ function InspectionTab({ vehicleId, onInspectionChange }: { vehicleId: string; o
                     </span>
                     {ins.linked_expense && (
                       <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md">
-                        {Number(ins.linked_expense.amount).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} PLN
+                        {Number(ins.linked_expense.amount).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł
                       </span>
                     )}
                   </div>
@@ -3733,6 +3312,16 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
     }
   }, [vehicleId, filters, page, t]);
 
+  const refreshExpenses = useCallback(async () => {
+    try {
+      const data = await expenseService.getVehicleExpenses(vehicleId, filters, page);
+      setExpenses(data.results);
+      setTotalCount(data.count);
+    } catch {
+      // silent
+    }
+  }, [vehicleId, filters, page]);
+
   const loadCategories = useCallback(async () => {
     try {
       const data = await expenseService.getCategories();
@@ -3759,7 +3348,8 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
     try {
       setIsSubmitting(true);
       if (editingExpense) {
-        await expenseService.updateExpense(editingExpense.id, data);
+        const updated = await expenseService.updateExpense(editingExpense.id, data);
+        setExpenses(prev => prev.map(e => e.id === updated.id ? updated : e));
       } else {
         const created = await expenseService.createVehicleExpense(vehicleId, data);
         if (created.invoice_data) {
@@ -3771,7 +3361,11 @@ function ExpensesTab({ vehicleId, vehicleDriver }: { vehicleId: string; vehicleD
       }
       setShowForm(false);
       setEditingExpense(null);
-      loadExpenses();
+      if (editingExpense) {
+        refreshExpenses();
+      } else {
+        loadExpenses();
+      }
       loadSummary();
     } catch (err) {
       console.error('Expense submit error:', err);
