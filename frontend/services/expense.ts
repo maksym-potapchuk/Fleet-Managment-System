@@ -12,6 +12,18 @@ import {
   QuickExpenseResult,
 } from '@/types/expense';
 
+const DECIMAL_FIELDS = new Set([
+  'amount', 'company_amount', 'client_amount',
+  'official_cost', 'additional_cost',
+]);
+
+function sanitizeDecimal(value: unknown): string {
+  const str = String(value).trim();
+  const num = parseFloat(str);
+  if (isNaN(num)) return '0';
+  return num.toFixed(2);
+}
+
 function buildFormData(data: Record<string, unknown>): FormData {
   const formData = new FormData();
   Object.entries(data).forEach(([key, value]) => {
@@ -20,6 +32,8 @@ function buildFormData(data: Record<string, unknown>): FormData {
       formData.append(key, value);
     } else if (Array.isArray(value)) {
       formData.append(key, JSON.stringify(value));
+    } else if (DECIMAL_FIELDS.has(key)) {
+      formData.append(key, sanitizeDecimal(value));
     } else {
       formData.append(key, String(value));
     }
@@ -146,8 +160,8 @@ export const expenseService = {
               const overallTotal = parseFloat(entry.amount) || 1;
               const ratio = entryTotal / overallTotal;
               const clientAmt = Math.ceil(parseFloat(entry.client_amount) * ratio * 100) / 100;
-              data.client_amount = clientAmt;
-              data.company_amount = Math.round((entryTotal - clientAmt) * 100) / 100;
+              data.client_amount = parseFloat(clientAmt.toFixed(2));
+              data.company_amount = parseFloat((entryTotal - clientAmt).toFixed(2));
               if (entry.client_driver) data.client_driver = entry.client_driver;
               if (entry.exclude_from_cost) data.exclude_from_cost = true;
             } else {

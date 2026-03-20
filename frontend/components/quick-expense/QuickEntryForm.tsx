@@ -340,10 +340,10 @@ export function QuickEntryForm({
     if (!isValid) return;
 
     let computedAmount = amount;
-    if (code === 'FUEL') computedAmount = String(fuelTotal);
-    else if (code === 'SERVICE') computedAmount = String(serviceTotal);
-    else if (code === 'PARTS' || code === 'ACCESSORIES' || code === 'DOCUMENTS') computedAmount = String(partsTotal);
-    else if (code === 'INSPECTION') computedAmount = String(inspectionTotal);
+    if (code === 'FUEL') computedAmount = fuelTotal.toFixed(2);
+    else if (code === 'SERVICE') computedAmount = serviceTotal.toFixed(2);
+    else if (code === 'PARTS' || code === 'ACCESSORIES' || code === 'DOCUMENTS') computedAmount = partsTotal.toFixed(2);
+    else if (code === 'INSPECTION') computedAmount = inspectionTotal.toFixed(2);
 
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;

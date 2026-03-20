@@ -154,8 +154,8 @@ describe('expenseService – submitQuickExpenses', () => {
     await expenseService.submitQuickExpenses('v-1', [entry], () => {});
 
     const formData = mockedApi.post.mock.calls[0][1] as FormData;
-    expect(formData.get('amount')).toBe('149');
-    expect(formData.get('official_cost')).toBe('99');
+    expect(formData.get('amount')).toBe('149.00');
+    expect(formData.get('official_cost')).toBe('99.00');
     expect(formData.get('inspection_date')).toBe('2026-03-01');
     expect(formData.get('next_inspection_date')).toBe('2028-03-01');
   });
@@ -173,7 +173,7 @@ describe('expenseService – submitQuickExpenses', () => {
     await expenseService.submitQuickExpenses('v-1', [entry], () => {});
 
     const formData = mockedApi.post.mock.calls[0][1] as FormData;
-    expect(formData.get('amount')).toBe('200');
+    expect(formData.get('amount')).toBe('200.00');
     expect(formData.get('fuel_types')).toBe(JSON.stringify(['GASOLINE']));
   });
 
